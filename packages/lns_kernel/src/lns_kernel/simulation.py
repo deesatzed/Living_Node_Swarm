@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 from lns_kernel.ensemble import run_ensemble
+from lns_kernel.diagnostics import assess_stability
 from lns_kernel.models import Freshness, SimulationSnapshot, SimStatus
 from lns_kernel.store import GraphStore
 
@@ -43,6 +44,12 @@ class SimulationCoordinator:
             predictives, transform_used, _ = run_ensemble(
                 graph.nodes, seed=seed, n_samples=n_samples
             )
+            stability_diagnostic = assess_stability(
+                graph.nodes,
+                baseline_predictives=predictives,
+                seed=seed,
+                sample_count=n_samples,
+            )
             finished = datetime.now(timezone.utc)
             snap = SimulationSnapshot(
                 id=snap_id,
@@ -55,6 +62,7 @@ class SimulationCoordinator:
                 started_at=started,
                 finished_at=finished,
                 status="complete",
+                stability_diagnostic=stability_diagnostic,
             )
             self.store.save_snapshot(snap)
             return snap

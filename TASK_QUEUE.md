@@ -32,7 +32,7 @@
 | Q1-05 | Add dimension/unit validation | Q0-04 | Invalid affine/sum relationships fail before simulation | Complete (3 focused tests, 63 kernel tests, 2026-07-27) |
 | Q1-06 | Add forecast origin/horizon and time-expanded lag validation | Q0-01, Q0-04 | Lagged paths work; same-time cycles still fail | Complete (3 focused tests, 66 kernel tests, 2026-07-27) |
 | Q1-07 | Add shared-latent dependence warnings | Q0-04 | correlated/duplicate candidates surface unresolved warnings | Complete (3 focused tests, 69 kernel tests, 2026-07-27) |
-| Q1-08 | Add convergence/stability diagnostics | Q1-03 | multi-seed/sample-size report saved with every run | Pending |
+| Q1-08 | Add convergence/stability diagnostics | Q1-03 | multi-seed/sample-size report saved with every run | Complete (persisted snapshot receipt test, 72 kernel tests, 2026-07-27) |
 | Q1-09 | Add continuous scoring primitives | Q0-01 | CRPS/interval coverage tests pass on reference examples | Complete (2 focused tests, 71 kernel tests, 2026-07-27) |
 
 ## Gate 2 — Safe Research and Provenance

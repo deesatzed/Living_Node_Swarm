@@ -8,6 +8,7 @@ from lns_kernel.models import (
     NodeStatus,
     PredictivePayload,
     SimulationSnapshot,
+    StabilityDiagnostic,
     TransformKind,
     UpdateEvent,
 )
@@ -42,6 +43,7 @@ from lns_kernel.units import assert_relationship_units, parse_unit
 from lns_kernel.temporal import expand_time_relationships, validate_temporal_relationships
 from lns_kernel.dependence import DependenceWarning, detect_dependence_warnings
 from lns_kernel.scoring import crps_empirical, interval_coverage
+from lns_kernel.diagnostics import assess_stability
 
 __all__ = [
     "DistributionFamily",
@@ -51,6 +53,7 @@ __all__ = [
     "NodeStatus",
     "PredictivePayload",
     "SimulationSnapshot",
+    "StabilityDiagnostic",
     "TransformKind",
     "UpdateEvent",
     "SimulationCoordinator",
@@ -74,6 +77,7 @@ __all__ = [
     "detect_dependence_warnings",
     "crps_empirical",
     "interval_coverage",
+    "assess_stability",
     "ApprovalReceipt",
     "DistributionSpec",
     "EvidenceClaim",

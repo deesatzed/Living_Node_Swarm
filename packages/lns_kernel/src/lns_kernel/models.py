@@ -139,6 +139,15 @@ class SimulationSnapshot(BaseModel):
     finished_at: datetime | None = None
     status: str = "complete"  # complete | failed | running
     error: str | None = None
+    stability_diagnostic: StabilityDiagnostic | None = None
+
+
+class StabilityDiagnostic(BaseModel):
+    method: str
+    seeds: list[int]
+    sample_counts: list[int]
+    node_metric_ranges: dict[str, dict[str, float]] = Field(default_factory=dict)
+    limitations: str
 
 
 class SimStatus(BaseModel):

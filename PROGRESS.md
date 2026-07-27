@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-**10% complete – Gate 0 contracts complete; Gate 1 scientific kernel next**
+**15% complete – Gates 0–1 complete; Gate 2 safe research/provenance next**
 
 The new domain-general goal has a hardened control surface and the first typed kernel contracts. The existing v0.1/v0.2 shell remains the verified baseline; no generalized research, authoring API, or workspace has been built yet.
 
@@ -10,7 +10,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 
 | Surface | Verified state |
 |---|---|
-| Kernel tests | 71 passed on 2026-07-27 after continuous scoring primitives |
+| Kernel tests | 72 passed on 2026-07-27 after persisted multi-seed/multi-sample stability diagnostics |
 | Server tests | 16 passed on 2026-07-27; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-27 |
 | Gas UI | Production build passed on 2026-07-27 |
@@ -51,7 +51,8 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Q1-06 time-expanded lags | Complete | Codex | Explicit lag clock, delayed-feedback expansion, and same-time cycle rejection; 66 kernel tests passed |
 | Q1-07 dependence warnings | Complete | Codex | Warns on unresolved proxy correlation, duplicate links, and shared-evidence double counting; 69 kernel tests passed |
 | Q1-09 continuous scoring | Complete | Codex | Empirical CRPS and interval coverage with reference/invalid-input tests; 71 kernel tests passed |
-| Gate 1 scientific kernel | Pending | Unassigned | Depends on Gate 0 |
+| Q1-08 stability diagnostics | Complete | Codex | Every successful snapshot persists a bounded multi-seed/multi-sample metric-range receipt and limitation; 72 kernel tests passed |
+| Gate 1 scientific kernel | Complete | Codex | Registry, compatibility, units, temporal DAG, dependence warnings, stability receipts, and scoring verified |
 | Gate 2 safe research/provenance | Pending | Unassigned | Depends on Gate 0 |
 | Gate 3 generalized authoring | Pending | Unassigned | Depends on Gates 1–2 |
 | Gate 4 visual workspace | Pending | Unassigned | Depends on Gate 3 API/contracts |
@@ -68,15 +69,15 @@ The new domain-general goal has a hardened control surface and the first typed k
 
 ## Current Milestone
 
-**Gate 1 — Scientific Kernel**
+**Gate 2 — Safe Research and Provenance**
 
-Gate 0 exited on 2026-07-27: typed contract tests, legacy graph defaults, JSON-schema export, and a canonical target example are verified. The next exit is a registry with eight canonical distribution families, validation, sampling, units, lags, dependence warnings, diagnostics, and scoring primitives.
+Gate 1 exited on 2026-07-27: all eight registry families, explicit compatibility, units, time-expanded lag validation, dependence warnings, stability receipts, and continuous scoring are verified. The next exit is permissioned, safe, provenance-preserving research.
 
 ## Next Actions
 
-1. Complete Q1-08: add convergence and stability diagnostics.
-2. Start Gate 2 URL safety only after Gate 1 exits.
-3. Run focused tests after each atomic change and update this file with exact results.
+1. Complete Q2-01: implement URL safety validation for public HTTP(S) destinations.
+2. Complete Q2-02: implement a bounded fetcher with redirect, timeout, size, and content-type controls.
+3. Run focused security tests after each atomic change and update this file with exact results.
 
 ## Blockers
 
