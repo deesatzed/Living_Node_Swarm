@@ -100,7 +100,58 @@ export const api = {
   createSeed: () =>
     req<{ graph: Graph; snapshot: Snapshot | null }>("/graphs", {
       method: "POST",
-      body: JSON.stringify({ from_seed: true, name: "seed-demo" }),
+      body: JSON.stringify({ from_seed: true, seed_kind: "demo", name: "seed-demo" }),
+    }),
+  createGasGraph: (body: {
+    ticker?: string;
+    threshold_usd?: number;
+    market_yes_mid?: number | null;
+    name?: string;
+    title?: string;
+  }) =>
+    req<{
+      graph: Graph;
+      snapshot: Snapshot | null;
+      kalshi: { ticker: string; yes_mid: number | null; threshold_usd: number };
+      exit_rule: { move_pct: number; description: string };
+    }>("/use-cases/gas/graph", {
+      method: "POST",
+      body: JSON.stringify({ run_sim: true, ...body }),
+    }),
+  refreshKalshiMid: (graphId: string, ticker: string) =>
+    req<{
+      quote: Record<string, unknown>;
+      graph: Graph;
+      snapshot: Snapshot | null;
+      sim_status: SimStatus;
+    }>(`/graphs/${graphId}/kalshi/refresh-mid?ticker=${encodeURIComponent(ticker)}`, {
+      method: "POST",
+    }),
+  journalOpen: (body: {
+    ticker: string;
+    side?: string;
+    contracts?: number;
+    entry_yes_mid?: number | null;
+    move_pct?: number;
+    graph_id?: string;
+    notes?: string;
+  }) =>
+    req<{ position: Record<string, unknown>; exit_rule: Record<string, unknown>; note: string }>(
+      "/journal/positions",
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+  journalList: () => req<{ positions: Array<Record<string, unknown>> }>("/journal/positions"),
+  journalCheckAll: () =>
+    req<{
+      checked: number;
+      should_sell_count: number;
+      results: Array<Record<string, unknown>>;
+      action: string;
+    }>("/journal/positions/check-all-exits", { method: "POST" }),
+  journalClose: (id: string, exit_reason = "move_20pct") =>
+    req<{ position: Record<string, unknown> }>(`/journal/positions/${id}/close`, {
+      method: "POST",
+      body: JSON.stringify({ exit_reason }),
     }),
   getGraph: (id: string) => req<Graph>(`/graphs/${id}`),
   getSnapshot: (id: string) => req<Snapshot>(`/graphs/${id}/snapshot`),

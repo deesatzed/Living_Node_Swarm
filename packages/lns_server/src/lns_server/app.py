@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, AsyncIterator
 
 import logging
@@ -22,10 +23,14 @@ from lns_kernel.models import (
     NodeStatus,
     TransformKind,
 )
+from lns_kernel.gas_seed import build_gas_graph
+from lns_kernel.scoring import brier
 from lns_kernel.seed import build_seed_graph
 from lns_kernel.simulation import SimulationCoordinator
 from lns_kernel.store import GraphStore
 from lns_kernel.validation import ValidationError
+from lns_server.journal import TradeJournal
+from lns_server.kalshi_client import KalshiClient, KalshiError
 from lns_server.openrouter import OpenRouterClient, OpenRouterError
 from lns_server.proposal_normalize import proposal_to_node
 from lns_server.settings import Settings
@@ -49,7 +54,37 @@ class LayoutBody(BaseModel):
 
 class CreateGraphBody(BaseModel):
     from_seed: bool = True
+    seed_kind: str = "demo"  # demo | gas
     name: str = "seed-demo"
+    # gas seed options
+    ticker: str = ""
+    threshold_usd: float = 4.12
+    market_yes_mid: float | None = None
+    title: str = "US gas prices threshold market"
+
+
+class GasGraphBody(BaseModel):
+    ticker: str = ""
+    threshold_usd: float = 4.12
+    market_yes_mid: float | None = None
+    name: str = "us-gas-kalshi"
+    title: str = "US gas prices threshold market"
+    run_sim: bool = True
+
+
+class JournalOpenBody(BaseModel):
+    ticker: str
+    side: str = "yes"  # yes | no
+    contracts: int = 1
+    entry_yes_mid: float | None = None  # if None, fetch live mid
+    move_pct: float | None = None  # default from settings (0.20)
+    graph_id: str | None = None
+    notes: str = ""
+
+
+class JournalCloseBody(BaseModel):
+    exit_yes_mid: float | None = None
+    exit_reason: str = "manual"
 
 
 class ProposeNodeBody(BaseModel):
@@ -84,10 +119,12 @@ class WireBody(BaseModel):
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     store = GraphStore(settings.resolved_db_path())
+    journal = TradeJournal(Path(settings.resolved_db_path()).with_name("lns_journal.db"))
     coord = SimulationCoordinator(
         store, default_seed=settings.mc_seed, default_n_samples=settings.n_samples
     )
     or_client = OpenRouterClient(settings)
+    kalshi = KalshiClient(settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -95,8 +132,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.coord = coord
         app.state.settings = settings
         app.state.openrouter = or_client
+        app.state.journal = journal
+        app.state.kalshi = kalshi
         yield
         store.close()
+        journal.close()
 
     app = FastAPI(title="Living Node Swarm", version="0.1.0", lifespan=lifespan)
     app.add_middleware(
@@ -141,6 +181,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "model_slots": {
                 k: (v is not None) for k, v in settings.models_catalog().items()
             },
+            "kalshi_env": settings.kalshi_env,
+            "kalshi_key_configured": bool(settings.kalshi_key_id()),
+            "kalshi_exit_move_pct": settings.kalshi_exit_move_pct,
+            "use_cases": ["demo", "gas"],
         }
 
     @app.get("/graphs")
@@ -150,7 +194,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/graphs")
     def create_graph(body: CreateGraphBody) -> dict[str, Any]:
         if body.from_seed:
-            g = build_seed_graph(name=body.name)
+            if body.seed_kind == "gas":
+                g = build_gas_graph(
+                    name=body.name or "us-gas-kalshi",
+                    ticker=body.ticker,
+                    threshold_usd=body.threshold_usd,
+                    market_yes_mid=body.market_yes_mid,
+                    title=body.title,
+                )
+            else:
+                g = build_seed_graph(name=body.name)
         else:
             from lns_kernel.models import Graph
             import uuid
@@ -159,8 +212,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         store.create_graph(g)
         if g.nodes:
             snap = coord.run_now(g.id)
-            return {"graph": json.loads(g.model_dump_json()), "snapshot": json.loads(snap.model_dump_json())}
-        return {"graph": json.loads(g.model_dump_json()), "snapshot": None}
+            return {
+                "graph": json.loads(g.model_dump_json()),
+                "snapshot": json.loads(snap.model_dump_json()),
+                "seed_kind": body.seed_kind,
+            }
+        return {"graph": json.loads(g.model_dump_json()), "snapshot": None, "seed_kind": body.seed_kind}
 
     @app.get("/graphs/{graph_id}")
     def get_graph(graph_id: str) -> dict[str, Any]:
@@ -457,6 +514,195 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "snapshot": json.loads(snap.model_dump_json()) if snap else None,
             "model_used": model_used,
         }
+
+    # --- Kalshi / gas use-case ---
+
+    @app.get("/kalshi/markets/{ticker}")
+    def kalshi_market(ticker: str) -> dict[str, Any]:
+        try:
+            q = kalshi.get_market(ticker)
+        except KalshiError as e:
+            raise HTTPException(400, str(e)) from e
+        return q.as_public_dict()
+
+    @app.post("/use-cases/gas/graph")
+    def create_gas_graph(body: GasGraphBody) -> dict[str, Any]:
+        mid = body.market_yes_mid
+        title = body.title
+        if body.ticker and mid is None:
+            try:
+                q = kalshi.get_market(body.ticker)
+                mid = q.yes_mid
+                title = q.title or title
+                if q.floor_strike is not None:
+                    threshold = q.floor_strike
+                else:
+                    threshold = body.threshold_usd
+            except KalshiError as e:
+                raise HTTPException(400, str(e)) from e
+        else:
+            threshold = body.threshold_usd
+        g = build_gas_graph(
+            name=body.name,
+            ticker=body.ticker,
+            threshold_usd=threshold,
+            market_yes_mid=mid,
+            title=title,
+        )
+        store.create_graph(g)
+        snap = coord.run_now(g.id) if body.run_sim else None
+        return {
+            "graph": json.loads(g.model_dump_json()),
+            "snapshot": json.loads(snap.model_dump_json()) if snap else None,
+            "kalshi": {"ticker": body.ticker, "yes_mid": mid, "threshold_usd": threshold},
+            "exit_rule": {
+                "move_pct": settings.kalshi_exit_move_pct,
+                "description": "SELL when abs(yes_mid_now - entry_mid)/entry_mid >= move_pct",
+            },
+        }
+
+    @app.post("/graphs/{graph_id}/kalshi/refresh-mid")
+    def refresh_market_mid(graph_id: str, ticker: str = Query(...)) -> dict[str, Any]:
+        g = store.get_graph(graph_id)
+        if not g:
+            raise HTTPException(404, "graph not found")
+        try:
+            q = kalshi.get_market(ticker)
+        except KalshiError as e:
+            raise HTTPException(400, str(e)) from e
+        if q.yes_mid is None:
+            raise HTTPException(400, f"No mid available for {ticker}")
+        if "market_implied_yes" not in g.nodes:
+            raise HTTPException(400, "graph has no market_implied_yes node — use gas seed")
+        g2, ev = store.patch_node_parameters(
+            graph_id,
+            "market_implied_yes",
+            {"value": float(q.yes_mid)},
+            actor="kalshi",
+            reason=f"refresh mid ticker={ticker}",
+        )
+        snap = coord.run_now(graph_id)
+        return {
+            "quote": q.as_public_dict(),
+            "graph": json.loads(g2.model_dump_json()),
+            "event": json.loads(ev.model_dump_json()),
+            "snapshot": json.loads(snap.model_dump_json()),
+            "sim_status": json.loads(coord.status(graph_id).model_dump_json()),
+        }
+
+    @app.get("/journal/positions")
+    def journal_list(status: str | None = "open") -> dict[str, Any]:
+        return {"positions": journal.list_positions(status=status)}
+
+    @app.post("/journal/positions")
+    def journal_open(body: JournalOpenBody) -> dict[str, Any]:
+        mid = body.entry_yes_mid
+        quote = None
+        if mid is None:
+            try:
+                q = kalshi.get_market(body.ticker)
+                quote = q.as_public_dict()
+                mid = q.yes_mid
+            except KalshiError as e:
+                raise HTTPException(400, str(e)) from e
+        if mid is None:
+            raise HTTPException(400, "could not determine entry_yes_mid")
+        move = body.move_pct if body.move_pct is not None else settings.kalshi_exit_move_pct
+        try:
+            pos = journal.open_position(
+                ticker=body.ticker,
+                side=body.side,
+                contracts=body.contracts,
+                entry_yes_mid=float(mid),
+                move_pct=float(move),
+                graph_id=body.graph_id,
+                notes=body.notes,
+                meta={"quote_at_entry": quote},
+            )
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from e
+        return {
+            "position": pos,
+            "exit_rule": {
+                "move_pct": move,
+                "description": "SELL when abs(yes_mid_now - entry_mid)/entry_mid >= move_pct",
+            },
+            "note": "Journal entry only — does not place a Kalshi order. Use MCP to place, then journal.",
+        }
+
+    @app.post("/journal/positions/{position_id}/check-exit")
+    def journal_check_exit(position_id: str) -> dict[str, Any]:
+        pos = journal.get(position_id)
+        if not pos:
+            raise HTTPException(404, "position not found")
+        try:
+            q = kalshi.get_market(pos["ticker"])
+        except KalshiError as e:
+            raise HTTPException(400, str(e)) from e
+        if q.yes_mid is None:
+            raise HTTPException(400, "no mid")
+        ev = journal.evaluate_exit(pos, q.yes_mid)
+        return {"evaluation": ev, "quote": q.as_public_dict()}
+
+    @app.post("/journal/positions/check-all-exits")
+    def journal_check_all() -> dict[str, Any]:
+        open_pos = journal.list_positions(status="open")
+        results = []
+        for pos in open_pos:
+            try:
+                q = kalshi.get_market(pos["ticker"])
+                mid = q.yes_mid
+                if mid is None:
+                    results.append({"position_id": pos["id"], "error": "no mid"})
+                    continue
+                ev = journal.evaluate_exit(pos, mid)
+                results.append({"evaluation": ev, "quote": q.as_public_dict()})
+            except KalshiError as e:
+                results.append({"position_id": pos["id"], "error": str(e)})
+        sells = [r for r in results if r.get("evaluation", {}).get("should_sell")]
+        return {
+            "checked": len(results),
+            "should_sell_count": len(sells),
+            "results": results,
+            "action": "If should_sell, close via journal and place sell on Kalshi (MCP) with confirm.",
+        }
+
+    @app.post("/journal/positions/{position_id}/close")
+    def journal_close(position_id: str, body: JournalCloseBody) -> dict[str, Any]:
+        pos = journal.get(position_id)
+        if not pos:
+            raise HTTPException(404, "position not found")
+        mid = body.exit_yes_mid
+        if mid is None:
+            try:
+                q = kalshi.get_market(pos["ticker"])
+                mid = q.yes_mid
+            except KalshiError as e:
+                raise HTTPException(400, str(e)) from e
+        if mid is None:
+            raise HTTPException(400, "no exit mid")
+        try:
+            closed = journal.close_position(
+                position_id, exit_yes_mid=float(mid), exit_reason=body.exit_reason
+            )
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from e
+        # rough mark-to-mid PnL in dollars: YES long ≈ contracts * (exit - entry)
+        entry = float(closed["entry_yes_mid"])
+        contracts = int(closed["contracts"])
+        if closed["side"] == "yes":
+            pnl_per = float(mid) - entry
+        else:
+            pnl_per = entry - float(mid)
+        return {
+            "position": closed,
+            "approx_pnl_dollars_if_1_contract_is_1_usd_max": contracts * pnl_per,
+            "note": "PnL estimate assumes $1 max per contract; verify against Kalshi fills.",
+        }
+
+    @app.post("/scoring/brier")
+    def score_brier(p: float = Query(..., ge=0, le=1), y: int = Query(..., ge=0, le=1)) -> dict[str, Any]:
+        return {"p": p, "y": y, "brier": brier(p, y)}
 
     return app
 

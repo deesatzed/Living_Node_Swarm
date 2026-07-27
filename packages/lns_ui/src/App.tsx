@@ -17,6 +17,10 @@ export default function App() {
   const [hint, setHint] = useState("Propose one useful intermediate factor for this graph.");
   const [experiment, setExperiment] = useState<string>("");
   const [health, setHealth] = useState<string>("");
+  const [gasTicker, setGasTicker] = useState("");
+  const [gasThreshold, setGasThreshold] = useState("4.12");
+  const [gasMid, setGasMid] = useState("0.51");
+  const [journalLog, setJournalLog] = useState<string>("");
 
   const loadNew = useCallback(async () => {
     setBusy(true);
@@ -201,7 +205,7 @@ export default function App() {
         <div className="row">
           {status && <FreshnessBadge freshness={status.freshness} />}
           <button className="secondary" disabled={busy} onClick={loadNew}>
-            New seed graph
+            New toy seed
           </button>
         </div>
       </header>
@@ -226,6 +230,147 @@ export default function App() {
             </button>
           </div>
           {experiment && <pre className="raw">{experiment}</pre>}
+
+          <h2 style={{ marginTop: 18 }}>US gas (Kalshi) + 20% sell rule</h2>
+          <p className="muted">
+            Threshold markets (e.g. Above 4.120). Exit journal signal when YES mid moves ≥20% from
+            entry: |mid_now − entry| / entry ≥ 0.20. Journal does not auto-place orders — place on
+            Kalshi, then journal; check-all flags sells.
+          </p>
+          <label>
+            Kalshi market ticker (from Kalshi URL)
+            <input
+              placeholder="paste exact ticker e.g. GAS-… or AAAGAS…"
+              value={gasTicker}
+              onChange={(e) => setGasTicker(e.target.value)}
+            />
+          </label>
+          <label>
+            Strike threshold $/gal (if not from ticker)
+            <input value={gasThreshold} onChange={(e) => setGasThreshold(e.target.value)} />
+          </label>
+          <label>
+            YES mid fallback if no ticker (0–1)
+            <input value={gasMid} onChange={(e) => setGasMid(e.target.value)} />
+          </label>
+          <div className="row">
+            <button
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                setError(null);
+                try {
+                  const res = await api.createGasGraph({
+                    ticker: gasTicker || undefined,
+                    threshold_usd: Number(gasThreshold),
+                    market_yes_mid: gasTicker ? null : Number(gasMid),
+                    name: "us-gas-kalshi",
+                    title: "US gas prices",
+                  });
+                  setGraph(res.graph);
+                  setSnapshot(res.snapshot);
+                  setStatus({
+                    graph_id: res.graph.id,
+                    freshness: "fresh",
+                    graph_version: res.graph.graph_version,
+                    last_snapshot_id: res.snapshot?.id ?? null,
+                    last_error: null,
+                    job_running: false,
+                  });
+                  setSelectedId("market_implied_yes");
+                  setJournalLog(
+                    `Gas graph ready. mid=${res.kalshi.yes_mid} strike=${res.kalshi.threshold_usd}\n` +
+                      res.exit_rule.description
+                  );
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : String(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Load gas graph
+            </button>
+            <button
+              disabled={busy || !graph || !gasTicker}
+              onClick={async () => {
+                if (!graph || !gasTicker) return;
+                setBusy(true);
+                setError(null);
+                try {
+                  const res = await api.refreshKalshiMid(graph.id, gasTicker);
+                  setGraph(res.graph);
+                  setSnapshot(res.snapshot);
+                  setStatus(res.sim_status);
+                  setJournalLog(`Refreshed mid: ${JSON.stringify(res.quote.yes_mid)}`);
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : String(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Refresh Kalshi mid
+            </button>
+          </div>
+          <div className="row">
+            <button
+              disabled={busy || !gasTicker}
+              onClick={async () => {
+                setBusy(true);
+                setError(null);
+                try {
+                  const res = await api.journalOpen({
+                    ticker: gasTicker,
+                    side: "yes",
+                    contracts: 1,
+                    entry_yes_mid: gasTicker ? null : Number(gasMid),
+                    move_pct: 0.2,
+                    graph_id: graph?.id,
+                    notes: "micro-stake; sell on 20% YES mid move",
+                  });
+                  setJournalLog(JSON.stringify(res, null, 2));
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : String(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Journal entry (1 contract YES @ mid)
+            </button>
+            <button
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                setError(null);
+                try {
+                  const res = await api.journalCheckAll();
+                  setJournalLog(JSON.stringify(res, null, 2));
+                  for (const r of res.results) {
+                    const ev = r.evaluation as { should_sell?: boolean; position_id?: string } | undefined;
+                    if (ev?.should_sell && ev.position_id) {
+                      await api.journalClose(ev.position_id, "move_20pct");
+                    }
+                  }
+                  const open = await api.journalList();
+                  setJournalLog(
+                    (prev) =>
+                      JSON.stringify(res, null, 2) +
+                      "\n\nClosed any should_sell in journal.\nOpen now:\n" +
+                      JSON.stringify(open, null, 2)
+                  );
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : String(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Check exits (20%) + close journal
+            </button>
+          </div>
+          {journalLog && <pre className="raw">{journalLog}</pre>}
 
           <h2 style={{ marginTop: 18 }}>OpenRouter — propose node</h2>
           <p className="muted">

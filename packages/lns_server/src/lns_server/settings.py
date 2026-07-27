@@ -50,11 +50,23 @@ class Settings(BaseSettings):
     openrouter_site_url: str | None = None
     openrouter_app_name: str = "Living Node Swarm"
 
+    # Kalshi
+    kalshi_env: str = "prod"  # demo | prod — project uses real ~$10 account when prod
+    kalshi_api_key: str | None = None
+    kalshi_api_key_id: str | None = None  # alias
+    kalshi_private_key_path: str | None = None
+    kalshi_base_url: str | None = None  # optional override
+    kalshi_exit_move_pct: float = 0.20  # sell when YES mid moves 20% from entry
+
     @field_validator(
         "openrouter_api_key",
         "openrouter_model",
         "model_reasoning",
         "model_fast",
+        "kalshi_api_key",
+        "kalshi_api_key_id",
+        "kalshi_private_key_path",
+        "kalshi_env",
         mode="before",
     )
     @classmethod
@@ -92,3 +104,6 @@ class Settings(BaseSettings):
                 out.append({"role": role, "id": mid})
                 seen.add(mid)
         return out
+
+    def kalshi_key_id(self) -> str | None:
+        return self.kalshi_api_key or self.kalshi_api_key_id
