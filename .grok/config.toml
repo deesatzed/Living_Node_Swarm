@@ -1,0 +1,12 @@
+# Project-scoped Grok config for Living Node Swarm.
+# Secrets must come from the environment — do not paste keys here.
+
+# Kalshi MCP: research-first. Default demo. Enable in user config if uvx path differs.
+# Uncomment after: uvx can run mcp-server-kalshi
+#
+# [mcp_servers.kalshi]
+# command = "uvx"
+# args = ["mcp-server-kalshi"]
+# enabled = true
+# startup_timeout_sec = 120
+# env = { KALSHI_ENV = "demo" }

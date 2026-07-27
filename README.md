@@ -1,6 +1,8 @@
-# Living Node Swarm (v0.1 shell)
+# Living Node Swarm (v0.1–0.2 shell + Kalshi track)
 
-Domain-agnostic **explicit probabilistic node graph** with **on-change ensemble Monte Carlo**, expert UI (inspect/edit + distribution views), honest **freshness** badges, transform **experiments**, and **OpenRouter** AI node proposals (you choose the model).
+Domain-agnostic **explicit probabilistic node graph** with **on-change ensemble Monte Carlo**, expert UI (inspect/edit + distribution views), honest **freshness** badges, transform **experiments**, **OpenRouter** AI node proposals (you choose the model), human **activate/reject**, and **wire-into-chain**.
+
+**Kalshi track:** project-only account (~$10) for real market mids, resolution scoring, and optional **micro-stakes** experiments. Not investment advice. See `docs/integrations/kalshi-mcp.md` and skill `kalshi-lns`.
 
 ## Product acceptance path
 
@@ -8,13 +10,15 @@ Domain-agnostic **explicit probabilistic node graph** with **on-change ensemble 
 2. Edit one node’s parameters  
 3. Watch freshness → `updating` / `stale` then `fresh`  
 4. Downstream predictive distributions change  
+5. (Optional) Propose → activate → wire a factor into the chain  
+6. (Kalshi) Freeze market mid → score vs resolution (Brier)
 
-## Non-goals (v0.1)
+## Non-goals (current shell)
 
 - Multi-user, auth, multi-tenant, cloud deploy  
 - Clinical use  
-- Hard-coded LLM model id (you pick via OpenRouter)
-
+- Hard-coded LLM model id (you pick via OpenRouter)  
+- Large-balance or production trading product
 ## Layout
 
 | Path | Role |
@@ -70,8 +74,11 @@ cd packages/lns_server && PYTHONPATH=src:../lns_kernel/src pytest -v
 
 Dependent nodes support `affine`, `sum_parents`, `mean_parents`. Use **Compare transforms** in the UI (or `POST /graphs/{id}/experiments/transforms`) to run real MC under each strategy and pick what fits.
 
-## Design docs
+## Design docs / handoff
 
+- `HANDOFF_LATEST.md` — resume here
 - `docs/architecture/2026-07-27-living-node-swarm-ironclad.md`
 - `docs/plans/2026-07-27-living-node-swarm-v0.1.md`
+- `docs/plans/2026-07-27-v0.2-wire-chain.md`
+- `docs/integrations/kalshi-mcp.md`
 - `01_PRINCIPLES_AND_LIVING_2NODE_SCHEMA.md`
