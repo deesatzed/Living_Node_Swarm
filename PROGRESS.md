@@ -10,7 +10,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 
 | Surface | Verified state |
 |---|---|
-| Kernel tests | 48 passed on 2026-07-27 after registry validation and analytic distribution statistics |
+| Kernel tests | 57 passed on 2026-07-27 after seeded sampling across all eight canonical families |
 | Server tests | 16 passed on 2026-07-27; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-27 |
 | Gas UI | Production build passed on 2026-07-27 |
@@ -45,6 +45,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Gate 0 compatibility and API schemas | Complete | Codex | Legacy graph defaults, public JSON-schema export, and canonical Neodymium contract doc; 37 kernel tests passed |
 | Q1-01 distribution registry | Complete | Codex | Eight canonical families, support/parameter metadata, aliases; 42 kernel tests passed |
 | Q1-02 validation/statistics | Complete | Codex | Registry-backed finite/parameter/support validation and explicit analytic statistics; 48 kernel tests passed |
+| Q1-03 seeded sampling | Complete | Codex | Reproducible support-checked sampling for every canonical family; 57 kernel tests passed |
 | Gate 1 scientific kernel | Pending | Unassigned | Depends on Gate 0 |
 | Gate 2 safe research/provenance | Pending | Unassigned | Depends on Gate 0 |
 | Gate 3 generalized authoring | Pending | Unassigned | Depends on Gates 1–2 |
@@ -68,8 +69,8 @@ Gate 0 exited on 2026-07-27: typed contract tests, legacy graph defaults, JSON-s
 
 ## Next Actions
 
-1. Complete Q1-03: seeded sampling for all eight canonical families.
-2. Complete Q1-04: migrate legacy family parameter names without silent semantic change.
+1. Complete Q1-04: migrate legacy family parameter names without silent semantic change.
+2. Complete Q1-05: add dimension and unit validation for relationships.
 3. Keep existing serialized family names stable while adding registry behavior.
 4. Run focused tests after each atomic change and update this file with exact results.
 

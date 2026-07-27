@@ -34,6 +34,7 @@ from lns_kernel.distributions import (
     SupportDefinition,
     distribution_statistics,
     get_family,
+    sample_distribution,
     validate_family_parameters,
 )
 
@@ -57,6 +58,7 @@ __all__ = [
     "SupportDefinition",
     "get_family",
     "distribution_statistics",
+    "sample_distribution",
     "validate_family_parameters",
     "ApprovalReceipt",
     "DistributionSpec",

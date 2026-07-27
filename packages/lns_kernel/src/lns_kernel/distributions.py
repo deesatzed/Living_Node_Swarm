@@ -6,6 +6,8 @@ from dataclasses import dataclass
 import math
 from typing import Mapping
 
+import numpy as np
+
 
 @dataclass(frozen=True)
 class SupportDefinition:
@@ -199,3 +201,35 @@ def distribution_statistics(identifier: str, parameters: Mapping[str, float]) ->
         value = parameters["value"]
         stats.update(mean=value, median=value, mode=value, variance=0.0)
     return stats
+
+
+def sample_distribution(
+    identifier: str,
+    parameters: Mapping[str, float],
+    *,
+    size: int,
+    seed: int,
+) -> np.ndarray:
+    """Draw reproducible samples from a validated canonical family."""
+
+    if size <= 0:
+        raise ValueError("size must be positive")
+    family = validate_family_parameters(identifier, parameters)
+    rng = np.random.default_rng(seed)
+    if family.id == "Normal":
+        return rng.normal(parameters["mu"], parameters["sigma"], size=size)
+    if family.id == "LogNormal":
+        return rng.lognormal(parameters["log_loc"], parameters["log_scale"], size=size)
+    if family.id == "Beta":
+        return rng.beta(parameters["alpha"], parameters["beta"], size=size)
+    if family.id == "Poisson":
+        return rng.poisson(parameters["rate"], size=size).astype(float)
+    if family.id == "NegativeBinomial":
+        return rng.negative_binomial(parameters["n"], parameters["p"], size=size).astype(float)
+    if family.id == "Gamma":
+        return rng.gamma(parameters["shape"], parameters["scale"], size=size)
+    if family.id == "StudentT":
+        return parameters["loc"] + parameters["scale"] * rng.standard_t(parameters["df"], size=size)
+    if family.id == "Deterministic":
+        return np.full(size, parameters["value"], dtype=float)
+    raise AssertionError(f"registry family {family.id} has no sampler")
