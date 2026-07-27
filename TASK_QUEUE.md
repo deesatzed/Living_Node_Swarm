@@ -13,13 +13,13 @@
 
 | ID | Task | Depends on | Acceptance | Status |
 |---|---|---|---|---|
-| Q0-01 | Add `TargetContract` model and validation tests | — | Exact oracle/basis/horizon/fallback fields validate; ambiguous targets fail | Ready |
-| Q0-02 | Add `DistributionSpec` and canonical schema version | Q0-01 | Registered family/parameters/provenance serialize and round-trip | Pending |
-| Q0-03 | Add `EvidenceClaim` and `SourceReceipt` | Q0-01 | Claim provenance, conflict, hash, classification round-trip | Pending |
-| Q0-04 | Add `RelationshipContract` | Q0-01 | Type/units/lag/formula/provenance/state validate | Pending |
-| Q0-05 | Add `GraphProposal`, `ApprovalReceipt`, `SimulationRun` | Q0-02–04 | Approval binds exact versions; run records complete provenance | Pending |
-| Q0-06 | Extend graph/node schema compatibly | Q0-01–05 | Existing stored graph JSON loads with documented defaults | Pending |
-| Q0-07 | Expose contract JSON schemas and examples | Q0-01–06 | API/docs schemas match kernel contracts | Pending |
+| Q0-01 | Add `TargetContract` model and validation tests | — | Exact oracle/basis/horizon/fallback fields validate; ambiguous targets fail | Complete (25 kernel tests, 2026-07-27) |
+| Q0-02 | Add `DistributionSpec` and canonical schema version | Q0-01 | Registered family/parameters/provenance serialize and round-trip | Complete (4 focused tests, 34 kernel tests, 2026-07-27) |
+| Q0-03 | Add `EvidenceClaim` and `SourceReceipt` | Q0-01 | Claim provenance, conflict, hash, classification round-trip | Complete (focused contract tests, 2026-07-27) |
+| Q0-04 | Add `RelationshipContract` | Q0-01 | Type/units/lag/formula/provenance/state validate | Complete (focused contract tests, 2026-07-27) |
+| Q0-05 | Add `GraphProposal`, `ApprovalReceipt`, `SimulationRun` | Q0-02–04 | Approval binds exact versions; run records complete provenance | Complete (focused contract tests, 2026-07-27) |
+| Q0-06 | Extend graph/node schema compatibly | Q0-01–05 | Existing stored graph JSON loads with documented defaults | Complete (legacy fixture/default test, 2026-07-27) |
+| Q0-07 | Expose contract JSON schemas and examples | Q0-01–06 | API/docs schemas match kernel contracts | Complete (`contract_json_schemas()` and canonical Neodymium doc, 2026-07-27) |
 
 ## Gate 1 — Scientific Kernel
 

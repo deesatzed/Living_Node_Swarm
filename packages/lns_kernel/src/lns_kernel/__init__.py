@@ -11,7 +11,21 @@ from lns_kernel.models import (
     TransformKind,
     UpdateEvent,
 )
+from lns_kernel.contracts import (
+    ApprovalReceipt,
+    DistributionSpec,
+    EvidenceClaim,
+    EvidenceClass,
+    GraphProposal,
+    ParameterValue,
+    RelationshipContract,
+    RelationshipType,
+    SimulationRun,
+    SourceReceipt,
+    TargetContract,
+)
 from lns_kernel.simulation import SimulationCoordinator
+from lns_kernel.schemas import CONTRACT_MODELS, contract_json_schemas
 
 __all__ = [
     "DistributionFamily",
@@ -24,6 +38,19 @@ __all__ = [
     "TransformKind",
     "UpdateEvent",
     "SimulationCoordinator",
+    "CONTRACT_MODELS",
+    "contract_json_schemas",
+    "ApprovalReceipt",
+    "DistributionSpec",
+    "EvidenceClaim",
+    "EvidenceClass",
+    "GraphProposal",
+    "ParameterValue",
+    "RelationshipContract",
+    "RelationshipType",
+    "SimulationRun",
+    "SourceReceipt",
+    "TargetContract",
 ]
 
 __version__ = "0.1.0"

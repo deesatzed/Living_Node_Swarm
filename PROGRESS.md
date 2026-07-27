@@ -2,15 +2,15 @@
 
 ## Status Overview
 
-**0% complete – Initialization phase**
+**10% complete – Gate 0 contracts complete; Gate 1 scientific kernel next**
 
-The new domain-general goal has a hardened control surface, but no implementation work under the new goal has begun. The existing v0.1/v0.2 shell remains the verified baseline.
+The new domain-general goal has a hardened control surface and the first typed kernel contracts. The existing v0.1/v0.2 shell remains the verified baseline; no generalized research, authoring API, or workspace has been built yet.
 
 ## Current Baseline
 
 | Surface | Verified state |
 |---|---|
-| Kernel tests | 20 passed on 2026-07-27 |
+| Kernel tests | 37 passed on 2026-07-27 after all Gate 0 contract/compatibility/schema tests |
 | Server tests | 16 passed on 2026-07-27; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-27 |
 | Gas UI | Production build passed on 2026-07-27 |
@@ -40,7 +40,9 @@ The new domain-general goal has a hardened control surface, but no implementatio
 | Create actionable queue | Complete | Codex | `TASK_QUEUE.md` |
 | Create detailed design and implementation plans | Complete | Codex | Saved under `docs/plans/` |
 | Replace stale latest handoff | Complete | Codex | Active packet is `HANDOFF_2026-07-27_DOMAIN_GENERAL.md` |
-| Gate 0 contract implementation | Pending | Unassigned | First code milestone |
+| Q0-01 `TargetContract` | Complete | Codex | Immutable resolution-grade contract; 5 new tests, 25 kernel tests passed |
+| Q0-02 through Q0-05 contract slices | Complete | Codex | Distribution, evidence/source/conflict, relationship, proposal/approval/run contracts; 34 kernel tests passed |
+| Gate 0 compatibility and API schemas | Complete | Codex | Legacy graph defaults, public JSON-schema export, and canonical Neodymium contract doc; 37 kernel tests passed |
 | Gate 1 scientific kernel | Pending | Unassigned | Depends on Gate 0 |
 | Gate 2 safe research/provenance | Pending | Unassigned | Depends on Gate 0 |
 | Gate 3 generalized authoring | Pending | Unassigned | Depends on Gates 1–2 |
@@ -58,17 +60,15 @@ The new domain-general goal has a hardened control surface, but no implementatio
 
 ## Current Milestone
 
-**Gate 0 — Contracts and design**
+**Gate 1 — Scientific Kernel**
 
-Exit requires typed contract tests, compatible persistence/migration design, exact API shapes, and resolution of any blocking pending decision.
+Gate 0 exited on 2026-07-27: typed contract tests, legacy graph defaults, JSON-schema export, and a canonical target example are verified. The next exit is a registry with eight canonical distribution families, validation, sampling, units, lags, dependence warnings, diagnostics, and scoring primitives.
 
 ## Next Actions
 
-1. Complete the detailed implementation plan under `docs/plans/`.
-2. Start `Q0-01` in `TASK_QUEUE.md`: write failing tests for `TargetContract`.
-3. Implement contracts in the queue order.
-4. Run the focused test after each atomic change.
-5. Update this file with exact commands and results.
+1. Begin Q1-01 with a failing registry-catalog test for the eight canonical families and aliases.
+2. Keep existing serialized family names stable while adding registry metadata.
+3. Run focused tests after each atomic change and update this file with exact results.
 
 ## Blockers
 

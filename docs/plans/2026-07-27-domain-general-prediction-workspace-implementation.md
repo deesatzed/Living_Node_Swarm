@@ -170,7 +170,17 @@ git add packages/lns_kernel/src/lns_kernel/contracts.py packages/lns_kernel/test
 git commit -m "feat(kernel): add evidence and approval contracts"
 ```
 
-### Task 3: Distribution Registry Catalog
+### Gate 0 completion checkpoint
+
+Do not begin the scientific registry until the compatibility and public contract surfaces are proven:
+
+1. Complete Q0-06 with a fixture proving current stored graph/node JSON loads under documented defaults without a semantic change.
+2. Complete Q0-07 by exposing versioned JSON schemas and canonical Neodymium examples for every Gate 0 contract.
+3. Update `PROGRESS.md` and `TASK_QUEUE.md` with the command results.
+
+This checkpoint corrects an earlier sequencing error in this plan: Q1-01 depends on Q0-02 conceptually, but the project control queue requires the full Gate 0 compatibility/API proof before any Gate 1 work.
+
+### Task 3: Distribution Registry Catalog (after Q0-06/Q0-07)
 
 **Files:**
 

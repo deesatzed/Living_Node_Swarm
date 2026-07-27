@@ -65,6 +65,11 @@ class Node(BaseModel):
     updated_at: datetime = Field(default_factory=utcnow)
     discovery_rationale: str | None = None
     tags: list[str] = Field(default_factory=list)
+    # General-workspace metadata. Defaults deliberately preserve v0 graph semantics.
+    distribution_spec_id: str | None = None
+    evidence_claim_ids: list[str] = Field(default_factory=list)
+    relationship_ids: list[str] = Field(default_factory=list)
+    schema_version: int = Field(default=1, ge=1)
 
     @field_validator("id")
     @classmethod
@@ -85,6 +90,10 @@ class Graph(BaseModel):
     nodes: dict[str, Node] = Field(default_factory=dict)
     layout: dict[str, NodeLayout] = Field(default_factory=dict)
     graph_version: int = 1
+    # These optional links are introduced without changing legacy graph behavior.
+    target_contract_id: str | None = None
+    active_approval_id: str | None = None
+    schema_version: int = Field(default=1, ge=1)
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
 
