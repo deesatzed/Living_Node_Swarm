@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
+from typing import Mapping
 
 
 @dataclass(frozen=True)
@@ -116,3 +118,84 @@ def get_family(identifier: str) -> FamilyDefinition:
     if canonical is None:
         raise KeyError(f"unknown distribution family: {identifier}")
     return REGISTRY[canonical]
+
+
+def validate_family_parameters(identifier: str, parameters: Mapping[str, float]) -> FamilyDefinition:
+    """Validate a canonical parameter mapping before a distribution is sampled."""
+
+    family = get_family(identifier)
+    expected = set(family.parameters)
+    supplied = set(parameters)
+    missing = expected - supplied
+    unexpected = supplied - expected
+    if missing or unexpected:
+        details = []
+        if missing:
+            details.append(f"missing: {', '.join(sorted(missing))}")
+        if unexpected:
+            details.append(f"unexpected: {', '.join(sorted(unexpected))}")
+        raise ValueError(f"{family.id} parameters do not match registry ({'; '.join(details)})")
+    for parameter_id, value in parameters.items():
+        if not math.isfinite(value):
+            raise ValueError(f"{parameter_id} must be finite")
+    for definition in family.parameter_definitions:
+        value = parameters[definition.id]
+        if definition.lower is not None:
+            if definition.lower_open and value <= definition.lower:
+                raise ValueError(f"{definition.id} must be > {definition.lower:g}")
+            if not definition.lower_open and value < definition.lower:
+                raise ValueError(f"{definition.id} must be >= {definition.lower:g}")
+    if family.id == "NegativeBinomial" and parameters["p"] >= 1:
+        raise ValueError("p must be between 0 and 1")
+    return family
+
+
+def distribution_statistics(identifier: str, parameters: Mapping[str, float]) -> dict[str, float | None]:
+    """Return only analytic statistics that are defined and defensible for the family."""
+
+    family = validate_family_parameters(identifier, parameters)
+    stats: dict[str, float | None] = {
+        "mean": None,
+        "median": None,
+        "mode": None,
+        "variance": None,
+        "support_lower": family.support.lower,
+        "support_upper": family.support.upper,
+    }
+    if family.id == "Normal":
+        stats.update(mean=parameters["mu"], median=parameters["mu"], mode=parameters["mu"], variance=parameters["sigma"] ** 2)
+    elif family.id == "LogNormal":
+        loc, scale = parameters["log_loc"], parameters["log_scale"]
+        stats.update(
+            mean=math.exp(loc + scale**2 / 2),
+            median=math.exp(loc),
+            mode=math.exp(loc - scale**2),
+            variance=(math.exp(scale**2) - 1) * math.exp(2 * loc + scale**2),
+        )
+    elif family.id == "Beta":
+        alpha, beta = parameters["alpha"], parameters["beta"]
+        stats.update(mean=alpha / (alpha + beta), variance=(alpha * beta) / ((alpha + beta) ** 2 * (alpha + beta + 1)))
+        if alpha > 1 and beta > 1:
+            stats["mode"] = (alpha - 1) / (alpha + beta - 2)
+    elif family.id == "Poisson":
+        stats.update(mean=parameters["rate"], variance=parameters["rate"])
+    elif family.id == "NegativeBinomial":
+        n, p = parameters["n"], parameters["p"]
+        stats.update(mean=n * (1 - p) / p, variance=n * (1 - p) / p**2)
+    elif family.id == "Gamma":
+        shape, scale = parameters["shape"], parameters["scale"]
+        stats.update(mean=shape * scale, variance=shape * scale**2)
+        if shape >= 1:
+            stats["mode"] = (shape - 1) * scale
+    elif family.id == "StudentT":
+        df, loc, scale = parameters["df"], parameters["loc"], parameters["scale"]
+        if df > 1:
+            stats["mean"] = loc
+        if df > 2:
+            stats["variance"] = scale**2 * df / (df - 2)
+        if df == 1:
+            stats["mode"] = loc
+    elif family.id == "Deterministic":
+        value = parameters["value"]
+        stats.update(mean=value, median=value, mode=value, variance=0.0)
+    return stats

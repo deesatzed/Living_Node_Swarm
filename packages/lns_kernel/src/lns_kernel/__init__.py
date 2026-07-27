@@ -26,7 +26,16 @@ from lns_kernel.contracts import (
 )
 from lns_kernel.simulation import SimulationCoordinator
 from lns_kernel.schemas import CONTRACT_MODELS, contract_json_schemas
-from lns_kernel.distributions import ALIASES, REGISTRY, FamilyDefinition, ParameterDefinition, SupportDefinition, get_family
+from lns_kernel.distributions import (
+    ALIASES,
+    REGISTRY,
+    FamilyDefinition,
+    ParameterDefinition,
+    SupportDefinition,
+    distribution_statistics,
+    get_family,
+    validate_family_parameters,
+)
 
 __all__ = [
     "DistributionFamily",
@@ -47,6 +56,8 @@ __all__ = [
     "ParameterDefinition",
     "SupportDefinition",
     "get_family",
+    "distribution_statistics",
+    "validate_family_parameters",
     "ApprovalReceipt",
     "DistributionSpec",
     "EvidenceClaim",
