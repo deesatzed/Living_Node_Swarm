@@ -10,7 +10,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 
 | Surface | Verified state |
 |---|---|
-| Kernel tests | 37 passed on 2026-07-27 after all Gate 0 contract/compatibility/schema tests |
+| Kernel tests | 42 passed on 2026-07-27 after Gate 0 and the canonical distribution catalog |
 | Server tests | 16 passed on 2026-07-27; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-27 |
 | Gas UI | Production build passed on 2026-07-27 |
@@ -43,6 +43,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Q0-01 `TargetContract` | Complete | Codex | Immutable resolution-grade contract; 5 new tests, 25 kernel tests passed |
 | Q0-02 through Q0-05 contract slices | Complete | Codex | Distribution, evidence/source/conflict, relationship, proposal/approval/run contracts; 34 kernel tests passed |
 | Gate 0 compatibility and API schemas | Complete | Codex | Legacy graph defaults, public JSON-schema export, and canonical Neodymium contract doc; 37 kernel tests passed |
+| Q1-01 distribution registry | Complete | Codex | Eight canonical families, support/parameter metadata, aliases; 42 kernel tests passed |
 | Gate 1 scientific kernel | Pending | Unassigned | Depends on Gate 0 |
 | Gate 2 safe research/provenance | Pending | Unassigned | Depends on Gate 0 |
 | Gate 3 generalized authoring | Pending | Unassigned | Depends on Gates 1–2 |
@@ -66,9 +67,10 @@ Gate 0 exited on 2026-07-27: typed contract tests, legacy graph defaults, JSON-s
 
 ## Next Actions
 
-1. Begin Q1-01 with a failing registry-catalog test for the eight canonical families and aliases.
-2. Keep existing serialized family names stable while adding registry metadata.
-3. Run focused tests after each atomic change and update this file with exact results.
+1. Complete Q1-02: registry-backed parameter/support validation and derived statistics.
+2. Complete Q1-03: seeded sampling for all eight canonical families.
+3. Keep existing serialized family names stable while adding registry behavior.
+4. Run focused tests after each atomic change and update this file with exact results.
 
 ## Blockers
 

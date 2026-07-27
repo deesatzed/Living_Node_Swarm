@@ -25,7 +25,7 @@
 
 | ID | Task | Depends on | Acceptance | Status |
 |---|---|---|---|---|
-| Q1-01 | Create distribution registry | Q0-02 | Eight canonical families and aliases defined once | Pending |
+| Q1-01 | Create distribution registry | Q0-02 | Eight canonical families and aliases defined once | Complete (5 focused tests, 42 kernel tests, 2026-07-27) |
 | Q1-02 | Implement registry validation and derived statistics | Q1-01 | Invalid parameters/support fail; derived values match reference tolerances | Pending |
 | Q1-03 | Implement seeded sampling for all families | Q1-01 | Support, reproducibility, and approximate-moment tests pass | Pending |
 | Q1-04 | Migrate existing family parameter names | Q1-01–03 | Old graphs round-trip or migrate without silent semantic change | Pending |

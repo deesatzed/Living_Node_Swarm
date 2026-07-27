@@ -17,6 +17,10 @@ class DistributionFamily(str, Enum):
     NORMAL = "Normal"
     LOGNORMAL = "LogNormal"
     BETA = "Beta"
+    POISSON = "Poisson"
+    NEGATIVE_BINOMIAL = "NegativeBinomial"
+    GAMMA = "Gamma"
+    STUDENT_T = "StudentT"
     DETERMINISTIC = "Deterministic"
 
 
