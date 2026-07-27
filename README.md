@@ -4,6 +4,8 @@ Domain-agnostic **explicit probabilistic node graph** with **on-change ensemble 
 
 **Kalshi track:** project-only account (~$10) for real market mids, resolution scoring, and optional **micro-stakes** experiments. Not investment advice. See `docs/integrations/kalshi-mcp.md` and skill `kalshi-lns`.
 
+> **Current build vs active goal:** The code today is the verified v0.1–0.2 shell described below. The active goal is to turn the base app into a domain-general Prediction Workspace with resolution-grade targets, cited research, extensive multi-hop factor authoring, explicit distribution/relationship review, and a visual trust surface. Gas will become a shared preset rather than the product boundary. See `GOAL.md`, `TASK_QUEUE.md`, and `docs/plans/2026-07-27-domain-general-prediction-workspace-design.md`. These future capabilities are not yet implemented.
+
 ## Product acceptance path
 
 1. Load seed graph  

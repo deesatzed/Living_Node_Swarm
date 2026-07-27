@@ -1,0 +1,106 @@
+# TASK_QUEUE.md
+
+## Queue Rules
+
+1. Execute in dependency order.
+2. One task equals one focused patch plus nearest verification.
+3. Write or identify the failing test before implementation.
+4. Update `PROGRESS.md` after verification.
+5. Record any consequential deviation in `DECISIONS.md`.
+6. Do not start a later gate while a required earlier gate is red.
+
+## Gate 0 — Contracts
+
+| ID | Task | Depends on | Acceptance | Status |
+|---|---|---|---|---|
+| Q0-01 | Add `TargetContract` model and validation tests | — | Exact oracle/basis/horizon/fallback fields validate; ambiguous targets fail | Ready |
+| Q0-02 | Add `DistributionSpec` and canonical schema version | Q0-01 | Registered family/parameters/provenance serialize and round-trip | Pending |
+| Q0-03 | Add `EvidenceClaim` and `SourceReceipt` | Q0-01 | Claim provenance, conflict, hash, classification round-trip | Pending |
+| Q0-04 | Add `RelationshipContract` | Q0-01 | Type/units/lag/formula/provenance/state validate | Pending |
+| Q0-05 | Add `GraphProposal`, `ApprovalReceipt`, `SimulationRun` | Q0-02–04 | Approval binds exact versions; run records complete provenance | Pending |
+| Q0-06 | Extend graph/node schema compatibly | Q0-01–05 | Existing stored graph JSON loads with documented defaults | Pending |
+| Q0-07 | Expose contract JSON schemas and examples | Q0-01–06 | API/docs schemas match kernel contracts | Pending |
+
+## Gate 1 — Scientific Kernel
+
+| ID | Task | Depends on | Acceptance | Status |
+|---|---|---|---|---|
+| Q1-01 | Create distribution registry | Q0-02 | Eight canonical families and aliases defined once | Pending |
+| Q1-02 | Implement registry validation and derived statistics | Q1-01 | Invalid parameters/support fail; derived values match reference tolerances | Pending |
+| Q1-03 | Implement seeded sampling for all families | Q1-01 | Support, reproducibility, and approximate-moment tests pass | Pending |
+| Q1-04 | Migrate existing family parameter names | Q1-01–03 | Old graphs round-trip or migrate without silent semantic change | Pending |
+| Q1-05 | Add dimension/unit validation | Q0-04 | Invalid affine/sum relationships fail before simulation | Pending |
+| Q1-06 | Add forecast origin/horizon and time-expanded lag validation | Q0-01, Q0-04 | Lagged paths work; same-time cycles still fail | Pending |
+| Q1-07 | Add shared-latent dependence warnings | Q0-04 | correlated/duplicate candidates surface unresolved warnings | Pending |
+| Q1-08 | Add convergence/stability diagnostics | Q1-03 | multi-seed/sample-size report saved with every run | Pending |
+| Q1-09 | Add continuous scoring primitives | Q0-01 | CRPS/interval coverage tests pass on reference examples | Pending |
+
+## Gate 2 — Safe Research and Provenance
+
+| ID | Task | Depends on | Acceptance | Status |
+|---|---|---|---|---|
+| Q2-01 | Implement URL safety validator | Q0-03 | private/reserved/metadata destinations and unsafe redirects fail | Pending |
+| Q2-02 | Implement bounded HTTP fetcher | Q2-01 | scheme/type/size/time/redirect controls tested | Pending |
+| Q2-03 | Implement evidence/source persistence | Q0-03 | receipts and claims survive restart and preserve hashes | Pending |
+| Q2-04 | Implement untrusted-content extraction boundary | Q2-02 | page instructions cannot alter system/provider instructions | Pending |
+| Q2-05 | Implement provider payload preview and routing receipt | Q2-03–04 | user sees provider/model/data scope before send | Pending |
+| Q2-06 | Implement bounded research plan | Q2-03–05 | source diversity, contradiction search, saturation, budget, gaps recorded | Pending |
+| Q2-07 | Add research security/provenance suite | Q2-01–06 | all required attack/receipt cases pass | Pending |
+
+## Gate 3 — Generalized Authoring
+
+| ID | Task | Depends on | Acceptance | Status |
+|---|---|---|---|---|
+| Q3-01 | Add target-intake API | Q0-07 | valid target stored; missing basis/horizon rejected | Pending |
+| Q3-02 | Add research-review API | Q2-06 | user can accept/reject claims before model proposal | Pending |
+| Q3-03 | Add ranked candidate-graph proposal | Q1-01, Q2-06 | deterministic fixture yields 15 distinct candidates and a three-hop path | Pending |
+| Q3-04 | Add distribution elicitation/fit service | Q1-02 | quantiles map to valid family params with receipt | Pending |
+| Q3-05 | Add relationship proposal/validation | Q1-05–07 | units, lags, duplicates, dependence warnings returned | Pending |
+| Q3-06 | Add shadow active-vs-candidate simulation | Q1-08, Q3-03–05 | candidate never mutates active graph; paired run IDs returned | Pending |
+| Q3-07 | Add version-bound approval workflow | Q0-05, Q3-06 | edit invalidates approval; approved graph becomes active atomically | Pending |
+| Q3-08 | Add authoring API integration suite | Q3-01–07 | full fixture journey passes | Pending |
+
+## Gate 4 — Prediction Workspace
+
+| ID | Task | Depends on | Acceptance | Status |
+|---|---|---|---|---|
+| Q4-01 | Scaffold private `lns_ui_shared` package | Q0-07 | both apps consume shared types/client | Pending |
+| Q4-02 | Build target-intake and research-consent flow | Q3-01–02, Q4-01 | accessible forms and error states tested | Pending |
+| Q4-03 | Build target-centered hop graph | Q3-03, Q4-01 | 30-node deterministic layout has no default overlap | Pending |
+| Q4-04 | Build node distribution inspector | Q1-01–04, Q4-01 | eight family forms/curves/derived values tested | Pending |
+| Q4-05 | Build relationship inspector | Q3-05, Q4-01 | type, units, lag, evidence, state editable/reviewable | Pending |
+| Q4-06 | Build evidence drawer and warning center | Q2-03, Q4-01 | claims/conflicts/unknowns trace to nodes | Pending |
+| Q4-07 | Build active-vs-candidate comparison | Q3-06, Q4-01 | paths and distribution changes visible; no false improvement label | Pending |
+| Q4-08 | Build approval and run-receipt views | Q3-07, Q4-01 | version-bound review and receipts visible | Pending |
+| Q4-09 | Add component/accessibility tests | Q4-02–08 | keyboard, labels, statuses, reduced motion pass | Pending |
+| Q4-10 | Add Playwright canonical flow and screenshots | Q4-02–09 | full 15-factor journey passes at both viewports | Pending |
+
+## Gate 5 — Neodymium Acceptance
+
+| ID | Task | Depends on | Acceptance | Status |
+|---|---|---|---|---|
+| Q5-01 | Confirm exact Neodymium target oracle | Q3-01 | private-investor retail basis explicitly confirmed and snapshotted | Pending |
+| Q5-02 | Execute consented research packet | Q2-07, Q5-01 | claims, conflicts, contradictions, gaps preserved | Pending |
+| Q5-03 | Generate/review 15+ candidate graph | Q3-08, Q5-02 | ranking, exclusions, three-hop path, warnings present | Pending |
+| Q5-04 | Approve and simulate selected graph | Q4-10, Q5-03 | reproducible run and convergence receipt saved | Pending |
+| Q5-05 | Run baseline/direct/multi-hop evaluation | Q1-09, Q5-04 | leakage-safe report or explicit data limitation saved | Pending |
+| Q5-06 | Save acceptance and visual packet | Q5-01–05 | `docs/verification/neodymium/` complete | Pending |
+
+## Gate 6 — Gas Adapter
+
+| ID | Task | Depends on | Acceptance | Status |
+|---|---|---|---|---|
+| Q6-01 | Define gas preset contract | Q3-08 | gas-specific inputs map to general contracts | Pending |
+| Q6-02 | Replace duplicate gas UI with shared workspace preset | Q4-10, Q6-01 | gas app uses shared components | Pending |
+| Q6-03 | Isolate Kalshi panel and disable real-money actions by default | Q6-02 | no live action without separate explicit enable/review | Pending |
+| Q6-04 | Remove/hard-gate bulk activation semantics | Q3-07, Q6-02 | invalid/unreviewed batch cannot activate | Pending |
+| Q6-05 | Run gas regression suite | Q6-01–04 | existing and new gas tests/builds pass | Pending |
+
+## Gate 7 — CI, Truthful Docs, Completion
+
+| ID | Task | Depends on | Acceptance | Status |
+|---|---|---|---|---|
+| Q7-01 | Add CI workflows | Q1–Q6 complete | Python/UI/E2E/diff checks run from clean checkout | Pending |
+| Q7-02 | Run release/reality audit | Q7-01 | claims match code and evidence | Pending |
+| Q7-03 | Update README and handoff | Q7-02 | verified/current/limited/deferred states explicit | Pending |
+| Q7-04 | Final completion review | Q7-01–03 | every `GOAL.md` proof item has current evidence | Pending |
