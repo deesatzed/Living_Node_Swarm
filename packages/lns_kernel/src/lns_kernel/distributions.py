@@ -59,8 +59,8 @@ def _family(
 REGISTRY: dict[str, FamilyDefinition] = {
     "Normal": _family(
         "Normal", "A symmetric continuous quantity around a central expected value.", SupportDefinition(),
-        _parameter("mu", "Mean", "Expected value."),
-        _parameter("sigma", "Standard deviation", "Spread around the mean.", lower=0, lower_open=True),
+        _parameter("loc", "Location", "Central expected value."),
+        _parameter("scale", "Scale", "Positive spread around the location.", lower=0, lower_open=True),
     ),
     "LogNormal": _family(
         "LogNormal", "A positive continuous quantity with right-tail uncertainty, modeled in log space.", SupportDefinition(lower=0, lower_open=True),
@@ -78,8 +78,8 @@ REGISTRY: dict[str, FamilyDefinition] = {
     ),
     "NegativeBinomial": _family(
         "NegativeBinomial", "An over-dispersed non-negative count.", SupportDefinition(lower=0),
-        _parameter("n", "Dispersion", "Positive count-dispersion shape.", lower=0, lower_open=True),
-        _parameter("p", "Success probability", "Probability strictly between zero and one.", lower=0, lower_open=True),
+        _parameter("mean", "Mean count", "Expected count for the specified exposure.", lower=0),
+        _parameter("dispersion", "Dispersion", "Positive NB2 dispersion; larger is closer to Poisson.", lower=0, lower_open=True),
     ),
     "Gamma": _family(
         "Gamma", "A positive continuous quantity with asymmetric right-tail uncertainty.", SupportDefinition(lower=0, lower_open=True),
@@ -122,10 +122,37 @@ def get_family(identifier: str) -> FamilyDefinition:
     return REGISTRY[canonical]
 
 
+LEGACY_PARAMETER_NAMES: dict[str, dict[str, str]] = {
+    "Normal": {"mu": "loc", "sigma": "scale"},
+    "LogNormal": {"mu": "log_loc", "sigma": "log_scale"},
+    "Beta": {"a": "alpha", "b": "beta"},
+}
+
+
+def normalize_parameters(identifier: str, parameters: Mapping[str, float]) -> dict[str, float]:
+    """Return frozen canonical parameter names, accepting only documented legacy payloads."""
+
+    family = get_family(identifier)
+    supplied = set(parameters)
+    canonical = set(family.parameters)
+    if supplied == canonical:
+        return dict(parameters)
+    legacy_names = LEGACY_PARAMETER_NAMES.get(family.id)
+    if legacy_names is not None and supplied == set(legacy_names):
+        return {canonical_name: parameters[legacy_name] for legacy_name, canonical_name in legacy_names.items()}
+    if family.id == "NegativeBinomial" and supplied == {"n", "p"}:
+        n, p = parameters["n"], parameters["p"]
+        if not 0 < p < 1:
+            raise ValueError("p must be between 0 and 1")
+        return {"mean": n * (1 - p) / p, "dispersion": n}
+    return dict(parameters)
+
+
 def validate_family_parameters(identifier: str, parameters: Mapping[str, float]) -> FamilyDefinition:
     """Validate a canonical parameter mapping before a distribution is sampled."""
 
     family = get_family(identifier)
+    parameters = normalize_parameters(identifier, parameters)
     expected = set(family.parameters)
     supplied = set(parameters)
     missing = expected - supplied
@@ -147,14 +174,13 @@ def validate_family_parameters(identifier: str, parameters: Mapping[str, float])
                 raise ValueError(f"{definition.id} must be > {definition.lower:g}")
             if not definition.lower_open and value < definition.lower:
                 raise ValueError(f"{definition.id} must be >= {definition.lower:g}")
-    if family.id == "NegativeBinomial" and parameters["p"] >= 1:
-        raise ValueError("p must be between 0 and 1")
     return family
 
 
 def distribution_statistics(identifier: str, parameters: Mapping[str, float]) -> dict[str, float | None]:
     """Return only analytic statistics that are defined and defensible for the family."""
 
+    parameters = normalize_parameters(identifier, parameters)
     family = validate_family_parameters(identifier, parameters)
     stats: dict[str, float | None] = {
         "mean": None,
@@ -165,7 +191,7 @@ def distribution_statistics(identifier: str, parameters: Mapping[str, float]) ->
         "support_upper": family.support.upper,
     }
     if family.id == "Normal":
-        stats.update(mean=parameters["mu"], median=parameters["mu"], mode=parameters["mu"], variance=parameters["sigma"] ** 2)
+        stats.update(mean=parameters["loc"], median=parameters["loc"], mode=parameters["loc"], variance=parameters["scale"] ** 2)
     elif family.id == "LogNormal":
         loc, scale = parameters["log_loc"], parameters["log_scale"]
         stats.update(
@@ -182,8 +208,8 @@ def distribution_statistics(identifier: str, parameters: Mapping[str, float]) ->
     elif family.id == "Poisson":
         stats.update(mean=parameters["rate"], variance=parameters["rate"])
     elif family.id == "NegativeBinomial":
-        n, p = parameters["n"], parameters["p"]
-        stats.update(mean=n * (1 - p) / p, variance=n * (1 - p) / p**2)
+        mean, dispersion = parameters["mean"], parameters["dispersion"]
+        stats.update(mean=mean, variance=mean + mean**2 / dispersion)
     elif family.id == "Gamma":
         shape, scale = parameters["shape"], parameters["scale"]
         stats.update(mean=shape * scale, variance=shape * scale**2)
@@ -214,10 +240,11 @@ def sample_distribution(
 
     if size <= 0:
         raise ValueError("size must be positive")
+    parameters = normalize_parameters(identifier, parameters)
     family = validate_family_parameters(identifier, parameters)
     rng = np.random.default_rng(seed)
     if family.id == "Normal":
-        return rng.normal(parameters["mu"], parameters["sigma"], size=size)
+        return rng.normal(parameters["loc"], parameters["scale"], size=size)
     if family.id == "LogNormal":
         return rng.lognormal(parameters["log_loc"], parameters["log_scale"], size=size)
     if family.id == "Beta":
@@ -225,7 +252,9 @@ def sample_distribution(
     if family.id == "Poisson":
         return rng.poisson(parameters["rate"], size=size).astype(float)
     if family.id == "NegativeBinomial":
-        return rng.negative_binomial(parameters["n"], parameters["p"], size=size).astype(float)
+        mean, dispersion = parameters["mean"], parameters["dispersion"]
+        probability = dispersion / (dispersion + mean)
+        return rng.negative_binomial(dispersion, probability, size=size).astype(float)
     if family.id == "Gamma":
         return rng.gamma(parameters["shape"], parameters["scale"], size=size)
     if family.id == "StudentT":

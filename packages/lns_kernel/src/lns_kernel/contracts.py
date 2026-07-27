@@ -12,6 +12,8 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from lns_kernel.units import assert_relationship_units
+
 
 def _require_aware_datetime(value: datetime) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
@@ -315,6 +317,12 @@ class RelationshipContract(ContractModel):
             raise ValueError("parent_node_id and child_node_id must differ")
         if self.transform == "affine" and self.coefficient_units is None:
             raise ValueError("affine relationships require coefficient_units")
+        assert_relationship_units(
+            transform=self.transform,
+            source_unit=self.source_unit,
+            target_unit=self.target_unit,
+            coefficient_units=self.coefficient_units,
+        )
         return self
 
 

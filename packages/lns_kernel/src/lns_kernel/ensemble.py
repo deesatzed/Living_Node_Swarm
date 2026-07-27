@@ -7,6 +7,7 @@ from typing import Callable
 import numpy as np
 
 from lns_kernel.dependencies import topological_order
+from lns_kernel.distributions import normalize_parameters
 from lns_kernel.models import (
     DistributionFamily,
     Freshness,
@@ -20,12 +21,13 @@ from lns_kernel.models import (
 def _sample_family(
     family: DistributionFamily, parameters: dict[str, float], n: int, rng: np.random.Generator
 ) -> np.ndarray:
+    canonical = normalize_parameters(family.value, parameters)
     if family == DistributionFamily.NORMAL:
-        return rng.normal(parameters["mu"], parameters["sigma"], size=n)
+        return rng.normal(canonical["loc"], canonical["scale"], size=n)
     if family == DistributionFamily.LOGNORMAL:
-        return rng.lognormal(parameters["mu"], parameters["sigma"], size=n)
+        return rng.lognormal(canonical["log_loc"], canonical["log_scale"], size=n)
     if family == DistributionFamily.BETA:
-        return rng.beta(parameters["a"], parameters["b"], size=n)
+        return rng.beta(canonical["alpha"], canonical["beta"], size=n)
     if family == DistributionFamily.DETERMINISTIC:
         return np.full(n, parameters["value"], dtype=float)
     raise ValueError(f"Unsupported family {family}")

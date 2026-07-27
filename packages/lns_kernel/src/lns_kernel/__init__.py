@@ -34,9 +34,11 @@ from lns_kernel.distributions import (
     SupportDefinition,
     distribution_statistics,
     get_family,
+    normalize_parameters,
     sample_distribution,
     validate_family_parameters,
 )
+from lns_kernel.units import assert_relationship_units, parse_unit
 
 __all__ = [
     "DistributionFamily",
@@ -57,9 +59,12 @@ __all__ = [
     "ParameterDefinition",
     "SupportDefinition",
     "get_family",
+    "normalize_parameters",
     "distribution_statistics",
     "sample_distribution",
     "validate_family_parameters",
+    "assert_relationship_units",
+    "parse_unit",
     "ApprovalReceipt",
     "DistributionSpec",
     "EvidenceClaim",

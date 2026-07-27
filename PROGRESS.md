@@ -10,11 +10,11 @@ The new domain-general goal has a hardened control surface and the first typed k
 
 | Surface | Verified state |
 |---|---|
-| Kernel tests | 57 passed on 2026-07-27 after seeded sampling across all eight canonical families |
+| Kernel tests | 63 passed on 2026-07-27 after relationship dimensional validation |
 | Server tests | 16 passed on 2026-07-27; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-27 |
 | Gas UI | Production build passed on 2026-07-27 |
-| Current families | Normal, LogNormal, Beta, Deterministic |
+| Current families | Eight canonical registry families; legacy node payloads remain readable through explicit parameter normalization |
 | Current graph | Static DAG with affine/sum/mean transforms |
 | Current research/provenance | Not implemented |
 | Current generalized authoring UX | Not implemented |
@@ -46,6 +46,8 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Q1-01 distribution registry | Complete | Codex | Eight canonical families, support/parameter metadata, aliases; 42 kernel tests passed |
 | Q1-02 validation/statistics | Complete | Codex | Registry-backed finite/parameter/support validation and explicit analytic statistics; 48 kernel tests passed |
 | Q1-03 seeded sampling | Complete | Codex | Reproducible support-checked sampling for every canonical family; 57 kernel tests passed |
+| Q1-04 parameter compatibility | Complete | Codex | Legacy node payloads round-trip; runtime normalizes documented legacy names to frozen registry parameterization; 60 kernel tests passed |
+| Q1-05 relationship units | Complete | Codex | Affine coefficient dimensions and aggregate unit compatibility reject invalid graph edges; 63 kernel tests passed |
 | Gate 1 scientific kernel | Pending | Unassigned | Depends on Gate 0 |
 | Gate 2 safe research/provenance | Pending | Unassigned | Depends on Gate 0 |
 | Gate 3 generalized authoring | Pending | Unassigned | Depends on Gates 1–2 |
@@ -69,10 +71,9 @@ Gate 0 exited on 2026-07-27: typed contract tests, legacy graph defaults, JSON-s
 
 ## Next Actions
 
-1. Complete Q1-04: migrate legacy family parameter names without silent semantic change.
-2. Complete Q1-05: add dimension and unit validation for relationships.
-3. Keep existing serialized family names stable while adding registry behavior.
-4. Run focused tests after each atomic change and update this file with exact results.
+1. Complete Q1-06: add forecast horizon and time-expanded lag validation.
+2. Complete Q1-07: add shared-latent dependence warnings.
+3. Run focused tests after each atomic change and update this file with exact results.
 
 ## Blockers
 
