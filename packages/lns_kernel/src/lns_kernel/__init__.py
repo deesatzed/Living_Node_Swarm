@@ -41,6 +41,7 @@ from lns_kernel.distributions import (
 from lns_kernel.units import assert_relationship_units, parse_unit
 from lns_kernel.temporal import expand_time_relationships, validate_temporal_relationships
 from lns_kernel.dependence import DependenceWarning, detect_dependence_warnings
+from lns_kernel.scoring import crps_empirical, interval_coverage
 
 __all__ = [
     "DistributionFamily",
@@ -71,6 +72,8 @@ __all__ = [
     "validate_temporal_relationships",
     "DependenceWarning",
     "detect_dependence_warnings",
+    "crps_empirical",
+    "interval_coverage",
     "ApprovalReceipt",
     "DistributionSpec",
     "EvidenceClaim",
