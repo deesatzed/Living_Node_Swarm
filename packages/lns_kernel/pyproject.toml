@@ -1,0 +1,26 @@
+[project]
+name = "lns-kernel"
+version = "0.1.0"
+description = "Living Node Swarm kernel — probabilistic graph + ensemble MC"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.26",
+  "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.sources]
+"src/lns_kernel" = "lns_kernel"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lns_kernel"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
