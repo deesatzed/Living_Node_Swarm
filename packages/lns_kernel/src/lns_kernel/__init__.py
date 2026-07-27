@@ -39,6 +39,7 @@ from lns_kernel.distributions import (
     validate_family_parameters,
 )
 from lns_kernel.units import assert_relationship_units, parse_unit
+from lns_kernel.temporal import expand_time_relationships, validate_temporal_relationships
 
 __all__ = [
     "DistributionFamily",
@@ -65,6 +66,8 @@ __all__ = [
     "validate_family_parameters",
     "assert_relationship_units",
     "parse_unit",
+    "expand_time_relationships",
+    "validate_temporal_relationships",
     "ApprovalReceipt",
     "DistributionSpec",
     "EvidenceClaim",

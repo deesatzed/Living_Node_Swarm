@@ -15,6 +15,7 @@ def relationship(**overrides):
         "target_unit": "USD/kg",
         "sign": "positive",
         "lag_periods": 1,
+        "lag_unit": "month",
         "coefficient_units": "USD*year/(kg*vehicles)",
     }
     values.update(overrides)

@@ -27,6 +27,7 @@ This file records product and architecture decisions that future agents must pre
 | D-017 | 2026-07-27 | Continuous targets require continuous scoring and leakage-safe comparison; Brier remains binary-only. | Accepted | Correct scoring depends on target type. |
 | D-018 | 2026-07-27 | The generalized UI lives in a shared package; `lns_ui` is canonical and gas consumes it as a preset/adapter. | Accepted | Prevents two drifting products. |
 | D-019 | 2026-07-27 | No live Kalshi trade occurs during this goal. | Accepted | Trading is not required to prove the generalized product and has separate safety gaps. |
+| D-020 | 2026-07-27 | Every nonzero relationship lag declares `day`, `week`, `month`, `quarter`, `year`, or `step`; one time-expanded graph uses one shared lag clock. | Accepted | A bare lag number is scientifically ambiguous and makes temporal DAG validation unreliable. |
 
 ## Initial Default Decisions
 

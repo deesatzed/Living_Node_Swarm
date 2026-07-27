@@ -282,6 +282,7 @@ class RelationshipContract(ContractModel):
     target_unit: str
     sign: str
     lag_periods: int = Field(ge=0)
+    lag_unit: str | None = None
     coefficient_units: str | None = None
     state: str = "proposed"
     evidence_claim_ids: tuple[str, ...] = ()
@@ -295,6 +296,7 @@ class RelationshipContract(ContractModel):
         "source_unit",
         "target_unit",
         "sign",
+        "lag_unit",
         "coefficient_units",
         "state",
     )
@@ -317,6 +319,10 @@ class RelationshipContract(ContractModel):
             raise ValueError("parent_node_id and child_node_id must differ")
         if self.transform == "affine" and self.coefficient_units is None:
             raise ValueError("affine relationships require coefficient_units")
+        if self.lag_periods > 0 and self.lag_unit not in {"day", "week", "month", "quarter", "year", "step"}:
+            raise ValueError("nonzero lag_periods require lag_unit day|week|month|quarter|year|step")
+        if self.lag_periods == 0 and self.lag_unit is not None:
+            raise ValueError("lag_unit must be omitted when lag_periods is zero")
         assert_relationship_units(
             transform=self.transform,
             source_unit=self.source_unit,
