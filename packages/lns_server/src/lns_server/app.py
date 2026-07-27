@@ -87,6 +87,26 @@ class JournalCloseBody(BaseModel):
     exit_reason: str = "manual"
 
 
+class TradeOrderBody(BaseModel):
+    """Place or preview a Kalshi order. confirm=false (default) never hits the exchange."""
+
+    ticker: str
+    action: str = "buy"  # buy | sell
+    side: str = "yes"  # yes | no
+    contracts: int = 1
+    limit_price_cents: int | None = None
+    confirm: bool = False
+    journal: bool = True  # open/close journal entry on execute
+    graph_id: str | None = None
+    notes: str = ""
+
+
+class AutoSellBody(BaseModel):
+    """Check open journal positions; sell on Kalshi when 20% mid move hit."""
+
+    confirm: bool = False  # false = dry-run evaluations only
+
+
 class ProposeNodeBody(BaseModel):
     """AI proposes a node via OpenRouter. model is required unless OPENROUTER_MODEL is set."""
 
@@ -703,6 +723,140 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/scoring/brier")
     def score_brier(p: float = Query(..., ge=0, le=1), y: int = Query(..., ge=0, le=1)) -> dict[str, Any]:
         return {"p": p, "y": y, "brier": brier(p, y)}
+
+    @app.get("/kalshi/balance")
+    def kalshi_balance() -> dict[str, Any]:
+        try:
+            bal = kalshi.get_balance()
+        except KalshiError as e:
+            raise HTTPException(400, str(e)) from e
+        return {"env": kalshi.env_label, "balance": bal}
+
+    @app.post("/kalshi/orders")
+    def kalshi_order(body: TradeOrderBody) -> dict[str, Any]:
+        """
+        Preview (confirm=false) or place (confirm=true) a Kalshi order.
+        Stake caps from settings. On buy+journal, opens journal with 20% exit rule.
+        On sell+journal matching open ticker, closes journal entries.
+        """
+        try:
+            if not body.confirm:
+                preview = kalshi.preview_order(
+                    ticker=body.ticker,
+                    action=body.action,
+                    side=body.side,
+                    count=body.contracts,
+                    limit_price_cents=body.limit_price_cents,
+                )
+                return {"executed": False, "preview": preview}
+            placed = kalshi.place_order(
+                ticker=body.ticker,
+                action=body.action,
+                side=body.side,
+                count=body.contracts,
+                limit_price_cents=body.limit_price_cents,
+                max_notional_usd=settings.kalshi_max_notional_usd,
+                max_contracts=settings.kalshi_max_contracts,
+            )
+        except KalshiError as e:
+            raise HTTPException(400, str(e)) from e
+
+        journal_out = None
+        mid = placed["preview"]["quote"].get("yes_mid")
+        if body.journal and mid is not None:
+            if body.action == "buy":
+                try:
+                    journal_out = journal.open_position(
+                        ticker=body.ticker,
+                        side=body.side,
+                        contracts=body.contracts,
+                        entry_yes_mid=float(mid),
+                        move_pct=settings.kalshi_exit_move_pct,
+                        graph_id=body.graph_id,
+                        notes=body.notes or f"live {body.action} via LNS",
+                        meta={"order_response": placed.get("order_response"), "preview": placed.get("preview")},
+                    )
+                except ValueError as e:
+                    raise HTTPException(400, str(e)) from e
+            elif body.action == "sell":
+                # close open journal rows for ticker
+                closed = []
+                for pos in journal.list_positions(status="open"):
+                    if pos["ticker"] == body.ticker and pos["side"] == body.side:
+                        closed.append(
+                            journal.close_position(
+                                pos["id"],
+                                exit_yes_mid=float(mid),
+                                exit_reason="kalshi_sell_order",
+                            )
+                        )
+                journal_out = {"closed": closed}
+
+        return {
+            "executed": True,
+            "env": kalshi.env_label,
+            "placed": placed,
+            "journal": journal_out,
+            "disclaimer": "Real money if PROD. Not investment advice. Micro-stake project account.",
+        }
+
+    @app.post("/kalshi/auto-sell-20pct")
+    def kalshi_auto_sell(body: AutoSellBody) -> dict[str, Any]:
+        """
+        For each open journal position, refresh mid; if 20% move, sell on Kalshi
+        (only when confirm=true) and close journal.
+        """
+        open_pos = journal.list_positions(status="open")
+        plan = []
+        for pos in open_pos:
+            try:
+                q = kalshi.get_market(pos["ticker"])
+                if q.yes_mid is None:
+                    plan.append({"position_id": pos["id"], "error": "no mid"})
+                    continue
+                ev = journal.evaluate_exit(pos, q.yes_mid)
+                item: dict[str, Any] = {
+                    "evaluation": ev,
+                    "quote": q.as_public_dict(),
+                }
+                if ev["should_sell"] and body.confirm:
+                    placed = kalshi.place_order(
+                        ticker=pos["ticker"],
+                        action="sell",
+                        side=pos["side"],
+                        count=int(pos["contracts"]),
+                        max_notional_usd=settings.kalshi_max_notional_usd,
+                        max_contracts=settings.kalshi_max_contracts,
+                    )
+                    closed = journal.close_position(
+                        pos["id"],
+                        exit_yes_mid=float(q.yes_mid),
+                        exit_reason="auto_sell_20pct",
+                    )
+                    item["executed"] = True
+                    item["placed"] = placed
+                    item["closed"] = closed
+                else:
+                    item["executed"] = False
+                plan.append(item)
+            except KalshiError as e:
+                plan.append({"position_id": pos["id"], "error": str(e)})
+            except ValueError as e:
+                plan.append({"position_id": pos["id"], "error": str(e)})
+
+        sells = [
+            p
+            for p in plan
+            if p.get("evaluation", {}).get("should_sell") or p.get("executed")
+        ]
+        return {
+            "confirm": body.confirm,
+            "env": kalshi.env_label,
+            "open_checked": len(open_pos),
+            "should_sell_or_sold": len(sells),
+            "results": plan,
+            "hint": "Pass confirm=true to actually sell on Kalshi when rule hits.",
+        }
 
     return app
 

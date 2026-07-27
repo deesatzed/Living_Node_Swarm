@@ -57,6 +57,8 @@ class Settings(BaseSettings):
     kalshi_private_key_path: str | None = None
     kalshi_base_url: str | None = None  # optional override
     kalshi_exit_move_pct: float = 0.20  # sell when YES mid moves 20% from entry
+    kalshi_max_notional_usd: float = 3.0  # per-order cap (~$10 account)
+    kalshi_max_contracts: int = 3
 
     @field_validator(
         "openrouter_api_key",

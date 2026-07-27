@@ -315,20 +315,12 @@ export default function App() {
           </div>
           <div className="row">
             <button
-              disabled={busy || !gasTicker}
+              disabled={busy}
               onClick={async () => {
                 setBusy(true);
                 setError(null);
                 try {
-                  const res = await api.journalOpen({
-                    ticker: gasTicker,
-                    side: "yes",
-                    contracts: 1,
-                    entry_yes_mid: gasTicker ? null : Number(gasMid),
-                    move_pct: 0.2,
-                    graph_id: graph?.id,
-                    notes: "micro-stake; sell on 20% YES mid move",
-                  });
+                  const res = await api.kalshiBalance();
                   setJournalLog(JSON.stringify(res, null, 2));
                 } catch (e) {
                   setError(e instanceof Error ? e.message : String(e));
@@ -337,29 +329,78 @@ export default function App() {
                 }
               }}
             >
-              Journal entry (1 contract YES @ mid)
+              Kalshi balance
             </button>
+            <button
+              disabled={busy || !gasTicker}
+              onClick={async () => {
+                if (!gasTicker) return;
+                setBusy(true);
+                setError(null);
+                try {
+                  const prev = await api.kalshiOrder({
+                    ticker: gasTicker,
+                    action: "buy",
+                    side: "yes",
+                    contracts: 1,
+                    confirm: false,
+                    journal: true,
+                    graph_id: graph?.id,
+                  });
+                  setJournalLog("PREVIEW (not executed):\n" + JSON.stringify(prev, null, 2));
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : String(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Preview BUY 1 YES
+            </button>
+            <button
+              disabled={busy || !gasTicker}
+              onClick={async () => {
+                if (!gasTicker) return;
+                if (
+                  !window.confirm(
+                    `Place REAL order: BUY 1 YES on ${gasTicker}? Uses project Kalshi balance (~$10). Cap ~$3/order.`
+                  )
+                ) {
+                  return;
+                }
+                setBusy(true);
+                setError(null);
+                try {
+                  const res = await api.kalshiOrder({
+                    ticker: gasTicker,
+                    action: "buy",
+                    side: "yes",
+                    contracts: 1,
+                    confirm: true,
+                    journal: true,
+                    graph_id: graph?.id,
+                    notes: "live buy; auto-exit rule 20% mid move",
+                  });
+                  setJournalLog("EXECUTED BUY:\n" + JSON.stringify(res, null, 2));
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : String(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Confirm BUY 1 YES (live)
+            </button>
+          </div>
+          <div className="row">
             <button
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
                 setError(null);
                 try {
-                  const res = await api.journalCheckAll();
-                  setJournalLog(JSON.stringify(res, null, 2));
-                  for (const r of res.results) {
-                    const ev = r.evaluation as { should_sell?: boolean; position_id?: string } | undefined;
-                    if (ev?.should_sell && ev.position_id) {
-                      await api.journalClose(ev.position_id, "move_20pct");
-                    }
-                  }
-                  const open = await api.journalList();
-                  setJournalLog(
-                    (prev) =>
-                      JSON.stringify(res, null, 2) +
-                      "\n\nClosed any should_sell in journal.\nOpen now:\n" +
-                      JSON.stringify(open, null, 2)
-                  );
+                  const dry = await api.kalshiAutoSell20(false);
+                  setJournalLog("AUTO-SELL DRY RUN:\n" + JSON.stringify(dry, null, 2));
                 } catch (e) {
                   setError(e instanceof Error ? e.message : String(e));
                 } finally {
@@ -367,7 +408,31 @@ export default function App() {
                 }
               }}
             >
-              Check exits (20%) + close journal
+              Check 20% exits (dry)
+            </button>
+            <button
+              disabled={busy}
+              onClick={async () => {
+                if (
+                  !window.confirm(
+                    "Sell on Kalshi any open journal positions that hit 20% YES mid move?"
+                  )
+                ) {
+                  return;
+                }
+                setBusy(true);
+                setError(null);
+                try {
+                  const res = await api.kalshiAutoSell20(true);
+                  setJournalLog("AUTO-SELL EXECUTE:\n" + JSON.stringify(res, null, 2));
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : String(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Auto-SELL 20% hits (live)
             </button>
           </div>
           {journalLog && <pre className="raw">{journalLog}</pre>}

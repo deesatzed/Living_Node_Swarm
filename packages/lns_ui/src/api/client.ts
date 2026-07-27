@@ -153,6 +153,37 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ exit_reason }),
     }),
+  kalshiBalance: () => req<{ env: string; balance: Record<string, unknown> }>("/kalshi/balance"),
+  kalshiOrder: (body: {
+    ticker: string;
+    action?: string;
+    side?: string;
+    contracts?: number;
+    limit_price_cents?: number | null;
+    confirm: boolean;
+    journal?: boolean;
+    graph_id?: string;
+    notes?: string;
+  }) =>
+    req<{
+      executed: boolean;
+      preview?: Record<string, unknown>;
+      placed?: Record<string, unknown>;
+      journal?: unknown;
+      disclaimer?: string;
+    }>("/kalshi/orders", { method: "POST", body: JSON.stringify(body) }),
+  kalshiAutoSell20: (confirm: boolean) =>
+    req<{
+      confirm: boolean;
+      env: string;
+      open_checked: number;
+      should_sell_or_sold: number;
+      results: Array<Record<string, unknown>>;
+      hint: string;
+    }>("/kalshi/auto-sell-20pct", {
+      method: "POST",
+      body: JSON.stringify({ confirm }),
+    }),
   getGraph: (id: string) => req<Graph>(`/graphs/${id}`),
   getSnapshot: (id: string) => req<Snapshot>(`/graphs/${id}/snapshot`),
   getStatus: (id: string) => req<SimStatus>(`/graphs/${id}/sim/status`),
