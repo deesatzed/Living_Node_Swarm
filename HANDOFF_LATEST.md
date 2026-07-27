@@ -1,254 +1,235 @@
 # Living Node Swarm — Handoff Packet
-**Generated:** 2026-07-27 (Gas demo app + AI dynamic nodes)  
-**Branch:** main (see latest commit)  
+**Generated:** 2026-07-27 (gas demo app + AI dynamic nodes)  
+**Branch:** main @ 33df52e  
+**Last Commit:** 2026-07-27 — Add separate gas demo app with AI-defined dynamic nodes.  
 **Remote:** https://github.com/deesatzed/Living_Node_Swarm.git  
 
 ---
 
 ## Quick Resume Checklist
-- [ ] `git pull origin main` @ `011705d`
-- [ ] `source ~/.lns/kalshi_env.sh` — PEM at `~/.lns/kalshi_private.pem` (mode 600)
-- [ ] `.env`: OpenRouter + `KALSHI_ENV=prod`, `KALSHI_API_KEY`, `KALSHI_PRIVATE_KEY_PATH` (no multiline PEM in `.env`)
-- [ ] `./scripts/run_local.sh` + `./scripts/run_gas_demo.sh` (port **5174**)
-- [ ] Or general UI: `./scripts/run_ui.sh` (5173)
-- [ ] Gas demo: **Bootstrap + AI factors** → activate proposed → trading strip
-- [ ] Verify tests: kernel **20** + server **16** pass
-- [ ] Review **Kalshi policy**, **gas demo**, **20% exit**
+- [ ] `git pull origin main` @ `33df52e`
+- [ ] `source ~/.lns/kalshi_env.sh` — PEM `~/.lns/kalshi_private.pem` (600)
+- [ ] `.env`: OpenRouter models + `KALSHI_ENV=prod`, `KALSHI_API_KEY`, `KALSHI_PRIVATE_KEY_PATH` (no multiline PEM)
+- [ ] API: `./scripts/run_local.sh` → http://127.0.0.1:8787
+- [ ] **Gas demo GUI:** `./scripts/run_gas_demo.sh` → http://127.0.0.1:5174
+- [ ] (Optional) General UI: `./scripts/run_ui.sh` → http://127.0.0.1:5173
+- [ ] Tests: kernel **20** + server **16**
+- [ ] Gas demo: Bootstrap + AI factors → activate → trade strip
 
 ## AI Continuity Checklist
-- [ ] Load `HANDOFF_LATEST.md` + skill `kalshi-lns`
-- [ ] Project Kalshi account ~$10 only; micro-stakes OK with preview/confirm
-- [ ] Primary KPIs: Brier / mid freeze / Δ after wire — not trading alpha marketing
-- [ ] No mock LLM or Kalshi data
-- [ ] Never commit `.env`, PEM, or `MyESS.txt`-style key dumps
+- [ ] Read this file / `HANDOFF_LATEST.md`
+- [ ] Skill `kalshi-lns` for Kalshi research + micro-stakes discipline
+- [ ] Prefer **gas demo app** for sponsor gas scenario; general `lns_ui` for shell work
+- [ ] No mock LLM/Kalshi data; no secrets in git
 
 ---
 
 ## What This Project Does
 
-**Living Node Swarm (LNS)** is a single-user **localhost** app:
+**Living Node Swarm (LNS)** — single-user localhost product:
 
-- Explicit **probabilistic nodes** + **on-change Monte Carlo**
-- Expert **graph UI** with honest **freshness** (`stale` / `updating` / `fresh`)
-- **OpenRouter** AI propose (user-chosen models) → human **activate/reject** → **wire** into chain
-- **Kalshi track:** real financials markets (US gas thresholds), mid ingest, micro-stake **buy/sell**, journal, **20% YES-mid move auto-sell**
+1. **Explicit probabilistic node graph** + **on-change Monte Carlo** + freshness  
+2. **OpenRouter** propose (user-selected models) → activate/reject → **wire**  
+3. **Kalshi track** — real markets, mid ingest, micro buy/sell (~$10 project account), **20% YES-mid exit**  
+4. **Gas demo app** (separate GUI) — US retail gas vs Kalshi threshold, **AI-defined dynamic latent factors**
 
-**Not:** multi-user cloud product, investment advice, clinical use.
+Not multi-tenant cloud; not investment advice; non-clinical.
 
 ---
 
-## Kalshi account policy (owner)
+## Preferred operator path: Gas demo
+
+```bash
+./scripts/run_local.sh          # Terminal 1
+./scripts/run_gas_demo.sh       # Terminal 2 → http://127.0.0.1:5174
+```
+
+| Step | Action |
+|------|--------|
+| 1 | Paste Kalshi ticker (or mid fallback + strike e.g. 4.12) |
+| 2 | **Bootstrap + AI factors** → base graph + 3–5 **proposed** AI nodes |
+| 3 | **Activate all proposed + wire** (or activate one-by-one) |
+| 4 | Edit params → **Save & re-sim** → inspect model gas distribution |
+| 5 | **Refresh mid** → **Preview BUY** → **Confirm BUY** (live, capped) |
+| 6 | Later: **20% exits dry** → **Auto-SELL 20%** (live) |
+
+**AI expand:** OpenRouter returns multi-hop gas drivers (crude, inventories, crack, seasonality, hurricane risk, etc.) as `status=proposed`, tags `ai-dynamic`. Activation can auto-wire into `model_price_index`.
+
+---
+
+## Kalshi account policy
 
 | Item | Policy |
 |------|--------|
-| Account | **Project-only** |
-| Balance | ~**$10** USD (API: `balance` often in cents → 1000 ≈ $10) |
-| Use | Research, sponsor demos, micro-stakes validation |
-| Caps | `kalshi_max_notional_usd=3`, `kalshi_max_contracts=3` |
-| Exit rule | SELL when `abs(mid_now - entry_mid) / entry_mid ≥ 0.20` |
-| Orders | Always **preview** first; live needs `confirm=true` + UI confirm dialog |
-| Framing | Research prototype — not investment advice |
-
-### Credentials (local only)
-
-| Item | Location |
-|------|----------|
-| API key id | `.env` → `KALSHI_API_KEY` / `KALSHI_API_KEY_ID` |
-| RSA PEM | `~/.lns/kalshi_private.pem` (not multiline in `.env`) |
-| Helper | `source ~/.lns/kalshi_env.sh` |
-| Env | `KALSHI_ENV=prod` for real balance (demo keys ≠ prod) |
-| Grok MCP | `kalshi` → `uvx mcp-server-kalshi` (~24 tools) |
-
-Docs: `docs/integrations/kalshi-mcp.md` · Skill: `.grok/skills/kalshi-lns/SKILL.md`  
-Plan: `docs/plans/2026-07-27-gas-20pct-exit.md`
+| Account | Project-only |
+| Balance | ~$10 (API often returns cents: 1000 ≈ $10) |
+| Caps | max notional **$3**/order, max **3** contracts |
+| Exit | `\|mid_now − entry\| / entry ≥ 0.20` → sell |
+| Orders | Preview default; live needs confirm |
+| Creds | `KALSHI_ENV=prod`, key id, `~/.lns/kalshi_private.pem` |
+| MCP | Grok `kalshi` = `uvx mcp-server-kalshi` |
 
 ---
 
 ## Project Structure
 ```
 packages/
-  lns_kernel/     # nodes, MC, store, gas_seed, scoring
-  lns_server/     # FastAPI, OpenRouter, Kalshi, journal, /demo/gas/*
-  lns_ui/         # general React shell
-  lns_gas_demo/   # SEPARATE gas scenario GUI (port 5174)
-scripts/run_local.sh, run_ui.sh, run_gas_demo.sh
-docs/architecture/, docs/plans/, docs/integrations/kalshi-mcp.md
+  lns_kernel/       # MC, store, gas_seed, scoring
+  lns_server/       # FastAPI + OpenRouter + Kalshi + /demo/gas/*
+  lns_ui/           # general shell UI (:5173)
+  lns_gas_demo/     # SEPARATE gas scenario GUI (:5174)  ← primary demo
+scripts/
+  run_local.sh
+  run_ui.sh
+  run_gas_demo.sh
+docs/
+  architecture/, plans/, integrations/kalshi-mcp.md
 .grok/skills/kalshi-lns/
 HANDOFF_*.md
-data/seed_graph.json
 ```
 
-**Entry points**
-- API: `packages/lns_server/src/lns_server/app.py` → `app`
-- Kalshi: `kalshi_client.py`, journal: `journal.py`
-- Gas seed: `lns_kernel/gas_seed.py`
-- UI: `packages/lns_ui/src/App.tsx`
+### Key modules
+| Module | Path | Role |
+|--------|------|------|
+| Gas seed | `lns_kernel/gas_seed.py` | Base threshold graph |
+| Gas AI | `lns_server/gas_ai.py` | Multi-factor OpenRouter expand |
+| Kalshi client | `lns_server/kalshi_client.py` | Quotes + RSA orders |
+| Journal | `lns_server/journal.py` | 20% exit tracking |
+| Demo API | `lns_server/app.py` `/demo/gas/*` | Bootstrap / expand / activate-all |
+| Gas GUI | `lns_gas_demo/src/App.tsx` | Sponsor-facing demo |
 
 ---
 
-## How to Run
+## How to Run (summary)
 
 ```bash
-cd /path/to/Living_Node_Swarm
-source ~/.lns/kalshi_env.sh   # optional if .env is correct
-
-# deps (once)
+# deps once
 cd packages/lns_kernel && uv pip install -e ".[dev]"
-cd ../lns_server && uv pip install -e ".[dev]"   # includes cryptography
-cd ../lns_ui && npm install
-cd ../..
+cd ../lns_server && uv pip install -e ".[dev]"
+cd ../lns_gas_demo && npm install
 
-./scripts/run_local.sh       # http://127.0.0.1:8787
-./scripts/run_gas_demo.sh    # http://127.0.0.1:5174  ← gas demo
-# ./scripts/run_ui.sh        # http://127.0.0.1:5173  general UI
+# runtime
+./scripts/run_local.sh
+./scripts/run_gas_demo.sh
 ```
 
-### Gas demo path (preferred)
-1. Open http://127.0.0.1:5174  
-2. Paste Kalshi ticker (or use mid fallback)  
-3. **Bootstrap + AI factors** → base graph + 3–5 AI **proposed** nodes  
-4. Select proposed → Activate / or **Activate all proposed + wire**  
-5. Edit factors → Save & re-sim → watch model gas distribution  
-6. Refresh mid → Preview BUY → Confirm BUY → 20% Auto-SELL  
-
-### API demo endpoints
-- `POST /demo/gas/bootstrap` — seed + optional AI expand  
-- `POST /demo/gas/{id}/expand` — more AI dynamic factors  
-- `POST /demo/gas/{id}/activate-all-proposed?wire=true`  
+### Demo API
+| Method | Path |
+|--------|------|
+| POST | `/demo/gas/bootstrap` — seed + optional AI expand |
+| POST | `/demo/gas/{id}/expand` — more AI factors |
+| POST | `/demo/gas/{id}/activate-all-proposed?wire=true` |
+| POST | `/use-cases/gas/graph` — seed only |
+| POST | `/graphs/{id}/kalshi/refresh-mid?ticker=` |
+| GET | `/kalshi/balance` |
+| POST | `/kalshi/orders` — confirm false/true |
+| POST | `/kalshi/auto-sell-20pct` |
 
 ### Tests
 ```bash
-cd packages/lns_kernel && PYTHONPATH=src pytest -q    # 20 passed
-cd packages/lns_server && PYTHONPATH=src:../lns_kernel/src pytest -q  # 16 passed
+cd packages/lns_kernel && PYTHONPATH=src pytest -q           # 20
+cd packages/lns_server && PYTHONPATH=src:../lns_kernel/src pytest -q  # 16
 ```
-
-### Verification suite
-```bash
-cd packages/lns_kernel && PYTHONPATH=src pytest -q && \
-cd ../lns_server && PYTHONPATH=src:../lns_kernel/src pytest -q
-```
-**Pass:** 20 + 15, exit 0.
 
 ---
 
 ## Current State Assessment
 
 ### Working ✅
-- LNS kernel MC, SQLite, events, wire, activate/reject
-- OpenRouter propose + normalize (user models in `.env`)
-- UI graph inspect/edit/freshness + gas panel
-- Gas domain seed (`build_gas_graph`)
-- Kalshi public market GET + **RSA-auth balance** (prod verified)
-- **Live order place** (`POST /kalshi/orders` with confirm)
-- **Auto-sell 20%** (`POST /kalshi/auto-sell-20pct`)
-- Trade journal SQLite (`~/.lns/lns_journal.db` beside main DB)
-- Stake caps + preview/confirm gates
-- GitHub `main` through `011705d`
+- Full LNS shell (graph, MC, freshness, wire, activate/reject)
+- OpenRouter propose + proposal normalize
+- Gas domain seed + **separate gas demo GUI**
+- AI multi-factor expand (dynamic proposed nodes)
+- Activate-all + auto-wire to `model_price_index`
+- Kalshi mid refresh, live buy/sell, 20% auto-sell
+- Prod balance auth verified earlier (~$10)
+- Docs: kalshi-mcp, gas 20% plan, handoff
 
 ### Incomplete ⚠️
-- Full Brier **scorecard UI** for resolved events (API has `/scoring/brier` only)
-- Automatic ticker discovery for “US gas this week” (user pastes ticker)
+- Resolution **Brier scorecard UI** (only `/scoring/brier` helper)
+- Automatic gas **ticker discovery** list from Kalshi
 - Historical multi-event calibration dashboard
-- README still light on full trading walkthrough (plan doc is stronger)
-- No CI workflows yet
-- Order fill confirmation vs limit order resting (partial fills not deeply modeled)
+- CI (GitHub Actions)
+- Fill-price journal vs limit order resting details
+- Optional: timer-based auto-sell poll (currently button)
 
 ### Broken ❌
 - None known in unit tests
-- **Demo vs prod:** prod keys fail on demo API (use `KALSHI_ENV=prod`)
+- Demo API keys ≠ prod (must use `KALSHI_ENV=prod` for real $)
 
 ### Blockers 🚧
-- Live gas **ticker** must be copied from Kalshi UI (series filters flaky/rate-limited)
-- Do not leave PEM copies in repo root (e.g. never `MyESS.txt`)
+- Operator must **paste exact Kalshi ticker** for live mid/orders
+- OpenRouter required for AI expand (fails closed without key)
 
 ---
 
-## Feature Completion Matrix
+## Feature Matrix
 
-| Feature | Status | Evidence | Priority |
-|---------|--------|----------|----------|
-| Living graph + MC + UI | ✅ | kernel/server tests; user demo | done |
-| OpenRouter propose / activate / wire | ✅ | app + UI; user validated | done |
-| Gas domain seed | ✅ | `gas_seed.py`, tests | done |
-| Kalshi mid refresh | ✅ | `POST .../kalshi/refresh-mid` | done |
-| Journal + 20% rule | ✅ | `journal.py`, tests | done |
-| Live buy/sell + auto-sell | ✅ | `kalshi_client.place_order`, UI | done |
-| Brier helper | ✅ | `scoring.brier`, `/scoring/brier` | partial UI |
-| Multi-event scorecard | ⚠️ | missing | P1 |
-| Residual auto-propose | ⚠️ | not built | P2 |
-
----
-
-## Recent Changes
-
-| Date | SHA | Change |
-|------|-----|--------|
-| 2026-07-27 | 011705d | Live Kalshi orders + 20% auto-sell + confirm gates |
-| 2026-07-27 | 7400157 | Gas use-case + journal 20% exit (paper/journal first) |
-| 2026-07-27 | 625546c | Kalshi ~$10 policy docs + three build targets |
-| 2026-07-27 | 737b96c | Initial handoff packet |
-| 2026-07-27 | 7a9339b | Wire-into-chain |
-| 2026-07-27 | ba4d096 | Initial v0.1 shell |
-
-**Uncommitted:** none expected after this handoff commit  
-**Stash:** none  
+| Feature | Status | Evidence |
+|---------|--------|----------|
+| Living graph + MC + UI shell | ✅ | lns_ui, tests |
+| Wire / activate / reject | ✅ | store + app |
+| Gas seed | ✅ | gas_seed.py |
+| **Gas demo app** | ✅ | lns_gas_demo :5174 |
+| **AI dynamic gas factors** | ✅ | gas_ai.py, /demo/gas/expand |
+| Kalshi live orders + 20% sell | ✅ | kalshi_client, UI |
+| Brier scorecard product UI | ⚠️ | API only |
+| Ticker discovery | ⚠️ | missing |
 
 ---
 
-## Configuration & Secrets
+## Recent Commits
+
+| SHA | Change |
+|-----|--------|
+| 33df52e | Separate gas demo app + AI dynamic nodes |
+| 4a807ef | Handoff Kalshi live + gas track |
+| 011705d | Live Kalshi orders + auto-sell |
+| 7400157 | Gas seed + journal 20% exit |
+| 625546c | Kalshi ~$10 policy |
+| 7a9339b | Wire-into-chain |
+| ba4d096 | Initial v0.1 shell |
+
+---
+
+## Configuration
 
 | Variable | Purpose |
 |----------|---------|
-| `OPENROUTER_API_KEY`, `MODEL_REASONING`, `MODEL_FAST`, `OPENROUTER_MODEL` | AI propose |
-| `KALSHI_ENV` | `prod` or `demo` |
-| `KALSHI_API_KEY` / `KALSHI_API_KEY_ID` | API key id |
-| `KALSHI_PRIVATE_KEY_PATH` | Path to RSA PEM |
-| `kalshi_max_notional_usd` / `kalshi_max_contracts` | Settings defaults 3 / 3 |
-| `kalshi_exit_move_pct` | Default 0.20 |
+| `OPENROUTER_*` / `MODEL_*` | AI propose & gas expand |
+| `KALSHI_ENV=prod` | Real project account |
+| `KALSHI_API_KEY` | Key id |
+| `KALSHI_PRIVATE_KEY_PATH` | RSA pem path |
+| Settings caps | notional $3, contracts 3, exit 20% |
 
-**Never commit** `.env`, `*.pem`, or key dump files.
-
----
-
-## Key API surface (Kalshi / gas)
-
-| Method | Path | Notes |
-|--------|------|-------|
-| GET | `/kalshi/balance` | Auth |
-| GET | `/kalshi/markets/{ticker}` | Public quote |
-| POST | `/use-cases/gas/graph` | Domain seed |
-| POST | `/graphs/{id}/kalshi/refresh-mid?ticker=` | Update baseline node |
-| POST | `/kalshi/orders` | `confirm=false` preview; `true` execute |
-| POST | `/kalshi/auto-sell-20pct` | Dry or live 20% sells |
-| POST | `/journal/positions` | Manual journal without order |
-| POST | `/scoring/brier` | `p`, `y` query params |
+Never commit `.env` / PEM / key dumps (`MyESS.txt` gitignored if present).
 
 ---
 
-## Next Steps (priority)
+## Next Steps
 
-1. **P0 — Operator dry-run** — Restart stack; balance; preview buy on a real gas ticker; only then live 1 contract.  
-2. **P1 — Resolution scorecard** — After markets resolve, record y∈{0,1}, freeze mid, Brier table in UI.  
-3. **P1 — Ticker helper** — List open gas threshold markets from Kalshi so user doesn’t hunt URLs.  
-4. **P2 — CI** — GitHub Actions pytest.  
-5. **P2 — Fill-aware journal** — Tie journal to actual fill price from order response.
+1. **P0 — Live gas demo rehearsal** — Real ticker from Kalshi UI; bootstrap+AI; activate; optional 1ct buy  
+2. **P1 — Brier scorecard UI** — freeze mid, resolution y, model p, table  
+3. **P1 — Gas ticker browser** — list open threshold markets from API  
+4. **P2 — CI** on push  
+5. **P2 — Polling auto-sell** optional background check  
 
 ---
 
 ## Open Questions
-- Prefer take-profit-only (+20%) vs bidirectional 20% exit (current = both directions)?  
-- Auto-poll auto-sell on a timer, or button-only (current = button)?  
-- Keep Grok MCP on demo or align MCP env to **prod** for agent-side trading tools?
+- Bidirectional 20% exit vs take-profit-only?  
+- Auto-activate AI factors for “wow” demos vs always human gate?  
+- Align Grok MCP `KALSHI_ENV` to prod for agent trading tools?
 
 ---
 
 ## Assumptions
-1. Single-user localhost remains correct.  
-2. Kalshi prod credentials + ~$10 project account.  
-3. User selects OpenRouter models.  
-4. No mocks.  
-5. Non-clinical.  
-6. Micro-stakes allowed with explicit confirm.
+1. Localhost single-user  
+2. Project Kalshi ~$10, micro-stakes with confirm OK  
+3. User picks OpenRouter models  
+4. No mocks  
+5. Non-clinical  
+6. Gas demo is primary sponsor surface for financials narrative  
 
 ---
 
@@ -260,52 +241,54 @@ cd ../lns_server && PYTHONPATH=src:../lns_kernel/src pytest -q
   "repo": {
     "remote": "https://github.com/deesatzed/Living_Node_Swarm.git",
     "branch": "main",
-    "commit": "011705d6293c6992146874c8d1d89726937f8cd3",
-    "uncommitted_changes": false
+    "commit": "33df52e104483560a2070c243249c4c09397adbe"
   },
   "health": {
-    "tests_passing": 35,
-    "tests_failing": 0,
+    "tests_passing": 36,
     "kernel": 20,
-    "server": 15
+    "server": 16,
+    "tests_failing": 0
+  },
+  "apps": {
+    "api": "http://127.0.0.1:8787",
+    "shell_ui": "http://127.0.0.1:5173",
+    "gas_demo": "http://127.0.0.1:5174"
   },
   "kalshi": {
     "project_only": true,
     "approx_balance_usd": 10,
-    "env": "prod",
-    "exit_rule": "rel_move_yes_mid >= 0.20",
-    "max_notional_usd": 3,
-    "max_contracts": 3,
     "live_orders": true,
-    "auto_sell_20pct": true
+    "exit_rule_pct": 0.2,
+    "max_notional_usd": 3
   },
   "status": {
     "working": [
       "lns_core",
-      "openrouter_propose",
+      "openrouter",
       "wire_activate",
       "gas_seed",
-      "kalshi_mid",
-      "live_orders",
+      "gas_demo_app",
+      "ai_dynamic_gas_nodes",
+      "kalshi_live_orders",
       "auto_sell_20pct"
     ],
     "incomplete": [
-      "resolution_scorecard_ui",
-      "gas_ticker_discovery",
+      "brier_scorecard_ui",
+      "ticker_discovery",
       "ci"
     ],
     "broken": [],
-    "blockers": ["paste_exact_kalshi_ticker"]
+    "blockers": ["paste_kalshi_ticker", "openrouter_for_ai_expand"]
   },
   "next_steps": [
-    {"task": "Operator dry-run balance+preview+optional 1ct buy", "priority": "P0"},
-    {"task": "Resolution Brier scorecard UI", "priority": "P1"},
-    {"task": "Gas market ticker discovery list", "priority": "P1"}
+    {"task": "Rehearse gas demo with live ticker", "priority": "P0"},
+    {"task": "Brier scorecard UI", "priority": "P1"},
+    {"task": "Gas ticker discovery list", "priority": "P1"}
   ]
 }
 ```
 
 ---
 
-**Companion:** `HANDOFF_LATEST.md` (copy of this file).  
+**Companion:** `HANDOFF_LATEST.md`  
 **End of handoff.**
