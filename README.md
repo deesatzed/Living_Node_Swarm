@@ -51,17 +51,22 @@ export OPENROUTER_MODEL="<your-openrouter-model-id>"
 
 **You choose models.** Nothing in the product hard-codes a single OpenRouter model id as the only option.
 
-## Run (two terminals)
+## Run
 
 ```bash
-# Terminal 1 — API
+# Terminal 1 — API (always)
 ./scripts/run_local.sh
 
-# Terminal 2 — UI (proxies /api → :8787)
+# Terminal 2 — general shell UI
 ./scripts/run_ui.sh
+# http://127.0.0.1:5173
+
+# OR Terminal 2 — Gas demo (AI dynamic nodes + Kalshi)
+./scripts/run_gas_demo.sh
+# http://127.0.0.1:5174
 ```
 
-Open http://127.0.0.1:5173
+**Gas demo flow:** Bootstrap + AI factors → activate/wire proposed nodes → refresh Kalshi mid → preview/confirm micro-stake → 20% auto-sell.
 
 ## Tests
 

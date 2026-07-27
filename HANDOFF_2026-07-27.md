@@ -1,7 +1,6 @@
 # Living Node Swarm — Handoff Packet
-**Generated:** 2026-07-27 (Kalshi live trading + gas track)  
-**Branch:** main @ 011705d  
-**Last Commit:** 2026-07-27 — Add live Kalshi order placement and 20% auto-sell with confirm gates.  
+**Generated:** 2026-07-27 (Gas demo app + AI dynamic nodes)  
+**Branch:** main (see latest commit)  
 **Remote:** https://github.com/deesatzed/Living_Node_Swarm.git  
 
 ---
@@ -10,10 +9,11 @@
 - [ ] `git pull origin main` @ `011705d`
 - [ ] `source ~/.lns/kalshi_env.sh` — PEM at `~/.lns/kalshi_private.pem` (mode 600)
 - [ ] `.env`: OpenRouter + `KALSHI_ENV=prod`, `KALSHI_API_KEY`, `KALSHI_PRIVATE_KEY_PATH` (no multiline PEM in `.env`)
-- [ ] `./scripts/run_local.sh` + `./scripts/run_ui.sh`
-- [ ] UI: **Kalshi balance** should show ~$10 (1000 cents)
-- [ ] Verify tests: kernel **20** + server **15** pass
-- [ ] Review **Kalshi policy**, **gas + 20% exit**, and **Next Steps**
+- [ ] `./scripts/run_local.sh` + `./scripts/run_gas_demo.sh` (port **5174**)
+- [ ] Or general UI: `./scripts/run_ui.sh` (5173)
+- [ ] Gas demo: **Bootstrap + AI factors** → activate proposed → trading strip
+- [ ] Verify tests: kernel **20** + server **16** pass
+- [ ] Review **Kalshi policy**, **gas demo**, **20% exit**
 
 ## AI Continuity Checklist
 - [ ] Load `HANDOFF_LATEST.md` + skill `kalshi-lns`
@@ -68,9 +68,10 @@ Plan: `docs/plans/2026-07-27-gas-20pct-exit.md`
 ```
 packages/
   lns_kernel/     # nodes, MC, store, gas_seed, scoring
-  lns_server/     # FastAPI, OpenRouter, Kalshi client+orders, journal
-  lns_ui/         # React: graph + gas/Kalshi trading panel
-scripts/run_local.sh, run_ui.sh
+  lns_server/     # FastAPI, OpenRouter, Kalshi, journal, /demo/gas/*
+  lns_ui/         # general React shell
+  lns_gas_demo/   # SEPARATE gas scenario GUI (port 5174)
+scripts/run_local.sh, run_ui.sh, run_gas_demo.sh
 docs/architecture/, docs/plans/, docs/integrations/kalshi-mcp.md
 .grok/skills/kalshi-lns/
 HANDOFF_*.md
@@ -97,21 +98,28 @@ cd ../lns_server && uv pip install -e ".[dev]"   # includes cryptography
 cd ../lns_ui && npm install
 cd ../..
 
-./scripts/run_local.sh    # http://127.0.0.1:8787
-./scripts/run_ui.sh       # http://127.0.0.1:5173
+./scripts/run_local.sh       # http://127.0.0.1:8787
+./scripts/run_gas_demo.sh    # http://127.0.0.1:5174  ← gas demo
+# ./scripts/run_ui.sh        # http://127.0.0.1:5173  general UI
 ```
 
-### Gas + live micro-stake path
-1. Paste exact Kalshi **ticker** for a gas threshold market (e.g. Above 4.120)
-2. **Load gas graph** → **Refresh Kalshi mid**
-3. **Preview BUY 1 YES** → read est cost
-4. **Confirm BUY 1 YES (live)** → places order + journals with 20% exit rule
-5. Later: **Check 20% exits (dry)** then **Auto-SELL 20% hits (live)**
+### Gas demo path (preferred)
+1. Open http://127.0.0.1:5174  
+2. Paste Kalshi ticker (or use mid fallback)  
+3. **Bootstrap + AI factors** → base graph + 3–5 AI **proposed** nodes  
+4. Select proposed → Activate / or **Activate all proposed + wire**  
+5. Edit factors → Save & re-sim → watch model gas distribution  
+6. Refresh mid → Preview BUY → Confirm BUY → 20% Auto-SELL  
+
+### API demo endpoints
+- `POST /demo/gas/bootstrap` — seed + optional AI expand  
+- `POST /demo/gas/{id}/expand` — more AI dynamic factors  
+- `POST /demo/gas/{id}/activate-all-proposed?wire=true`  
 
 ### Tests
 ```bash
 cd packages/lns_kernel && PYTHONPATH=src pytest -q    # 20 passed
-cd packages/lns_server && PYTHONPATH=src:../lns_kernel/src pytest -q  # 15 passed
+cd packages/lns_server && PYTHONPATH=src:../lns_kernel/src pytest -q  # 16 passed
 ```
 
 ### Verification suite

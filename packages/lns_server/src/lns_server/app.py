@@ -29,6 +29,7 @@ from lns_kernel.seed import build_seed_graph
 from lns_kernel.simulation import SimulationCoordinator
 from lns_kernel.store import GraphStore
 from lns_kernel.validation import ValidationError
+from lns_server.gas_ai import expand_gas_factors, layout_for_new_nodes
 from lns_server.journal import TradeJournal
 from lns_server.kalshi_client import KalshiClient, KalshiError
 from lns_server.openrouter import OpenRouterClient, OpenRouterError
@@ -107,6 +108,28 @@ class AutoSellBody(BaseModel):
     confirm: bool = False  # false = dry-run evaluations only
 
 
+class GasExpandBody(BaseModel):
+    """AI expands dynamic latent factors for the gas graph."""
+
+    model: str | None = None
+    hint: str = ""
+    auto_activate: bool = False
+    auto_wire: bool = True  # wire new active/proposed parents into model_price_index when activated later
+
+
+class GasBootstrapBody(BaseModel):
+    """Create gas graph, optional Kalshi mid, optional AI expand."""
+
+    ticker: str = ""
+    threshold_usd: float = 4.12
+    market_yes_mid: float | None = None
+    title: str = "US gas prices threshold market"
+    expand_ai: bool = True
+    model: str | None = None
+    hint: str = ""
+    auto_activate_ai: bool = False
+
+
 class ProposeNodeBody(BaseModel):
     """AI proposes a node via OpenRouter. model is required unless OPENROUTER_MODEL is set."""
 
@@ -164,6 +187,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origins=[
             "http://127.0.0.1:5173",
             "http://localhost:5173",
+            "http://127.0.0.1:5174",
+            "http://localhost:5174",
             "http://127.0.0.1:8787",
             "http://localhost:8787",
         ],
@@ -798,6 +823,204 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "placed": placed,
             "journal": journal_out,
             "disclaimer": "Real money if PROD. Not investment advice. Micro-stake project account.",
+        }
+
+    @app.post("/demo/gas/bootstrap")
+    def demo_gas_bootstrap(body: GasBootstrapBody) -> dict[str, Any]:
+        """One-shot: gas seed graph + live mid if ticker + optional AI dynamic factors."""
+        mid = body.market_yes_mid
+        title = body.title
+        threshold = body.threshold_usd
+        quote = None
+        if body.ticker:
+            try:
+                q = kalshi.get_market(body.ticker)
+                quote = q.as_public_dict()
+                if mid is None:
+                    mid = q.yes_mid
+                title = q.title or title
+                if q.floor_strike is not None:
+                    threshold = float(q.floor_strike)
+            except KalshiError as e:
+                # allow offline bootstrap with warning
+                quote = {"error": str(e), "ticker": body.ticker}
+
+        g = build_gas_graph(
+            name="gas-demo",
+            ticker=body.ticker,
+            threshold_usd=threshold,
+            market_yes_mid=mid,
+            title=title,
+        )
+        store.create_graph(g)
+        snap = coord.run_now(g.id)
+
+        expand_result = None
+        if body.expand_ai:
+            g_live = store.get_graph(g.id)
+            assert g_live is not None
+            try:
+                raw_fac, nodes, errors = expand_gas_factors(
+                    or_client,
+                    graph_nodes=g_live.nodes,
+                    ticker=body.ticker,
+                    threshold_usd=threshold,
+                    market_yes_mid=mid,
+                    model=body.model or settings.default_model(),
+                    hint=body.hint,
+                )
+            except OpenRouterError as e:
+                raise HTTPException(400, str(e)) from e
+
+            added = []
+            layouts = layout_for_new_nodes(g_live.layout, [n.id for n in nodes])
+            for n in nodes:
+                if body.auto_activate_ai:
+                    n = n.model_copy(update={"status": NodeStatus.ACTIVE})
+                g2, ev = store.add_node(
+                    g.id,
+                    n,
+                    layout=layouts.get(n.id),
+                    actor="openrouter-gas",
+                    reason="demo gas AI expand",
+                )
+                added.append({"node": json.loads(n.model_dump_json()), "event_id": ev.id})
+                # auto-wire active nodes into model_price_index
+                if n.status == NodeStatus.ACTIVE and "model_price_index" in g2.nodes:
+                    try:
+                        store.wire_parent(
+                            g.id,
+                            n.id,
+                            "model_price_index",
+                            weight=1.0,
+                            actor="openrouter-gas",
+                            reason="auto-wire AI factor",
+                        )
+                    except ValidationError:
+                        pass
+            snap = coord.run_now(g.id)
+            expand_result = {
+                "raw_factors": raw_fac,
+                "added": added,
+                "errors": errors,
+            }
+
+        g_final = store.get_graph(g.id)
+        return {
+            "graph": json.loads(g_final.model_dump_json()) if g_final else None,
+            "snapshot": json.loads(snap.model_dump_json()),
+            "quote": quote,
+            "threshold_usd": threshold,
+            "market_yes_mid": mid,
+            "expand": expand_result,
+            "exit_rule": {
+                "move_pct": settings.kalshi_exit_move_pct,
+                "description": "SELL when abs(yes_mid_now - entry_mid)/entry_mid >= move_pct",
+            },
+            "demo": "gas",
+        }
+
+    @app.post("/demo/gas/{graph_id}/expand")
+    def demo_gas_expand(graph_id: str, body: GasExpandBody) -> dict[str, Any]:
+        g = store.get_graph(graph_id)
+        if not g:
+            raise HTTPException(404, "graph not found")
+        thr = 4.12
+        mid = None
+        if "threshold_usd" in g.nodes:
+            thr = float(g.nodes["threshold_usd"].parameters.get("value", 4.12))
+        if "market_implied_yes" in g.nodes:
+            mid = float(g.nodes["market_implied_yes"].parameters.get("value", 0.5))
+        ticker = ""
+        for n in g.nodes.values():
+            if "ticker=" in (n.description or ""):
+                # crude extract
+                part = n.description.split("ticker=", 1)[-1]
+                ticker = part.split()[0].strip(".") if part else ""
+                break
+        try:
+            raw_fac, nodes, errors = expand_gas_factors(
+                or_client,
+                graph_nodes=g.nodes,
+                ticker=ticker,
+                threshold_usd=thr,
+                market_yes_mid=mid,
+                model=body.model or settings.default_model(),
+                hint=body.hint,
+            )
+        except OpenRouterError as e:
+            raise HTTPException(400, str(e)) from e
+
+        layouts = layout_for_new_nodes(g.layout, [n.id for n in nodes])
+        added = []
+        for n in nodes:
+            if body.auto_activate:
+                n = n.model_copy(update={"status": NodeStatus.ACTIVE})
+            g2, ev = store.add_node(
+                graph_id,
+                n,
+                layout=layouts.get(n.id),
+                actor="openrouter-gas",
+                reason="demo gas AI expand",
+            )
+            added.append(json.loads(n.model_dump_json()))
+            if body.auto_activate and body.auto_wire and n.status == NodeStatus.ACTIVE:
+                if "model_price_index" in g2.nodes:
+                    try:
+                        store.wire_parent(
+                            graph_id,
+                            n.id,
+                            "model_price_index",
+                            weight=1.0,
+                            actor="openrouter-gas",
+                            reason="auto-wire AI factor",
+                        )
+                    except ValidationError:
+                        pass
+
+        snap = coord.run_now(graph_id)
+        g_final = store.get_graph(graph_id)
+        return {
+            "graph": json.loads(g_final.model_dump_json()) if g_final else None,
+            "snapshot": json.loads(snap.model_dump_json()),
+            "added_nodes": added,
+            "raw_factors": raw_fac,
+            "errors": errors,
+            "sim_status": json.loads(coord.status(graph_id).model_dump_json()),
+        }
+
+    @app.post("/demo/gas/{graph_id}/activate-all-proposed")
+    def demo_activate_all(graph_id: str, wire: bool = True) -> dict[str, Any]:
+        g = store.get_graph(graph_id)
+        if not g:
+            raise HTTPException(404, "graph not found")
+        activated = []
+        for nid, n in list(g.nodes.items()):
+            if n.status != NodeStatus.PROPOSED:
+                continue
+            g2, ev = store.set_node_status(
+                graph_id, nid, "active", actor="human", reason="activate all proposed"
+            )
+            activated.append(nid)
+            if wire and "model_price_index" in g2.nodes:
+                try:
+                    store.wire_parent(
+                        graph_id,
+                        nid,
+                        "model_price_index",
+                        weight=1.0,
+                        actor="human",
+                        reason="wire activated AI factor",
+                    )
+                except ValidationError:
+                    pass
+        snap = coord.run_now(graph_id) if activated else store.get_latest_snapshot(graph_id)
+        g_final = store.get_graph(graph_id)
+        return {
+            "activated": activated,
+            "graph": json.loads(g_final.model_dump_json()) if g_final else None,
+            "snapshot": json.loads(snap.model_dump_json()) if snap else None,
+            "sim_status": json.loads(coord.status(graph_id).model_dump_json()),
         }
 
     @app.post("/kalshi/auto-sell-20pct")
