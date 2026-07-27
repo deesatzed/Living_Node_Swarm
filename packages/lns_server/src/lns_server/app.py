@@ -73,6 +73,14 @@ class TransformExperimentBody(BaseModel):
     n_samples: int = 2000
 
 
+class WireBody(BaseModel):
+    """Wire parent_node into child as an additional depends_on edge."""
+
+    child_id: str
+    weight: float = 1.0
+    run_sim: bool = True
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     store = GraphStore(settings.resolved_db_path())
@@ -271,6 +279,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "results": rows,
             "recommendation": recommendation,
             "note": "Recommendation is a heuristic; inspect results and choose what fits your graph.",
+        }
+
+    @app.post("/graphs/{graph_id}/nodes/{node_id}/wire")
+    def wire_node(graph_id: str, node_id: str, body: WireBody) -> dict[str, Any]:
+        """Wire this node (parent) into child_id's depends_on, then re-sim."""
+        try:
+            g2, ev = store.wire_parent(
+                graph_id,
+                parent_id=node_id,
+                child_id=body.child_id,
+                weight=body.weight,
+                actor="human",
+                reason=f"wire {node_id} -> {body.child_id}",
+            )
+        except ValidationError as e:
+            raise HTTPException(400, str(e)) from e
+        snap = coord.run_now(graph_id) if body.run_sim else store.get_latest_snapshot(graph_id)
+        return {
+            "graph": json.loads(g2.model_dump_json()),
+            "event": json.loads(ev.model_dump_json()),
+            "snapshot": json.loads(snap.model_dump_json()) if snap else None,
+            "sim_status": json.loads(coord.status(graph_id).model_dump_json()),
         }
 
     @app.post("/graphs/{graph_id}/nodes/{node_id}/activate")

@@ -14,17 +14,23 @@ export function NodeEditor({
   onSave,
   onActivate,
   onReject,
+  wireTargets,
+  onWire,
 }: {
   node: LnsNode;
   busy: boolean;
   onSave: (parameters: Record<string, number>, transform: string, transformParams: Record<string, number>) => void;
   onActivate?: () => void;
   onReject?: () => void;
+  /** Other nodes this node can be wired into as a parent */
+  wireTargets?: LnsNode[];
+  onWire?: (childId: string) => void;
 }) {
   const fields = FAMILY_FIELDS[node.distribution_family] || Object.keys(node.parameters);
   const [params, setParams] = useState<Record<string, string>>({});
   const [transform, setTransform] = useState(node.transform);
   const [tp, setTp] = useState<Record<string, string>>({});
+  const [wireChild, setWireChild] = useState("");
 
   useEffect(() => {
     const p: Record<string, string> = {};
@@ -43,6 +49,10 @@ export function NodeEditor({
   }, [node.id, node.version, node.distribution_family]);
 
   const isProposed = node.status === "proposed";
+  const isActive = node.status === "active";
+  const targets = (wireTargets || []).filter(
+    (t) => t.id !== node.id && !t.depends_on.includes(node.id)
+  );
 
   return (
     <div>
@@ -63,6 +73,31 @@ export function NodeEditor({
           <button className="secondary" disabled={busy} onClick={onReject} title="Delete this proposal">
             Reject / delete
           </button>
+        </div>
+      )}
+      {isActive && targets.length > 0 && onWire && (
+        <div style={{ marginTop: 10, marginBottom: 10 }}>
+          <label>
+            Wire this node into chain (as parent of…)
+            <select value={wireChild} onChange={(e) => setWireChild(e.target.value)}>
+              <option value="">Select downstream node…</option>
+              {targets.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({t.id})
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            disabled={busy || !wireChild}
+            onClick={() => wireChild && onWire(wireChild)}
+            title="Add this node to the child's depends_on and re-simulate"
+          >
+            Wire into selected → re-sim
+          </button>
+          <p className="muted" style={{ marginTop: 6 }}>
+            Makes downstream nodes feel this factor (e.g. wire capacity → process_stage).
+          </p>
         </div>
       )}
       {fields.map((f) => (

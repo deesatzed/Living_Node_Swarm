@@ -17,6 +17,7 @@ from lns_kernel.models import (
     NodeLayout,
     NodeStatus,
     SimulationSnapshot,
+    TransformKind,
     UpdateEvent,
     utcnow,
 )
@@ -248,6 +249,102 @@ class GraphStore:
                 Freshness.STALE.value,
                 graph_id,
             ),
+        )
+        c.execute(
+            "INSERT INTO events (id, graph_id, payload_json, timestamp) VALUES (?,?,?,?)",
+            (event.id, graph_id, event.model_dump_json(), event.timestamp.isoformat()),
+        )
+        self._conn.commit()
+        return graph, event
+
+    def wire_parent(
+        self,
+        graph_id: str,
+        parent_id: str,
+        child_id: str,
+        *,
+        weight: float = 1.0,
+        actor: str = "human",
+        reason: str = "wire parent into child",
+    ) -> tuple[Graph, UpdateEvent]:
+        """
+        Make parent_id an additional depends_on of child_id so ensemble composition
+        includes the parent. Child becomes affine over parents if needed.
+        """
+        graph = self.get_graph(graph_id)
+        if graph is None:
+            raise ValidationError(f"Graph {graph_id} not found")
+        if parent_id not in graph.nodes:
+            raise ValidationError(f"Parent node {parent_id} not found")
+        if child_id not in graph.nodes:
+            raise ValidationError(f"Child node {child_id} not found")
+        if parent_id == child_id:
+            raise ValidationError("Cannot wire a node as its own parent")
+        parent = graph.nodes[parent_id]
+        child = graph.nodes[child_id]
+        if parent.status != NodeStatus.ACTIVE:
+            raise ValidationError(
+                f"Parent {parent_id} must be active before wiring (status={parent.status.value})"
+            )
+        if parent_id in child.depends_on:
+            raise ValidationError(f"{parent_id} is already a parent of {child_id}")
+
+        new_depends = list(child.depends_on) + [parent_id]
+        # Preserve existing affine coeffs; append weight for new parent as a{n}
+        tp = dict(child.transform_params)
+        if child.transform.value == "none" or not child.depends_on:
+            # first parent(s) setup
+            tp.setdefault("a0", 0.0)
+            # existing parents get default weight 1 if missing
+            for i in range(len(child.depends_on)):
+                tp.setdefault(f"a{i + 1}", 1.0)
+        new_idx = len(new_depends)  # 1-based a_i for last parent
+        tp[f"a{new_idx}"] = float(weight)
+        tp.setdefault("a0", 0.0)
+
+        old_version = child.version
+        new_child = child.model_copy(
+            update={
+                "depends_on": new_depends,
+                "transform": TransformKind.AFFINE,
+                "transform_params": tp,
+                "version": old_version + 1,
+                "last_updated_by": actor,
+                "updated_at": utcnow(),
+            }
+        )
+        validate_node(new_child)
+        trial = dict(graph.nodes)
+        trial[child_id] = new_child
+        assert_acyclic(trial)
+        validate_graph_nodes(trial)
+
+        graph.nodes[child_id] = new_child
+        graph.graph_version += 1
+        graph.updated_at = utcnow()
+        event = UpdateEvent(
+            id=str(uuid.uuid4()),
+            graph_id=graph_id,
+            node_id=child_id,
+            old_version=old_version,
+            new_version=new_child.version,
+            reason=reason,
+            actor=actor,
+            diff_summary={
+                "wired_parent": parent_id,
+                "child": child_id,
+                "depends_on_after": new_depends,
+                "weight": weight,
+            },
+        )
+        c = self._conn.cursor()
+        c.execute(
+            "UPDATE nodes SET payload_json=? WHERE graph_id=? AND node_id=?",
+            (new_child.model_dump_json(), graph_id, child_id),
+        )
+        c.execute(
+            "UPDATE graphs SET graph_version=?, updated_at=?, freshness=? WHERE id=?",
+            (graph.graph_version, graph.updated_at.isoformat(), Freshness.STALE.value, graph_id),
         )
         c.execute(
             "INSERT INTO events (id, graph_id, payload_json, timestamp) VALUES (?,?,?,?)",

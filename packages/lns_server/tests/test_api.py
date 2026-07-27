@@ -68,6 +68,34 @@ def test_ai_propose_requires_key_and_model(client: TestClient):
     assert "OPENROUTER" in r.json()["detail"].upper() or "model" in r.json()["detail"].lower() or "API" in r.json()["detail"]
 
 
+def test_wire_into_chain(client: TestClient):
+    from lns_kernel.models import DistributionFamily, Node, NodeStatus
+
+    gid = client.post("/graphs", json={"from_seed": True}).json()["graph"]["id"]
+    store = client.app.state.store
+    store.add_node(
+        gid,
+        Node(
+            id="capacity",
+            name="Capacity",
+            distribution_family=DistributionFamily.NORMAL,
+            parameters={"mu": 3.0, "sigma": 0.2},
+            status=NodeStatus.ACTIVE,
+        ),
+        actor="test",
+        reason="add",
+    )
+    r = client.post(
+        f"/graphs/{gid}/nodes/capacity/wire",
+        json={"child_id": "process_stage", "weight": 1.0},
+    )
+    assert r.status_code == 200, r.text
+    deps = r.json()["graph"]["nodes"]["process_stage"]["depends_on"]
+    assert "capacity" in deps
+    assert "input_signal" in deps
+    assert "process_stage" in r.json()["snapshot"]["node_predictives"]
+
+
 def test_activate_and_reject_proposed(client: TestClient):
     from lns_kernel.models import DistributionFamily, Node, NodeStatus
     from lns_kernel.store import GraphStore

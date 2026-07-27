@@ -161,4 +161,14 @@ export const api = {
       event: unknown;
       deleted_node_id: string;
     }>(`/graphs/${graphId}/nodes/${nodeId}/reject`, { method: "POST" }),
+  wireNode: (graphId: string, parentId: string, childId: string, weight = 1.0) =>
+    req<{
+      graph: Graph;
+      snapshot: Snapshot | null;
+      sim_status: SimStatus;
+      event: unknown;
+    }>(`/graphs/${graphId}/nodes/${parentId}/wire`, {
+      method: "POST",
+      body: JSON.stringify({ child_id: childId, weight, run_sim: true }),
+    }),
 };

@@ -80,6 +80,33 @@ def test_activate_puts_node_in_snapshot():
         store.close()
 
 
+def test_wire_parent_changes_child_depends_and_predictive():
+    with tempfile.TemporaryDirectory() as td:
+        store = GraphStore(Path(td) / "t.db")
+        g = build_seed_graph()
+        store.create_graph(g)
+        from lns_kernel.models import DistributionFamily, Node
+
+        cap = Node(
+            id="capacity",
+            name="Capacity",
+            distribution_family=DistributionFamily.NORMAL,
+            parameters={"mu": 10.0, "sigma": 0.1},
+            status=NodeStatus.ACTIVE,
+        )
+        store.add_node(g.id, cap, actor="test", reason="add")
+        before = store.get_graph(g.id)
+        assert before is not None
+        assert "capacity" not in before.nodes["process_stage"].depends_on
+        g2, ev = store.wire_parent(g.id, "capacity", "process_stage", weight=0.5)
+        assert "capacity" in g2.nodes["process_stage"].depends_on
+        assert ev.diff_summary["wired_parent"] == "capacity"
+        snap = SimulationCoordinator(store, default_n_samples=400).run_now(g.id, seed=1)
+        assert "capacity" in snap.node_predictives
+        assert "process_stage" in snap.node_predictives
+        store.close()
+
+
 def test_reject_deletes_proposed():
     with tempfile.TemporaryDirectory() as td:
         store = GraphStore(Path(td) / "t.db")

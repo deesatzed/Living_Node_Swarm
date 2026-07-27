@@ -172,6 +172,25 @@ export default function App() {
     }
   }
 
+  async function wireSelected(childId: string) {
+    if (!graph || !selectedId) return;
+    setBusy(true);
+    setError(null);
+    setStatus((s) => (s ? { ...s, freshness: "updating", job_running: true } : s));
+    try {
+      const res = await api.wireNode(graph.id, selectedId, childId, 1.0);
+      setGraph(res.graph);
+      setSnapshot(res.snapshot);
+      setStatus(res.sim_status);
+      setSelectedId(childId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setStatus((s) => (s ? { ...s, freshness: "failed", job_running: false } : s));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="app">
       <header>
@@ -259,6 +278,8 @@ export default function App() {
               onSave={onSave}
               onActivate={activateSelected}
               onReject={rejectSelected}
+              wireTargets={graph ? Object.values(graph.nodes) : []}
+              onWire={wireSelected}
             />
           ) : (
             <p className="muted">Select a node to edit parameters.</p>
