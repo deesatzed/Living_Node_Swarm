@@ -10,7 +10,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 
 | Surface | Verified state |
 |---|---|
-| Kernel tests | 66 passed on 2026-07-27 after time-expanded lag validation |
+| Kernel tests | 69 passed on 2026-07-27 after unresolved-dependence warnings |
 | Server tests | 16 passed on 2026-07-27; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-27 |
 | Gas UI | Production build passed on 2026-07-27 |
@@ -49,6 +49,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Q1-04 parameter compatibility | Complete | Codex | Legacy node payloads round-trip; runtime normalizes documented legacy names to frozen registry parameterization; 60 kernel tests passed |
 | Q1-05 relationship units | Complete | Codex | Affine coefficient dimensions and aggregate unit compatibility reject invalid graph edges; 63 kernel tests passed |
 | Q1-06 time-expanded lags | Complete | Codex | Explicit lag clock, delayed-feedback expansion, and same-time cycle rejection; 66 kernel tests passed |
+| Q1-07 dependence warnings | Complete | Codex | Warns on unresolved proxy correlation, duplicate links, and shared-evidence double counting; 69 kernel tests passed |
 | Gate 1 scientific kernel | Pending | Unassigned | Depends on Gate 0 |
 | Gate 2 safe research/provenance | Pending | Unassigned | Depends on Gate 0 |
 | Gate 3 generalized authoring | Pending | Unassigned | Depends on Gates 1–2 |
@@ -72,8 +73,8 @@ Gate 0 exited on 2026-07-27: typed contract tests, legacy graph defaults, JSON-s
 
 ## Next Actions
 
-1. Complete Q1-07: add shared-latent dependence warnings.
-2. Complete Q1-08: add convergence and stability diagnostics.
+1. Complete Q1-08: add convergence and stability diagnostics.
+2. Complete Q1-09: add continuous scoring primitives.
 3. Run focused tests after each atomic change and update this file with exact results.
 
 ## Blockers

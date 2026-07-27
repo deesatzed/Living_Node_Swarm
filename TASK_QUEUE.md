@@ -31,7 +31,7 @@
 | Q1-04 | Migrate existing family parameter names | Q1-01–03 | Old graphs round-trip or migrate without silent semantic change | Complete (legacy round-trip/normalization tests, 60 kernel tests, 2026-07-27) |
 | Q1-05 | Add dimension/unit validation | Q0-04 | Invalid affine/sum relationships fail before simulation | Complete (3 focused tests, 63 kernel tests, 2026-07-27) |
 | Q1-06 | Add forecast origin/horizon and time-expanded lag validation | Q0-01, Q0-04 | Lagged paths work; same-time cycles still fail | Complete (3 focused tests, 66 kernel tests, 2026-07-27) |
-| Q1-07 | Add shared-latent dependence warnings | Q0-04 | correlated/duplicate candidates surface unresolved warnings | Pending |
+| Q1-07 | Add shared-latent dependence warnings | Q0-04 | correlated/duplicate candidates surface unresolved warnings | Complete (3 focused tests, 69 kernel tests, 2026-07-27) |
 | Q1-08 | Add convergence/stability diagnostics | Q1-03 | multi-seed/sample-size report saved with every run | Pending |
 | Q1-09 | Add continuous scoring primitives | Q0-01 | CRPS/interval coverage tests pass on reference examples | Pending |
 

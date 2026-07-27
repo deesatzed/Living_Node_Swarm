@@ -40,6 +40,7 @@ from lns_kernel.distributions import (
 )
 from lns_kernel.units import assert_relationship_units, parse_unit
 from lns_kernel.temporal import expand_time_relationships, validate_temporal_relationships
+from lns_kernel.dependence import DependenceWarning, detect_dependence_warnings
 
 __all__ = [
     "DistributionFamily",
@@ -68,6 +69,8 @@ __all__ = [
     "parse_unit",
     "expand_time_relationships",
     "validate_temporal_relationships",
+    "DependenceWarning",
+    "detect_dependence_warnings",
     "ApprovalReceipt",
     "DistributionSpec",
     "EvidenceClaim",

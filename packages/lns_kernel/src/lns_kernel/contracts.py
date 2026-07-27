@@ -284,6 +284,7 @@ class RelationshipContract(ContractModel):
     lag_periods: int = Field(ge=0)
     lag_unit: str | None = None
     coefficient_units: str | None = None
+    shared_latent_parent_id: str | None = None
     state: str = "proposed"
     evidence_claim_ids: tuple[str, ...] = ()
     schema_version: int = Field(default=1, ge=1)
@@ -298,6 +299,7 @@ class RelationshipContract(ContractModel):
         "sign",
         "lag_unit",
         "coefficient_units",
+        "shared_latent_parent_id",
         "state",
     )
     @classmethod
