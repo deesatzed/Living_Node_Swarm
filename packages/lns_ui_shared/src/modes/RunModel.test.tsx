@@ -64,4 +64,19 @@ describe("RunModel", () => {
     expect(await screen.findByLabelText("Prior run receipts")).toHaveTextContent("snapshot-older · graph v3 · seed 10 · 1000 samples · complete");
     expect(screen.getByLabelText("Prior run receipts")).toHaveTextContent("does not rerun or alter the approved graph");
   });
+
+  it("runs a bounded local sensitivity report without changing the approved graph", async () => {
+    const user = userEvent.setup();
+    const runLocalSensitivity = vi.fn(async () => ({ method: "one_at_a_time_local_finite_difference", active_graph_mutated: false, rows: [{ node_id: "input_signal", parameter: "mu", delta_mean: 1.5, delta_p50: 1.4 }], limitations: ["This is local structural sensitivity, not causal attribution."] }));
+    render(<RunModel graphId="graph-1" targetNodeId="outcome" client={{ runSimulation: async () => ({ snapshot: {} }), runLocalSensitivity }} />);
+
+    await user.clear(screen.getByLabelText("Local sensitivity fraction"));
+    await user.type(screen.getByLabelText("Local sensitivity fraction"), "0.1");
+    await user.click(screen.getByRole("button", { name: "Run local sensitivity" }));
+
+    expect(runLocalSensitivity).toHaveBeenCalledWith("graph-1", { target_node_id: "outcome", perturbation_fraction: 0.1 });
+    expect(await screen.findByLabelText("Local sensitivity analysis")).toHaveTextContent("input_signal.mu: mean delta 1.5 · median delta 1.4");
+    expect(screen.getByLabelText("Sensitivity limitations")).toHaveTextContent("not causal attribution");
+    expect(screen.getByText("Active graph unchanged: yes.")).toBeVisible();
+  });
 });

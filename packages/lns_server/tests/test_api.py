@@ -73,6 +73,22 @@ def test_transform_experiment(client: TestClient):
     assert data["recommendation"] in {"affine", "sum_parents", "mean_parents"}
 
 
+def test_local_sensitivity_is_non_mutating_and_reports_method_limits(client: TestClient):
+    created = client.post("/graphs", json={"from_seed": True})
+    graph_id = created.json()["graph"]["id"]
+    active_parameters = created.json()["graph"]["nodes"]["input_signal"]["parameters"]
+
+    report = client.post(f"/graphs/{graph_id}/analysis/local-sensitivity", json={"target_node_id": "outcome", "perturbation_fraction": 0.1, "n_samples": 300})
+    active = client.get(f"/graphs/{graph_id}")
+
+    assert report.status_code == 200, report.text
+    assert report.json()["method"] == "one_at_a_time_local_finite_difference"
+    assert report.json()["active_graph_mutated"] is False
+    assert report.json()["rows"]
+    assert any("not causal attribution" in limitation for limitation in report.json()["limitations"])
+    assert active.json()["nodes"]["input_signal"]["parameters"] == active_parameters
+
+
 def test_ai_propose_requires_key_and_model(client: TestClient):
     gid = client.post("/graphs", json={"from_seed": True}).json()["graph"]["id"]
     r = client.post(f"/graphs/{gid}/ai/propose-node", json={"hint": "add factor"})

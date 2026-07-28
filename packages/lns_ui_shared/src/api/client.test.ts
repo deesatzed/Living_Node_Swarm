@@ -117,6 +117,19 @@ describe("workspace API client", () => {
     await expect(client.simulateScenario("project-1", "upside/1")).resolves.toEqual({ active_graph_mutated: false });
   });
 
+  it("requests local sensitivity through the bounded graph analysis route", async () => {
+    const client = createWorkspaceClient({
+      baseUrl: "http://localhost:8787",
+      fetch: async (input, init) => {
+        expect(input).toBe("http://localhost:8787/graphs/graph%2F1/analysis/local-sensitivity");
+        expect(init?.method).toBe("POST");
+        expect(init?.body).toBe(JSON.stringify({ target_node_id: "outcome", perturbation_fraction: 0.1 }));
+        return new Response(JSON.stringify({ active_graph_mutated: false }));
+      },
+    });
+    await expect(client.runLocalSensitivity("graph/1", { target_node_id: "outcome", perturbation_fraction: 0.1 })).resolves.toEqual({ active_graph_mutated: false });
+  });
+
   it("retrieves a persisted target contract for Project Home summaries", async () => {
     const client = createWorkspaceClient({
       baseUrl: "http://localhost:8787",
@@ -272,6 +285,7 @@ describe("workspace API client", () => {
       "listSnapshots",
       "patchProject",
       "reviewResearchClaim",
+      "runLocalSensitivity",
       "runSimulation",
       "saveMonitoring",
       "shadowSimulate",

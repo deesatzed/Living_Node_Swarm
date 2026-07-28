@@ -78,6 +78,7 @@ export interface WorkspaceClient {
   ): Promise<JsonObject>;
   getGraph(graphId: string): Promise<JsonObject>;
   runSimulation(graphId: string): Promise<JsonObject>;
+  runLocalSensitivity(graphId: string, body: { target_node_id: string; perturbation_fraction: number }): Promise<JsonObject>;
   getSimulationStatus(graphId: string): Promise<JsonObject>;
   getSnapshot(graphId: string): Promise<JsonObject>;
   listSnapshots(graphId: string, limit?: number): Promise<{ snapshots: JsonObject[] }>;
@@ -205,6 +206,8 @@ export function createWorkspaceClient({
     getGraph: (graphId) => request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}`, { method: "GET" }),
     runSimulation: (graphId) =>
       request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/sim/run`, { method: "POST" }),
+    runLocalSensitivity: (graphId, body) =>
+      request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/analysis/local-sensitivity`, { method: "POST", body: JSON.stringify(body) }),
     getSimulationStatus: (graphId) =>
       request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/sim/status`, { method: "GET" }),
     getSnapshot: (graphId) =>

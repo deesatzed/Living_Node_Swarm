@@ -4,6 +4,7 @@ import { ScenarioEditor, type ScenarioClient } from "../simulation/ScenarioEdito
 
 export interface RunModelClient {
   runSimulation(graphId: string): Promise<JsonObject>;
+  runLocalSensitivity?(graphId: string, body: { target_node_id: string; perturbation_fraction: number }): Promise<JsonObject>;
   listSnapshots?(graphId: string, limit?: number): Promise<{ snapshots: JsonObject[] }>;
 }
 
@@ -24,6 +25,8 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
   const [history, setHistory] = useState<JsonObject[] | null>(null);
+  const [sensitivityFraction, setSensitivityFraction] = useState("0.05");
+  const [sensitivity, setSensitivity] = useState<JsonObject | null>(null);
   useEffect(() => {
     let active = true;
     if (!client.listSnapshots) return;
@@ -39,6 +42,12 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
     catch (reason) { setError(reason instanceof Error ? reason.message : "Run failed."); }
     finally { setRunning(false); }
   }
+  async function runSensitivity() {
+    const fraction = Number(sensitivityFraction);
+    if (!targetNodeId || !client.runLocalSensitivity || !Number.isFinite(fraction) || fraction <= 0 || fraction > 1) { setError("Enter a local sensitivity fraction greater than 0 and no more than 1."); return; }
+    try { setError(""); setSensitivity(await client.runLocalSensitivity(graphId, { target_node_id: targetNodeId, perturbation_fraction: fraction })); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to run local sensitivity analysis."); }
+  }
   const snapshot = result?.snapshot as JsonObject | undefined;
   const status = result?.sim_status as JsonObject | undefined;
   const predictives = object(snapshot?.node_predictives);
@@ -47,6 +56,7 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
   return <section aria-label="Run approved model controls">
     <p>Run uses the approved graph exactly as selected; it does not create, activate, or edit structure.</p>
     <button onClick={run} disabled={running}>{running ? "Running approved version…" : "Run approved version"}</button>
+    {targetNodeId && client.runLocalSensitivity && <section aria-label="Local sensitivity analysis"><h2>Local sensitivity analysis</h2><p>Independently increases each nonzero active parameter by the stated fraction in memory.</p><label>Local sensitivity fraction<input aria-label="Local sensitivity fraction" type="number" min="0" max="1" step="0.01" value={sensitivityFraction} onChange={(event) => setSensitivityFraction(event.target.value)} /></label><button onClick={runSensitivity}>Run local sensitivity</button>{sensitivity && <><p>Method: {text(sensitivity.method, "not recorded")}</p><ul>{Array.isArray(sensitivity.rows) ? sensitivity.rows.map((raw) => { const row = object(raw); return <li key={`${text(row?.node_id, "unknown")}.${text(row?.parameter, "unknown")}`}>{text(row?.node_id, "unknown")}.{text(row?.parameter, "unknown")}: mean delta {number(row?.delta_mean)} · median delta {number(row?.delta_p50)}</li>; }) : <li>No sensitivity rows returned.</li>}</ul>{Array.isArray(sensitivity.limitations) && <ul aria-label="Sensitivity limitations">{sensitivity.limitations.map((item) => <li key={text(item, "unknown")}>{text(item, "unknown")}</li>)}</ul>}<p>Active graph unchanged: {sensitivity.active_graph_mutated === false ? "yes" : "not confirmed"}.</p></>}</section>}
     {projectId && scenarioClient && <ScenarioEditor projectId={projectId} client={scenarioClient} targetNodeId={targetNodeId} activeGraphVersion={activeGraphVersion} />}
     {error && <p role="alert">{error}</p>}
     {snapshot && <section aria-label="Run receipt">

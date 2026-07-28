@@ -35,7 +35,7 @@ from lns_server.gas_ai import expand_gas_factors, layout_for_new_nodes
 from lns_server.candidate_graph import build_neodymium_fixture
 from lns_server.distribution_elicitation import ElicitDistributionBody, elicit_from_median_p90
 from lns_server.relationship_authoring import RelationshipValidationBody, validate_proposed_relationships
-from lns_server.shadow_simulation import ShadowSimulationBody, ShadowSimulationError, run_shadow_simulation
+from lns_server.shadow_simulation import ShadowSimulationBody, ShadowSimulationError, run_local_sensitivity, run_shadow_simulation
 from lns_server.candidate_approval import (
     ApproveCandidateBody,
     CandidateProposalBody,
@@ -180,6 +180,13 @@ class TransformExperimentBody(BaseModel):
     )
     seed: int = 42
     n_samples: int = 2000
+
+
+class LocalSensitivityBody(BaseModel):
+    target_node_id: str
+    perturbation_fraction: float = Field(default=0.05, gt=0, le=1)
+    seed: int = Field(default=42, ge=0)
+    n_samples: int = Field(default=2_000, gt=0, le=10_000)
 
 
 class WireBody(BaseModel):
@@ -751,6 +758,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "recommendation": recommendation,
             "note": "Recommendation is a heuristic; inspect results and choose what fits your graph.",
         }
+
+    @app.post("/graphs/{graph_id}/analysis/local-sensitivity")
+    def local_sensitivity(graph_id: str, body: LocalSensitivityBody) -> dict[str, Any]:
+        graph = store.get_graph(graph_id)
+        if graph is None:
+            raise HTTPException(404, "graph not found")
+        try:
+            return run_local_sensitivity(
+                graph,
+                target_node_id=body.target_node_id,
+                perturbation_fraction=body.perturbation_fraction,
+                seed=body.seed,
+                n_samples=body.n_samples,
+            )
+        except ShadowSimulationError as exc:
+            raise HTTPException(422, str(exc)) from exc
 
     @app.post("/graphs/{graph_id}/nodes/{node_id}/wire")
     def wire_node(graph_id: str, node_id: str, body: WireBody) -> dict[str, Any]:
