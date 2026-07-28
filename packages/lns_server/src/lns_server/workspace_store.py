@@ -66,6 +66,21 @@ class WorkspaceStore:
         self._connection.commit()
         return draft
 
+    def save_draft_and_transition_to_refine(self, project: WorkspaceProject, draft: WorkspaceDraft) -> WorkspaceDraft:
+        data = project.model_dump()
+        data.update(stage="refine", draft_base_version=draft.base_graph_version, updated_at=utcnow())
+        updated = WorkspaceProject.model_validate(data)
+        with self._connection:
+            self._connection.execute(
+                "INSERT INTO workspace_drafts VALUES (?, ?, ?)",
+                (project.id, draft.id, draft.model_dump_json()),
+            )
+            self._connection.execute(
+                "UPDATE workspace_projects SET payload_json=? WHERE id=?",
+                (updated.model_dump_json(), project.id),
+            )
+        return draft
+
     def list_drafts(self, project_id: str) -> list[WorkspaceDraft]:
         rows = self._connection.execute("SELECT payload_json FROM workspace_drafts WHERE project_id=? ORDER BY id", (project_id,)).fetchall()
         return [WorkspaceDraft.model_validate_json(row["payload_json"]) for row in rows]

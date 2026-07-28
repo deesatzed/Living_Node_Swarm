@@ -37,6 +37,7 @@ def test_workspace_project_persists_lifecycle_ledger_scenario_and_monitoring_acr
             "/projects/nd-project/scenarios",
             json={"id": "conservative", "name": "Conservative", "assumptions": {"demand": "lower"}},
         )
+        draft = client.post("/projects/nd-project/drafts", json={"id": "draft-1", "base_graph_version": 1})
         monitoring = client.put(
             "/projects/nd-project/monitoring",
             json={"cadence": "weekly", "freshness_threshold_days": 14, "mode": "fixture"},
@@ -50,6 +51,7 @@ def test_workspace_project_persists_lifecycle_ledger_scenario_and_monitoring_acr
     assert created.status_code == 200, created.text
     assert updated.status_code == 200, updated.text
     assert scenario.status_code == 200, scenario.text
+    assert draft.status_code == 200, draft.text
     assert monitoring.status_code == 200, monitoring.text
     assert event.status_code == 200, event.text
     assert acknowledged.status_code == 200, acknowledged.text
@@ -62,7 +64,8 @@ def test_workspace_project_persists_lifecycle_ledger_scenario_and_monitoring_acr
         restored_monitoring = restarted.get("/projects/nd-project/monitoring")
 
     assert [project["id"] for project in projects.json()["projects"]] == ["nd-project"]
-    assert restored.json()["stage"] == "vet"
+    assert restored.json()["stage"] == "refine"
+    assert restored.json()["draft_base_version"] == 1
     assert restored.json()["discovery_ledger"] == [{"kind": "user_claim", "text": "Demand will rise."}]
     assert restored.json()["research_consent"]["mode"] == "local_only"
     assert restored.json()["last_run"]["snapshot_id"] == "snapshot-1"

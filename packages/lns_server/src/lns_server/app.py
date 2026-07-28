@@ -300,7 +300,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         project = require_project(project_id)
         if project.active_graph_version is not None and draft.base_graph_version != project.active_graph_version:
             raise HTTPException(409, "draft base graph version is stale")
-        return app.state.workspace_store.save_draft(project_id, draft).model_dump(mode="json")
+        saved = app.state.workspace_store.save_draft_and_transition_to_refine(project, draft)
+        return saved.model_dump(mode="json")
 
     @app.get("/projects/{project_id}/revisions")
     def list_workspace_revisions(project_id: str) -> dict[str, Any]:
