@@ -15,12 +15,12 @@ Prediction Workspace has not been built yet.
 |---|---|
 | Kernel tests | 72 passed on 2026-07-27 after persisted multi-seed/multi-sample stability diagnostics |
 | Server tests | 51 passed on 2026-07-28 after full fixture generalized-authoring journey; one upstream deprecation warning |
-| General UI | Production build passed on 2026-07-27 |
-| Gas UI | Production build passed on 2026-07-27 |
+| General UI | Production build passed on 2026-07-28 after consuming `@lns/ui-shared` |
+| Gas UI | Production build passed on 2026-07-28 after consuming `@lns/ui-shared` |
 | Current families | Eight canonical registry families; legacy node payloads remain readable through explicit parameter normalization |
 | Current graph | Static DAG with affine/sum/mean transforms |
 | Current research/provenance | Local security, provenance, consent, and completeness primitives implemented; no live research/API journey yet |
-| Current generalized authoring UX | Not implemented |
+| Current generalized authoring UX | Shared package foundation exists; workspace journeys are not yet implemented |
 
 ## Current Assumptions
 
@@ -74,6 +74,7 @@ Prediction Workspace has not been built yet.
 | Q3-08 authoring journey | Complete | Codex | Fixture-only target→review→15-factor→elicitation→shadow→approval API journey; 51 server tests and 72 kernel tests passed |
 | Gate 3 generalized authoring | Complete | Codex | API supports reviewed, proposed-only, version-bound generalized authoring; fixture-only until live research is consented |
 | Define autonomous hybrid GUI goal | Complete | Codex | `GOAL_GUI.md` specifies Build, Run, Edit, and Monitor workflows plus evidence-gated autonomous completion |
+| Q4-01 shared UI package | Complete | Codex | `@lns/ui-shared` exports the typed lifecycle; its Vitest 4 smoke test/type build, zero-vulnerability package audit, and both consumer production builds passed on 2026-07-28 |
 | Gate 4 visual workspace | Pending | Unassigned | Depends on Gate 3 API/contracts |
 | Gate 5 Neodymium acceptance | Pending | Unassigned | Depends on Gates 1–4 |
 | Gate 6 gas adapter | Pending | Unassigned | Depends on shared workspace |
@@ -95,8 +96,8 @@ Gate 3 exited on 2026-07-28: fixture-tested target intake, evidence review, broa
 
 ## Next Actions
 
-1. Complete Q4-01: scaffold a private shared UI package consumed by canonical and gas apps.
-2. Complete Q4-02/03: target intake/research consent flow and target-centered hop graph.
+1. Complete Q4-02: target-intake and research-consent flow using the shared client and fixture labels.
+2. Complete Q4-03: target-centered hop graph with deterministic layout and textual alternative.
 3. Keep fixture proposals clearly labeled until live research is consented and completed.
 
 ## Blockers

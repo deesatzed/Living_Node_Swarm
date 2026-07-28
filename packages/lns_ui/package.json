@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@lns/ui-shared": "file:../lns_ui_shared",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

@@ -32,6 +32,7 @@ This file records product and architecture decisions that future agents must pre
 | D-022 | 2026-07-28 | Gate 4 prioritizes transparency and adaptability over early streamlining; lifecycle stages, inspectors, and workspace components remain typed and composable until usage evidence supports simplification. | Accepted | The team does not yet know which controls real operators will use most, and hiding assumptions too early would weaken the product's trust thesis. |
 | D-023 | 2026-07-28 | `GOAL_GUI.md` is autonomous for implementation: Codex chooses routine UX/engineering details and continues without intermediate user approval, while runtime operator approval remains mandatory before proposed structure becomes active. | Accepted | Development autonomy and in-product human control solve different problems and must not be conflated. |
 | D-024 | 2026-07-28 | Model decision support includes an authoritative, explicit weighted output ensemble with exact member versions, validated weights, reproducible mixture sampling, approval, and receipt. | Accepted | The approved workflow requires joint assessment and selection of a model or ensemble; a disabled placeholder would not satisfy it. |
+| D-025 | 2026-07-28 | The private shared UI package uses React peer dependencies plus test-only Vitest 4, Testing Library, user-event, and jsdom. | Accepted | These MIT-licensed tools provide the required component and accessibility harness; `npm audit` returned zero vulnerabilities after upgrading to Vitest 4.1.10. |
 
 ## Initial Default Decisions
 

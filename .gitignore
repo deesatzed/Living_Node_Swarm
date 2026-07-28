@@ -21,6 +21,10 @@ venv/
 # Node / UI
 packages/lns_ui/node_modules/
 packages/lns_ui/dist/
+packages/lns_ui/tsconfig.tsbuildinfo
+packages/lns_gas_demo/tsconfig.tsbuildinfo
+packages/lns_ui_shared/node_modules/
+packages/lns_ui_shared/dist/
 *.local
 
 # OS / IDE
