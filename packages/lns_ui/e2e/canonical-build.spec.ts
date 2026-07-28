@@ -16,6 +16,24 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800
   });
 }
 
+test("canonical Monitor inspects a fixture event and branches into a version-bound Edit draft", async ({ page }) => {
+  const project = { id: "approved-1", name: "Approved neodymium model", target_id: "target-1", graph_id: "graph-1", active_graph_version: 4, stage: "monitor", evidence_classification: "fixture_unverified" };
+  await page.route("**/api/projects", (route) => route.fulfill({ json: { projects: [project] } }));
+  await page.route("**/api/targets/target-1", (route) => route.fulfill({ json: { question: "What will neodymium cost?", forecast_origin: "2026-07-28T00:00:00Z", resolution_at: "2027-07-28T00:00:00Z" } }));
+  await page.route("**/api/projects/approved-1/monitoring", (route) => route.fulfill({ json: { config: { cadence: "weekly", freshness_threshold_days: 7, mode: "fixture" }, events: [{ id: "stale-source", severity: "warning", message: "Fixture source is stale", evidence_classification: "fixture_unverified" }] } }));
+  await page.route("**/api/projects/approved-1/drafts", (route) => route.fulfill({ json: { id: "draft-1", base_graph_version: 4 } }));
+  await page.route("**/api/projects/approved-1", (route) => route.fulfill({ json: project }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Monitor" }).click();
+  await expect(page.getByRole("heading", { name: "Monitor model" })).toBeVisible();
+  await page.getByRole("button", { name: "Inspect event" }).click();
+  await expect(page.getByLabel("Inspected monitoring event")).toContainText("Inspection does not change the approved model.");
+  await page.getByRole("button", { name: "Branch to edit" }).click();
+  await expect(page.getByRole("heading", { name: "Edit model through a draft" })).toBeVisible();
+  await page.getByRole("button", { name: "Create version-bound draft" }).click();
+  await expect(page.getByRole("status")).toContainText("Draft draft-1 is ready");
+});
+
 for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800 }]) {
 test(`canonical fixture Build advances from a persisted target through Vet to a proposal-only map at ${viewport.width}x${viewport.height}`, async ({ page }) => {
   await page.setViewportSize(viewport);
