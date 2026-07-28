@@ -83,15 +83,6 @@ export const api = {
       errors: string[];
       sim_status: { freshness: string };
     }>(`/demo/gas/${graphId}/expand`, { method: "POST", body: JSON.stringify(body) }),
-  activateAll: (graphId: string) =>
-    req<{ graph: Graph; snapshot: Snapshot | null; activated: string[] }>(
-      `/demo/gas/${graphId}/activate-all-proposed?wire=true`,
-      { method: "POST" }
-    ),
-  activateOne: (graphId: string, nodeId: string) =>
-    req<{ graph: Graph; snapshot: Snapshot | null }>(`/graphs/${graphId}/nodes/${nodeId}/activate`, {
-      method: "POST",
-    }),
   rejectOne: (graphId: string, nodeId: string) =>
     req<{ graph: Graph }>(`/graphs/${graphId}/nodes/${nodeId}/reject`, { method: "POST" }),
   refreshMid: (graphId: string, ticker: string) =>
