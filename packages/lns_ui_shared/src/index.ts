@@ -32,6 +32,7 @@ export {
 } from "./api/types";
 export { ProjectHome, type ProjectAction, type ProjectHomeItem } from "./projects/ProjectHome";
 export { WorkspaceShell } from "./workspace/WorkspaceShell";
+export { FixtureWorkspace } from "./workspace/FixtureWorkspace";
 export { canMoveToStage, type StageTransitionContext } from "./workflow/guards";
 export { TargetIntake } from "./intake/TargetIntake";
 export { submitTargetToProject, type TargetPersistenceClient } from "./intake/submitTarget";
