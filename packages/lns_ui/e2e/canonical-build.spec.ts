@@ -99,6 +99,8 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.getByRole("button", { name: "Branch to edit" }).click();
   await expect(page.getByRole("heading", { name: "Edit model through a draft" })).toBeVisible();
   await expect(page.getByLabel("Approved model dependency graph")).toContainText("Approved graph — read-only");
+  await expect(page.getByLabel("Approved dependency details")).toContainText("relationship type: causal_hypothesis");
+  await expect(page.getByLabel("Approved dependency details")).toContainText("evidence: fixture-claim-process-outcome · state: active");
   await page.getByLabel("Approved model dependency graph").getByRole("button", { name: "Input signal" }).click();
   await expect(page.getByLabel("Approved model dependency graph").getByRole("status")).toContainText("Traced path: Input signal → Process stage → Outcome");
   await expect(page.getByRole("heading", { name: "Active versus candidate" })).toBeVisible();
