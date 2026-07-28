@@ -89,6 +89,24 @@ def test_local_sensitivity_is_non_mutating_and_reports_method_limits(client: Tes
     assert active.json()["nodes"]["input_signal"]["parameters"] == active_parameters
 
 
+def test_weighted_ensemble_binds_member_versions_and_returns_distribution_mixture(client: TestClient):
+    first = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+    second = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+    result = client.post("/analysis/weighted-ensemble", json={
+        "members": [
+            {"graph_id": first["id"], "graph_version": first["graph_version"], "target_node_id": "outcome", "weight": 1},
+            {"graph_id": second["id"], "graph_version": second["graph_version"], "target_node_id": "outcome", "weight": 3},
+        ], "seed": 7, "n_samples": 300,
+    })
+
+    assert result.status_code == 200, result.text
+    assert result.json()["active_graph_mutated"] is False
+    assert result.json()["members"][0]["normalized_weight"] == 0.25
+    assert result.json()["members"][1]["normalized_weight"] == 0.75
+    assert result.json()["mixture"]["n_samples"] == 300
+    assert "not an arithmetic average" in result.json()["limitations"][0]
+
+
 def test_ai_propose_requires_key_and_model(client: TestClient):
     gid = client.post("/graphs", json={"from_seed": True}).json()["graph"]["id"]
     r = client.post(f"/graphs/{gid}/ai/propose-node", json={"hint": "add factor"})

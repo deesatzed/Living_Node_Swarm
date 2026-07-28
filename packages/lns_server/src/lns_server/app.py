@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from lns_kernel.ensemble import compare_transforms
+from lns_kernel.ensemble import compare_transforms, run_ensemble, weighted_outcome_mixture
 from lns_kernel.contracts import TargetContract
 from lns_kernel.distributions import REGISTRY, distribution_statistics, get_family, normalize_parameters
 from lns_kernel.models import (
@@ -185,6 +185,19 @@ class TransformExperimentBody(BaseModel):
 class LocalSensitivityBody(BaseModel):
     target_node_id: str
     perturbation_fraction: float = Field(default=0.05, gt=0, le=1)
+    seed: int = Field(default=42, ge=0)
+    n_samples: int = Field(default=2_000, gt=0, le=10_000)
+
+
+class WeightedEnsembleMemberBody(BaseModel):
+    graph_id: str
+    graph_version: int = Field(ge=1)
+    target_node_id: str
+    weight: float = Field(ge=0)
+
+
+class WeightedEnsembleBody(BaseModel):
+    members: list[WeightedEnsembleMemberBody] = Field(min_length=2, max_length=8)
     seed: int = Field(default=42, ge=0)
     n_samples: int = Field(default=2_000, gt=0, le=10_000)
 
@@ -774,6 +787,52 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         except ShadowSimulationError as exc:
             raise HTTPException(422, str(exc)) from exc
+
+    @app.post("/analysis/weighted-ensemble")
+    def weighted_ensemble(body: WeightedEnsembleBody) -> dict[str, Any]:
+        member_samples: dict[str, Any] = {}
+        member_receipts: list[dict[str, Any]] = []
+        weights: dict[str, float] = {}
+        for index, member in enumerate(body.members):
+            graph = store.get_graph(member.graph_id)
+            if graph is None:
+                raise HTTPException(404, f"ensemble member graph not found: {member.graph_id}")
+            if graph.graph_version != member.graph_version:
+                raise HTTPException(409, f"ensemble member graph version is stale: {member.graph_id}")
+            predictives, _, samples = run_ensemble(graph.nodes, seed=body.seed + index, n_samples=body.n_samples)
+            predictive = predictives.get(member.target_node_id)
+            outcome_samples = samples.get(member.target_node_id)
+            if predictive is None or outcome_samples is None:
+                raise HTTPException(422, f"ensemble member target is not active: {member.graph_id}:{member.target_node_id}")
+            member_id = f"{member.graph_id}@{member.graph_version}:{member.target_node_id}"
+            member_samples[member_id] = outcome_samples
+            weights[member_id] = member.weight
+            member_receipts.append({
+                "member_id": member_id,
+                "graph_id": member.graph_id,
+                "graph_version": member.graph_version,
+                "target_node_id": member.target_node_id,
+                "weight": member.weight,
+                "summary": json.loads(predictive.model_dump_json()),
+            })
+        try:
+            mixture, normalized_weights = weighted_outcome_mixture(member_samples, weights, seed=body.seed)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        for receipt in member_receipts:
+            receipt["normalized_weight"] = normalized_weights[receipt["member_id"]]
+        return {
+            "mixture": json.loads(mixture.model_dump_json()),
+            "members": member_receipts,
+            "seed": body.seed,
+            "n_samples": body.n_samples,
+            "active_graph_mutated": False,
+            "limitations": [
+                "This is a weighted distribution mixture, not an arithmetic average of member means.",
+                "Weights express an explicit operator-selected mixture assumption; no member is recommended as more accurate.",
+                "This comparison does not approve, activate, or persist an ensemble configuration.",
+            ],
+        }
 
     @app.post("/graphs/{graph_id}/nodes/{node_id}/wire")
     def wire_node(graph_id: str, node_id: str, body: WireBody) -> dict[str, Any]:
