@@ -324,10 +324,11 @@ class GraphStore:
         *,
         expected_graph_version: int,
         relationships: tuple[RelationshipContract, ...],
+        removed_relationship_ids: tuple[str, ...] = (),
         actor: str,
         reason: str,
     ) -> tuple[Graph, list[UpdateEvent]]:
-        """Activate exact proposed relationship additions in one SQLite transaction."""
+        """Apply exact proposed relationship additions/removals in one SQLite transaction."""
 
         graph = self.get_graph(graph_id)
         if graph is None:
@@ -337,6 +338,37 @@ class GraphStore:
         trial = graph.model_copy(deep=True)
         events: list[UpdateEvent] = []
         changed_node_ids: set[str] = set()
+        for relationship_id in removed_relationship_ids:
+            relationship = trial.relationships.get(relationship_id)
+            if relationship is None:
+                raise ValidationError(f"structural proposal removal references unknown active relationship {relationship_id}")
+            child = trial.nodes.get(relationship.child_node_id)
+            if child is None or relationship.parent_node_id not in child.depends_on or relationship_id not in child.relationship_ids:
+                raise ValidationError(f"structural proposal removal {relationship_id} is inconsistent with its active child edge")
+            parent_index = child.depends_on.index(relationship.parent_node_id)
+            retained_dependencies = [item for index, item in enumerate(child.depends_on) if index != parent_index]
+            retained_relationship_ids = [item for item in child.relationship_ids if item != relationship_id]
+            retained_coefficients = [child.transform_params.get(f"a{index + 1}") for index in range(len(child.depends_on)) if index != parent_index]
+            if any(value is None for value in retained_coefficients):
+                raise ValidationError(f"structural proposal removal {relationship_id} cannot reindex missing affine coefficients")
+            transform_params = {key: value for key, value in child.transform_params.items() if key == "a0" or not key.startswith("a") or not key[1:].isdigit()}
+            transform_params.update({f"a{index + 1}": value for index, value in enumerate(retained_coefficients)})
+            new_child = child.model_copy(update={
+                "depends_on": retained_dependencies,
+                "relationship_ids": retained_relationship_ids,
+                "transform_params": transform_params,
+                "version": child.version + 1,
+                "last_updated_by": actor,
+                "updated_at": utcnow(),
+            })
+            del trial.relationships[relationship_id]
+            trial.nodes[child.id] = new_child
+            changed_node_ids.add(child.id)
+            events.append(UpdateEvent(
+                id=str(uuid.uuid4()), graph_id=graph_id, node_id=child.id,
+                old_version=child.version, new_version=new_child.version, reason=reason, actor=actor,
+                diff_summary={"relationship_removed": relationship_id, "depends_on_before": child.depends_on, "depends_on_after": new_child.depends_on},
+            ))
         for relationship in relationships:
             if relationship.state != "proposed":
                 raise ValidationError(f"structural proposal relationship {relationship.id} must be proposed")
@@ -411,6 +443,11 @@ class GraphStore:
                 cursor.execute(
                     "INSERT INTO relationships (graph_id, relationship_id, payload_json) VALUES (?,?,?)",
                     (graph_id, relationship.id, trial.relationships[relationship.id].model_dump_json()),
+                )
+            for relationship_id in removed_relationship_ids:
+                cursor.execute(
+                    "DELETE FROM relationships WHERE graph_id=? AND relationship_id=?",
+                    (graph_id, relationship_id),
                 )
             cursor.execute(
                 "UPDATE graphs SET graph_version=?, updated_at=?, freshness=? WHERE id=?",

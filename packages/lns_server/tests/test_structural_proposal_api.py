@@ -124,3 +124,36 @@ def test_structural_proposal_shadow_simulates_its_exact_trial_without_activation
     assert payload["active_summary"]["mean"] != payload["candidate_summary"]["mean"]
     assert unchanged["graph_version"] == active["graph_version"]
     assert unchanged["nodes"]["outcome"]["depends_on"] == ["process_stage"]
+
+
+def test_structural_proposal_can_remove_an_exact_active_relationship_without_mutating_until_approval(tmp_path):
+    with TestClient(create_app(Settings(db_path=str(tmp_path / "graph.db")))) as client:
+        active = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        addition = client.post(
+            f"/authoring/graphs/{active['id']}/structural-proposals",
+            json={"relationships": [structural_relationship()]},
+        ).json()["proposal"]
+        assert client.post(
+            f"/authoring/graphs/{active['id']}/structural-proposals/{addition['id']}/approve",
+            json={"approved_by": "operator", "binding_hash": addition["binding_hash"]},
+        ).status_code == 200
+        activated = client.get(f"/graphs/{active['id']}").json()
+        removal = client.post(
+            f"/authoring/graphs/{active['id']}/structural-proposals",
+            json={"relationships": [], "removed_relationship_ids": ["input-to-outcome-proposal"]},
+        )
+        assert removal.status_code == 200, removal.text
+        removal_proposal = removal.json()["proposal"]
+        unchanged = client.get(f"/graphs/{active['id']}").json()
+        approved = client.post(
+            f"/authoring/graphs/{active['id']}/structural-proposals/{removal_proposal['id']}/approve",
+            json={"approved_by": "operator", "binding_hash": removal_proposal["binding_hash"]},
+        )
+
+    assert removal.status_code == 200, removal.text
+    assert removal.json()["proposal"]["removed_relationship_ids"] == ["input-to-outcome-proposal"]
+    assert unchanged["graph_version"] == activated["graph_version"]
+    assert unchanged["nodes"]["outcome"]["depends_on"] == ["process_stage", "input_signal"]
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["graph"]["nodes"]["outcome"]["depends_on"] == ["process_stage"]
+    assert "input-to-outcome-proposal" not in approved.json()["graph"]["relationships"]

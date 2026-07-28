@@ -8,7 +8,7 @@ import uuid
 from dataclasses import asdict
 from datetime import datetime, timezone
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from lns_kernel.contracts import ApprovalReceipt, RelationshipContract
 from lns_kernel.dependencies import assert_acyclic
@@ -20,20 +20,29 @@ from lns_kernel.validation import ValidationError, validate_graph_nodes
 class StructuralProposalBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    relationships: tuple[RelationshipContract, ...]
+    relationships: tuple[RelationshipContract, ...] = ()
+    removed_relationship_ids: tuple[str, ...] = ()
 
     @field_validator("relationships")
     @classmethod
     def require_proposed_relationships(
         cls, relationships: tuple[RelationshipContract, ...]
     ) -> tuple[RelationshipContract, ...]:
-        if not relationships:
-            raise ValueError("structural proposal requires at least one relationship")
         if len({relationship.id for relationship in relationships}) != len(relationships):
             raise ValueError("structural proposal relationship ids must be unique")
         if any(relationship.state != "proposed" for relationship in relationships):
             raise ValueError("structural proposal relationships must be proposed")
         return relationships
+
+    @model_validator(mode="after")
+    def require_a_structural_delta(self) -> "StructuralProposalBody":
+        if not self.relationships and not self.removed_relationship_ids:
+            raise ValueError("structural proposal requires a relationship addition or removal")
+        if len(set(self.removed_relationship_ids)) != len(self.removed_relationship_ids):
+            raise ValueError("structural proposal removal ids must be unique")
+        if set(self.removed_relationship_ids) & {relationship.id for relationship in self.relationships}:
+            raise ValueError("structural proposal cannot add and remove the same relationship id")
+        return self
 
 
 class StructuralGraphProposal(BaseModel):
@@ -43,6 +52,7 @@ class StructuralGraphProposal(BaseModel):
     graph_id: str
     graph_version: int = Field(ge=1)
     relationships: tuple[RelationshipContract, ...]
+    removed_relationship_ids: tuple[str, ...] = ()
     candidate_relationship_ids: tuple[str, ...]
     dependence_warnings: tuple[dict[str, str], ...] = ()
     created_at: datetime
@@ -76,11 +86,36 @@ def make_structural_approval_receipt(
     )
 
 
+def _remove_relationship_from_trial(trial: Graph, relationship_id: str) -> None:
+    relationship = trial.relationships.get(relationship_id)
+    if relationship is None:
+        raise ValidationError(f"structural proposal removal references unknown active relationship {relationship_id}")
+    child = trial.nodes.get(relationship.child_node_id)
+    if child is None or relationship.parent_node_id not in child.depends_on or relationship_id not in child.relationship_ids:
+        raise ValidationError(f"structural proposal removal {relationship_id} is inconsistent with its active child edge")
+    parent_index = child.depends_on.index(relationship.parent_node_id)
+    retained_dependencies = [item for index, item in enumerate(child.depends_on) if index != parent_index]
+    retained_relationship_ids = [item for item in child.relationship_ids if item != relationship_id]
+    retained_coefficients = [child.transform_params.get(f"a{index + 1}") for index in range(len(child.depends_on)) if index != parent_index]
+    if any(value is None for value in retained_coefficients):
+        raise ValidationError(f"structural proposal removal {relationship_id} cannot reindex missing affine coefficients")
+    transform_params = {key: value for key, value in child.transform_params.items() if key == "a0" or not key.startswith("a") or not key[1:].isdigit()}
+    transform_params.update({f"a{index + 1}": value for index, value in enumerate(retained_coefficients)})
+    trial.nodes[child.id] = child.model_copy(update={
+        "depends_on": retained_dependencies,
+        "relationship_ids": retained_relationship_ids,
+        "transform_params": transform_params,
+    })
+    del trial.relationships[relationship_id]
+
+
 def materialize_structural_trial(
-    graph: Graph, relationships: tuple[RelationshipContract, ...]
+    graph: Graph, relationships: tuple[RelationshipContract, ...], removed_relationship_ids: tuple[str, ...] = ()
 ) -> Graph:
-    """Return a validated in-memory graph with proposed relationship additions active."""
+    """Return a validated in-memory graph with exact proposed relationship changes active."""
     trial = graph.model_copy(deep=True)
+    for relationship_id in removed_relationship_ids:
+        _remove_relationship_from_trial(trial, relationship_id)
     for relationship in relationships:
         if relationship.transform == "affine" and not relationship.coefficient_parameters:
             raise ValidationError(
@@ -130,12 +165,13 @@ def materialize_structural_trial(
 def make_structural_proposal(graph: Graph, body: StructuralProposalBody) -> StructuralGraphProposal:
     """Validate a structural delta against a copy of the exact active graph."""
 
-    trial = materialize_structural_trial(graph, body.relationships)
+    trial = materialize_structural_trial(graph, body.relationships, body.removed_relationship_ids)
     return StructuralGraphProposal(
         id=str(uuid.uuid4()),
         graph_id=graph.id,
         graph_version=graph.graph_version,
         relationships=body.relationships,
+        removed_relationship_ids=body.removed_relationship_ids,
         candidate_relationship_ids=tuple(relationship.id for relationship in body.relationships),
         dependence_warnings=tuple(asdict(warning) for warning in detect_dependence_warnings(trial.relationships.values())),
         created_at=datetime.now(timezone.utc),

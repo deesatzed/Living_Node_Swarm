@@ -658,6 +658,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 graph_id,
                 expected_graph_version=proposal.graph_version,
                 relationships=proposal.relationships,
+                removed_relationship_ids=proposal.removed_relationship_ids,
                 actor=body.approved_by,
                 reason=f"approved structural proposal {proposal.id}",
             )
@@ -683,7 +684,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if graph.graph_version != proposal.graph_version:
             raise HTTPException(409, "structural proposal invalidated by graph version change")
         try:
-            trial = materialize_structural_trial(graph, proposal.relationships)
+            trial = materialize_structural_trial(graph, proposal.relationships, proposal.removed_relationship_ids)
             return run_structural_shadow_simulation(
                 graph, trial, body, candidate_relationship_ids=proposal.candidate_relationship_ids
             )
@@ -710,6 +711,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 project.graph_id,
                 expected_graph_version=proposal.graph_version,
                 relationships=proposal.relationships,
+                removed_relationship_ids=proposal.removed_relationship_ids,
                 actor=body.approved_by,
                 reason=f"approved structural proposal {proposal.id}",
             )

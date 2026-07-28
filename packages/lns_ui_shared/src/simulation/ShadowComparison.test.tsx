@@ -230,7 +230,7 @@ describe("ShadowComparison", () => {
     await user.click(screen.getByRole("button", { name: "Stage proposed relationship contract" }));
     await user.click(screen.getByRole("button", { name: "Create structural proposal for review" }));
 
-    expect(createStructuralProposal).toHaveBeenCalledWith("graph-1", { relationships: [expect.objectContaining({ parent_node_id: "input_signal", child_node_id: "outcome", coefficient_parameters: [{ id: "coefficient", value: 0.25 }] })] });
+    expect(createStructuralProposal).toHaveBeenCalledWith("graph-1", { relationships: [expect.objectContaining({ parent_node_id: "input_signal", child_node_id: "outcome", coefficient_parameters: [{ id: "coefficient", value: 0.25 }] })], removed_relationship_ids: [] });
     expect(await screen.findByLabelText("Structural proposal review")).toHaveTextContent("Binding hash: structural-hash");
     await user.click(screen.getByRole("button", { name: "Run structural in-memory comparison" }));
     expect(shadowStructuralProposal).toHaveBeenCalledWith("graph-1", "structural-1", { target_node_id: "outcome" });
@@ -245,6 +245,29 @@ describe("ShadowComparison", () => {
     expect(await screen.findByLabelText("Structural approval receipt")).toHaveTextContent("Approved graph version: 5");
     expect(screen.queryByLabelText("Structural comparison receipt")).not.toBeInTheDocument();
     expect(onApproved).toHaveBeenCalledWith({ stage: "decide", active_graph_version: 5 });
+  });
+
+  it("turns an excluded active dependency into an exact structural removal proposal", async () => {
+    const user = userEvent.setup();
+    const createStructuralProposal = vi.fn(async () => ({ proposal: { id: "remove-1", graph_version: 4, binding_hash: "remove-hash", removed_relationship_ids: ["input-to-outcome"] } }));
+    render(<ShadowComparison graphId="graph-1" client={{
+      getGraph: async () => ({
+        nodes: {
+          input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] },
+          outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] },
+        },
+        relationships: {
+          "input-to-outcome": { id: "input-to-outcome", parent_node_id: "input_signal", child_node_id: "outcome", state: "active" },
+        },
+      }),
+      shadowSimulate: async () => ({}), createStructuralProposal,
+    } as never} />);
+    await screen.findByLabelText("Candidate dependency");
+    await user.click(screen.getByRole("button", { name: "Exclude selected dependency in candidate" }));
+    await user.click(screen.getByRole("button", { name: "Create structural proposal for review" }));
+
+    expect(createStructuralProposal).toHaveBeenCalledWith("graph-1", { relationships: [], removed_relationship_ids: ["input-to-outcome"] });
+    expect(await screen.findByLabelText("Structural proposal review")).toHaveTextContent("Binding hash: remove-hash");
   });
 
   it("loads a matching-base persisted revision back into local staging without activation", async () => {
