@@ -318,6 +318,105 @@ class GraphStore:
             raise
         return graph, events
 
+    def apply_relationship_additions_atomically(
+        self,
+        graph_id: str,
+        *,
+        expected_graph_version: int,
+        relationships: tuple[RelationshipContract, ...],
+        actor: str,
+        reason: str,
+    ) -> tuple[Graph, list[UpdateEvent]]:
+        """Activate exact proposed relationship additions in one SQLite transaction."""
+
+        graph = self.get_graph(graph_id)
+        if graph is None:
+            raise ValidationError(f"Graph {graph_id} not found")
+        if graph.graph_version != expected_graph_version:
+            raise ValidationError("structural proposal invalidated by graph version change")
+        trial = graph.model_copy(deep=True)
+        events: list[UpdateEvent] = []
+        changed_node_ids: set[str] = set()
+        for relationship in relationships:
+            if relationship.state != "proposed":
+                raise ValidationError(f"structural proposal relationship {relationship.id} must be proposed")
+            if relationship.id in trial.relationships:
+                raise ValidationError(f"structural proposal relationship already exists: {relationship.id}")
+            parent = trial.nodes.get(relationship.parent_node_id)
+            child = trial.nodes.get(relationship.child_node_id)
+            if parent is None or child is None:
+                raise ValidationError(f"structural proposal relationship {relationship.id} references a missing node")
+            if relationship.parent_node_id in child.depends_on:
+                raise ValidationError(f"structural proposal relationship {relationship.id} duplicates an active dependency")
+            if child.transform == TransformKind.NONE:
+                raise ValidationError(f"structural proposal child {child.id} cannot add a dependency with transform none")
+            active_relationship = relationship.model_copy(update={"state": "active"})
+            new_child = child.model_copy(
+                update={
+                    "depends_on": [*child.depends_on, relationship.parent_node_id],
+                    "relationship_ids": [*child.relationship_ids, relationship.id],
+                    "version": child.version + 1,
+                    "last_updated_by": actor,
+                    "updated_at": utcnow(),
+                }
+            )
+            trial.relationships[relationship.id] = active_relationship
+            trial.nodes[child.id] = new_child
+            changed_node_ids.add(child.id)
+            events.append(
+                UpdateEvent(
+                    id=str(uuid.uuid4()),
+                    graph_id=graph_id,
+                    node_id=child.id,
+                    old_version=child.version,
+                    new_version=new_child.version,
+                    reason=reason,
+                    actor=actor,
+                    diff_summary={
+                        "relationship_added": relationship.id,
+                        "depends_on_before": child.depends_on,
+                        "depends_on_after": new_child.depends_on,
+                    },
+                )
+            )
+        validate_graph_nodes(trial.nodes)
+        assert_acyclic(trial.nodes)
+        _validate_graph_relationships(trial)
+        trial.graph_version += 1
+        trial.updated_at = utcnow()
+        cursor = self._conn.cursor()
+        try:
+            cursor.execute("BEGIN IMMEDIATE")
+            row = cursor.execute("SELECT graph_version FROM graphs WHERE id=?", (graph_id,)).fetchone()
+            if row is None:
+                raise ValidationError(f"Graph {graph_id} not found")
+            if row["graph_version"] != expected_graph_version:
+                raise ValidationError("structural proposal invalidated by graph version change")
+            for node_id in changed_node_ids:
+                cursor.execute(
+                    "UPDATE nodes SET payload_json=? WHERE graph_id=? AND node_id=?",
+                    (trial.nodes[node_id].model_dump_json(), graph_id, node_id),
+                )
+            for relationship in relationships:
+                cursor.execute(
+                    "INSERT INTO relationships (graph_id, relationship_id, payload_json) VALUES (?,?,?)",
+                    (graph_id, relationship.id, trial.relationships[relationship.id].model_dump_json()),
+                )
+            cursor.execute(
+                "UPDATE graphs SET graph_version=?, updated_at=?, freshness=? WHERE id=?",
+                (trial.graph_version, trial.updated_at.isoformat(), Freshness.STALE.value, graph_id),
+            )
+            for event in events:
+                cursor.execute(
+                    "INSERT INTO events (id, graph_id, payload_json, timestamp) VALUES (?,?,?,?)",
+                    (event.id, graph_id, event.model_dump_json(), event.timestamp.isoformat()),
+                )
+            self._conn.commit()
+        except Exception:
+            self._conn.rollback()
+            raise
+        return trial, events
+
     def add_node(
         self,
         graph_id: str,

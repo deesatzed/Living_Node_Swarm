@@ -59,3 +59,45 @@ def test_structural_proposal_survives_restart_as_a_proposed_non_active_record(tm
     assert stored.binding_hash == proposal["binding_hash"]
     assert stored.relationships[0].state == "proposed"
     assert active_after_restart["nodes"]["outcome"]["depends_on"] == ["process_stage"]
+
+
+def test_exact_structural_proposal_approval_activates_the_trial_atomically(tmp_path):
+    with TestClient(create_app(Settings(db_path=str(tmp_path / "graph.db")))) as client:
+        active = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        proposal = client.post(
+            f"/authoring/graphs/{active['id']}/structural-proposals",
+            json={"relationships": [structural_relationship()]},
+        ).json()["proposal"]
+        approved = client.post(
+            f"/authoring/graphs/{active['id']}/structural-proposals/{proposal['id']}/approve",
+            json={"approved_by": "operator", "binding_hash": proposal["binding_hash"]},
+        )
+        activated = client.get(f"/graphs/{active['id']}").json()
+
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["approval_receipt"]["binding_hash"] == proposal["binding_hash"]
+    assert activated["graph_version"] == active["graph_version"] + 1
+    assert activated["nodes"]["outcome"]["depends_on"] == ["process_stage", "input_signal"]
+    assert activated["relationships"]["input-to-outcome-proposal"]["state"] == "active"
+
+
+def test_structural_proposal_is_invalidated_by_an_intervening_graph_edit(tmp_path):
+    with TestClient(create_app(Settings(db_path=str(tmp_path / "graph.db")))) as client:
+        active = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        proposal = client.post(
+            f"/authoring/graphs/{active['id']}/structural-proposals",
+            json={"relationships": [structural_relationship()]},
+        ).json()["proposal"]
+        assert client.patch(
+            f"/graphs/{active['id']}/nodes/input_signal",
+            json={"parameters": {"mu": 4.0}, "run_sim": False},
+        ).status_code == 200
+        rejected = client.post(
+            f"/authoring/graphs/{active['id']}/structural-proposals/{proposal['id']}/approve",
+            json={"approved_by": "operator", "binding_hash": proposal["binding_hash"]},
+        )
+        unchanged = client.get(f"/graphs/{active['id']}").json()
+
+    assert rejected.status_code == 409
+    assert "invalidated" in rejected.json()["detail"]
+    assert "input-to-outcome-proposal" not in unchanged["relationships"]

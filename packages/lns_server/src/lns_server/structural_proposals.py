@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from lns_kernel.contracts import RelationshipContract
+from lns_kernel.contracts import ApprovalReceipt, RelationshipContract
 from lns_kernel.dependencies import assert_acyclic
 from lns_kernel.dependence import detect_dependence_warnings
 from lns_kernel.models import Graph
@@ -55,6 +55,25 @@ class StructuralGraphProposal(BaseModel):
 
     def response_payload(self) -> dict[str, object]:
         return {**self.model_dump(mode="json"), "binding_hash": self.binding_hash}
+
+
+def make_structural_approval_receipt(
+    proposal: StructuralGraphProposal, *, approved_by: str, binding_hash: str
+) -> ApprovalReceipt:
+    if not approved_by:
+        raise ValueError("approved_by must be non-empty")
+    if binding_hash != proposal.binding_hash:
+        raise ValueError("approval binding hash does not match structural proposal")
+    return ApprovalReceipt(
+        id=str(uuid.uuid4()),
+        proposal_id=proposal.id,
+        proposal_version=proposal.version,
+        graph_id=proposal.graph_id,
+        graph_version=proposal.graph_version,
+        binding_hash=proposal.binding_hash,
+        approved_by=approved_by,
+        approved_at=datetime.now(timezone.utc),
+    )
 
 
 def make_structural_proposal(graph: Graph, body: StructuralProposalBody) -> StructuralGraphProposal:

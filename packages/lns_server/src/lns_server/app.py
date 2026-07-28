@@ -35,7 +35,11 @@ from lns_server.gas_ai import expand_gas_factors, layout_for_new_nodes
 from lns_server.candidate_graph import build_neodymium_fixture
 from lns_server.distribution_elicitation import ElicitDistributionBody, elicit_from_median_p90
 from lns_server.relationship_authoring import RelationshipValidationBody, validate_proposed_relationships
-from lns_server.structural_proposals import StructuralProposalBody, make_structural_proposal
+from lns_server.structural_proposals import (
+    StructuralProposalBody,
+    make_structural_approval_receipt,
+    make_structural_proposal,
+)
 from lns_server.shadow_simulation import ShadowSimulationBody, ShadowSimulationError, run_local_sensitivity, run_shadow_simulation
 from lns_server.candidate_approval import (
     ApproveCandidateBody,
@@ -637,6 +641,33 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(422, str(exc)) from exc
         app.state.evidence_store.save_structural_graph_proposal(proposal)
         return {"proposal": proposal.response_payload(), "active_graph_mutated": False}
+
+    @app.post("/authoring/graphs/{graph_id}/structural-proposals/{proposal_id}/approve")
+    def approve_structural_proposal(
+        graph_id: str, proposal_id: str, body: ApproveCandidateBody
+    ) -> dict[str, Any]:
+        proposal = app.state.evidence_store.get_structural_graph_proposal(proposal_id)
+        if proposal is None or proposal.graph_id != graph_id:
+            raise HTTPException(404, "structural proposal not found")
+        try:
+            receipt = make_structural_approval_receipt(
+                proposal, approved_by=body.approved_by, binding_hash=body.binding_hash
+            )
+            graph, _ = store.apply_relationship_additions_atomically(
+                graph_id,
+                expected_graph_version=proposal.graph_version,
+                relationships=proposal.relationships,
+                actor=body.approved_by,
+                reason=f"approved structural proposal {proposal.id}",
+            )
+        except ValidationError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return {
+            "approval_receipt": json.loads(receipt.model_dump_json()),
+            "graph": json.loads(graph.model_dump_json()),
+        }
 
     @app.post("/authoring/graphs/{graph_id}/shadow-simulate")
     def shadow_simulate(graph_id: str, body: ShadowSimulationBody) -> dict[str, Any]:
