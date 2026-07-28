@@ -86,8 +86,9 @@ export interface WorkspaceDraftInput { id: string; base_graph_version: number; }
 export interface WorkspaceScenarioInput { id: string; name: string; assumptions: Record<string, string>; }
 
 export interface ClaimReviewInput {
-  decision: "include" | "exclude";
-  rationale?: string;
+  decision: "included" | "excluded";
+  reviewed_by: string;
+  reason?: string;
 }
 
 export interface ElicitDistributionInput {

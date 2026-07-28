@@ -49,6 +49,7 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
     return route.fulfill({ json: { id: "fixture-project" } });
   });
   await page.route("**/api/targets", (route) => route.fulfill({ json: { target: {} } }));
+  await page.route("**/api/research/targets/*/review", (route) => route.fulfill({ json: { claims: [] } }));
   await page.route("**/api/projects/**", (route) => route.fulfill({ json: {} }));
   await page.route("**/api/authoring/targets/*/candidate-proposals/fixture", (route) =>
     route.fulfill({ json: {

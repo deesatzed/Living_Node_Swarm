@@ -53,6 +53,7 @@ export { layoutHopGraph, type GraphPoint } from "./graph/layout";
 export { HopGraph } from "./graph/HopGraph";
 export { WarningCenter, type WorkspaceWarning } from "./inspectors/WarningCenter";
 export { DistributionInspector } from "./inspectors/DistributionInspector";
+export { EvidenceDrawer, type EvidenceDrawerClient } from "./inspectors/EvidenceDrawer";
 export { VettingConversation } from "./discovery/VettingConversation";
 export { CandidateMap, type CandidateMapClient } from "./discovery/CandidateMap";
 export { DecisionLedger, type DecisionLedgerClient } from "./discovery/DecisionLedger";
