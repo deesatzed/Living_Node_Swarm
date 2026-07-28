@@ -63,4 +63,16 @@ describe("VettingConversation", () => {
     expect(onRecordProviderRouting).toHaveBeenCalledWith(expect.objectContaining({ provider: "openrouter", mode: "provider_routing_authorized", data_scope: "No research content has been sent. Future routing is limited to the explicit research brief." }));
     expect(await screen.findByRole("status")).toHaveTextContent("Provider-routing consent saved. No research content was sent.");
   });
+
+  it("records planned research categories as a brief rather than retrieved evidence", async () => {
+    const user = userEvent.setup();
+    const onRecordResearchCategories = vi.fn(async () => undefined);
+    render(<VettingConversation provider="No provider selected" model="No model selected" dataScope="No content leaves this Mac." onRecordResearchCategories={onRecordResearchCategories} />);
+    await user.click(screen.getByLabelText("Supply"));
+    await user.click(screen.getByLabelText("Substitution"));
+    await user.click(screen.getByRole("button", { name: "Save research categories" }));
+    expect(onRecordResearchCategories).toHaveBeenCalledWith(["supply", "substitution"]);
+    expect(await screen.findByRole("status")).toHaveTextContent("Research brief categories saved: supply, substitution.");
+    expect(screen.getByText(/not retrieved evidence/i)).toBeVisible();
+  });
 });
