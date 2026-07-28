@@ -53,7 +53,7 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.getByRole("button", { name: "Run in-memory comparison" }).click();
   await expect(page.getByText("Affected path: Input signal → Outcome")).toBeVisible();
   await page.getByRole("button", { name: "Save durable candidate revision" }).click();
-  await expect(page.getByText("Revision revision-1 · base graph version 4 · 1 parameter change")).toBeVisible();
+  await expect(page.getByText("Revision revision-1 · base graph version 4 · 1 parameter change · 0 node-state changes · 0 relationship-state changes")).toBeVisible();
   await expect(page.getByText("Candidate revision saved without changing the active graph.")).toBeVisible();
   await page.getByRole("button", { name: "Save candidate for review" }).click();
   await expect(page.getByText("Binding hash: binding-123")).toBeVisible();
