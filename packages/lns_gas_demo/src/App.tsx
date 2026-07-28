@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { WORKFLOW_STAGES } from "@lns/ui-shared";
+import { WORKFLOW_STAGES, WorkspaceShell } from "@lns/ui-shared";
 import { api, type Graph, type Node, type Snapshot } from "./api";
 
 function histogram(samples: number[], bins = 22): number[] {
@@ -98,6 +98,7 @@ export default function App() {
   }
 
   return (
+    <WorkspaceShell projectName="LNS Gas preset" target="US retail gas versus Kalshi threshold" horizon="Current contract horizon" graphVersion={graph?.graph_version ?? 0} freshness={freshness === "fresh" ? "active" : "stale"} evidenceClassification="fixture_unverified" currentStage="simulate">
     <div className="app">
       <header className="hero">
         <div>
@@ -452,5 +453,6 @@ export default function App() {
         </div>
       </div>
     </div>
+    </WorkspaceShell>
   );
 }
