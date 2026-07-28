@@ -93,7 +93,7 @@
 |---|---|---|---|---|
 | Q6-01 | Define gas preset contract | Q3-08 | gas-specific inputs map to general contracts | Pending |
 | Q6-02 | Replace duplicate gas UI with shared workspace preset | Q4-10, Q6-01 | gas app uses shared components | Pending |
-| Q6-03 | Isolate Kalshi panel and disable real-money actions by default | Q6-02 | no live action without separate explicit enable/review | Pending |
+| Q6-03 | Isolate Kalshi panel and disable real-money actions by default | Q6-02 | no live action without separate explicit enable/review | In progress — Gas UI preserves preview and dry-run exits while hard-disabling live buy and live auto-sell controls; no UI source path sends `confirm: true` or `autoSell(true)` (gas production build, 2026-07-28). Separate execution enable/review surface remains intentionally absent. |
 | Q6-04 | Remove/hard-gate bulk activation semantics | Q3-07, Q6-02 | invalid/unreviewed batch cannot activate | Pending |
 | Q6-05 | Run gas regression suite | Q6-01–04 | existing and new gas tests/builds pass | Pending |
 

@@ -18,6 +18,7 @@ function histogram(samples: number[], bins = 22): number[] {
 }
 
 export default function App() {
+  const liveTradingEnabled = false;
   const [graph, setGraph] = useState<Graph | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -369,7 +370,7 @@ export default function App() {
           )}
 
           <h2 style={{ marginTop: 16 }}>3 · Kalshi micro-stakes</h2>
-          <p className="muted">Preview always first. Live uses project ~$10 account (caps $3 / 3 contracts).</p>
+          <p className="muted">Preview always first. Live execution is disabled in this goal build; no trade or auto-sell request can be submitted from this UI.</p>
           <div className="row">
             <button
               disabled={busy}
@@ -435,34 +436,9 @@ export default function App() {
             </button>
             <button
               className="primary"
-              disabled={busy || !ticker}
-              onClick={async () => {
-                if (!window.confirm(`LIVE BUY 1 YES on ${ticker}?`)) return;
-                setBusy(true);
-                try {
-                  setLog(
-                    "BUY:\n" +
-                      JSON.stringify(
-                        await api.order({
-                          ticker,
-                          action: "buy",
-                          side: "yes",
-                          contracts: 1,
-                          confirm: true,
-                          graph_id: graph?.id,
-                        }),
-                        null,
-                        2
-                      )
-                  );
-                } catch (e) {
-                  setError(e instanceof Error ? e.message : String(e));
-                } finally {
-                  setBusy(false);
-                }
-              }}
+              disabled={!liveTradingEnabled}
             >
-              Confirm BUY
+              Confirm BUY (disabled)
             </button>
             <button
               disabled={busy}
@@ -481,20 +457,9 @@ export default function App() {
             </button>
             <button
               className="danger"
-              disabled={busy}
-              onClick={async () => {
-                if (!window.confirm("LIVE auto-sell any 20% mid movers?")) return;
-                setBusy(true);
-                try {
-                  setLog("AUTO-SELL LIVE:\n" + JSON.stringify(await api.autoSell(true), null, 2));
-                } catch (e) {
-                  setError(e instanceof Error ? e.message : String(e));
-                } finally {
-                  setBusy(false);
-                }
-              }}
+              disabled={!liveTradingEnabled}
             >
-              Auto-SELL 20%
+              Auto-SELL 20% (disabled)
             </button>
           </div>
           {log && <pre className="log">{log}</pre>}
