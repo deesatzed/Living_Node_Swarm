@@ -33,7 +33,7 @@ from lns_kernel.store import GraphStore
 from lns_kernel.validation import ValidationError
 from lns_server.gas_ai import expand_gas_factors, layout_for_new_nodes
 from lns_server.candidate_graph import build_neodymium_fixture
-from lns_server.distribution_elicitation import ElicitDistributionBody, elicit_from_median_p90
+from lns_server.distribution_elicitation import DeriveDistributionBody, ElicitDistributionBody, derive_from_intuitive_inputs, elicit_from_median_p90
 from lns_server.relationship_authoring import RelationshipValidationBody, validate_proposed_relationships
 from lns_server.structural_proposals import (
     StructuralProposalBody,
@@ -637,6 +637,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/authoring/distributions/elicit")
     def elicit_distribution(body: ElicitDistributionBody) -> dict[str, Any]:
         return json.loads(elicit_from_median_p90(body).model_dump_json())
+
+    @app.post("/authoring/distributions/derive")
+    def derive_distribution(body: DeriveDistributionBody) -> dict[str, Any]:
+        try:
+            return json.loads(derive_from_intuitive_inputs(body).model_dump_json())
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
 
     @app.post("/authoring/relationships/validate")
     def validate_relationships(body: RelationshipValidationBody) -> dict[str, Any]:
