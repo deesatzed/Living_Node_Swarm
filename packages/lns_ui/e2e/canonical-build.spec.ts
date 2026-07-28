@@ -78,8 +78,14 @@ test("canonical Run renders an authoritative successful simulation receipt witho
     sim_status: { freshness: "fresh" },
   };
   await page.route("**/api/projects", (route) => route.fulfill({ json: { projects: [project] } }));
-  await page.route("**/api/targets/target-1", (route) => route.fulfill({ json: { question: "What will neodymium cost?", forecast_origin: "2026-07-28T00:00:00Z", resolution_at: "2027-07-28T00:00:00Z" } }));
+  await page.route("**/api/targets/target-1", (route) => route.fulfill({ json: { question: "What will neodymium cost?", target_node_id: "outcome", forecast_origin: "2026-07-28T00:00:00Z", resolution_at: "2027-07-28T00:00:00Z" } }));
   await page.route("**/api/projects/run-1/scenarios", (route) => route.fulfill({ json: { scenarios: [] } }));
+  await page.route("**/api/projects/run-1/monitoring", (route) => route.fulfill({ json: { config: null, events: [] } }));
+  await page.route("**/api/graphs/graph-1/snapshots?limit=10", (route) => route.fulfill({ json: { snapshots: [] } }));
+  await page.route("**/api/projects/run-1/ensembles", (route) => route.request().method() === "GET"
+    ? route.fulfill({ json: { ensembles: [{ id: "fixture-blend", name: "Fixture blend", combination_method: "weighted_distribution_mixture", binding_hash: "a".repeat(64), members: [{ graph_id: "graph-1", graph_version: 4, target_node_id: "outcome", weight: 1 }, { graph_id: "graph-2", graph_version: 3, target_node_id: "outcome", weight: 3 }] }] } })
+    : route.fulfill({ json: {} }));
+  await page.route("**/api/projects/run-1/ensembles/fixture-blend/approve", (route) => route.fulfill({ json: { approval_receipt: { id: "fixture-ensemble-receipt", approved_by: "fixture-operator" }, active_graph_mutated: false } }));
   await page.route("**/api/graphs/graph-1/sim/run", (route) => route.fulfill({ json: runResponse }));
   await page.route("**/api/projects/run-1", (route) => route.request().method() === "GET" ? route.fulfill({ json: project }) : route.fulfill({ json: project }));
   await page.goto("/");
@@ -90,6 +96,11 @@ test("canonical Run renders an authoritative successful simulation receipt witho
   await expect(page.getByLabel("Run outcome summaries")).toContainText("outcome · mean 48.2 · median 47.8 · p05 40.1 · p95 56.4");
   await expect(page.getByLabel("Run stability diagnostic")).toContainText("does not establish forecast accuracy or model calibration");
   await expect(page.getByText(/does not create, activate, or edit structure/i)).toBeVisible();
+  await page.getByLabel("Ensemble approver identity").fill("fixture-operator");
+  await page.getByLabel("I reviewed this exact ensemble binding").check();
+  await page.getByRole("button", { name: "Approve ensemble Fixture blend" }).click();
+  await expect(page.getByLabel("Ensemble approval receipt")).toContainText("Approval receipt: fixture-ensemble-receipt");
+  await expect(page.getByLabel("Ensemble approval receipt")).toContainText("Member graphs unchanged: yes.");
 });
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800 }]) {
