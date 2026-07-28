@@ -201,6 +201,80 @@ class GraphStore:
         self._conn.commit()
         return graph, event
 
+    def apply_parameter_overrides_atomically(
+        self,
+        graph_id: str,
+        *,
+        expected_graph_version: int,
+        overrides: dict[str, dict[str, float]],
+        actor: str,
+        reason: str,
+    ) -> tuple[Graph, list[UpdateEvent]]:
+        """Validate and apply a candidate parameter set in one SQLite transaction."""
+
+        graph = self.get_graph(graph_id)
+        if graph is None:
+            raise ValidationError(f"Graph {graph_id} not found")
+        if graph.graph_version != expected_graph_version:
+            raise ValidationError("candidate proposal invalidated by graph version change")
+        trial = dict(graph.nodes)
+        events: list[UpdateEvent] = []
+        for node_id, patch in overrides.items():
+            old_node = trial.get(node_id)
+            if old_node is None:
+                raise ValidationError(f"Candidate override references missing node {node_id}")
+            parameters = {**old_node.parameters, **patch}
+            new_node = old_node.model_copy(
+                update={
+                    "parameters": parameters,
+                    "version": old_node.version + 1,
+                    "last_updated_by": actor,
+                    "updated_at": utcnow(),
+                }
+            )
+            validate_node(new_node)
+            trial[node_id] = new_node
+            events.append(
+                UpdateEvent(
+                    id=str(uuid.uuid4()),
+                    graph_id=graph_id,
+                    node_id=node_id,
+                    old_version=old_node.version,
+                    new_version=new_node.version,
+                    reason=reason,
+                    actor=actor,
+                    diff_summary={"parameters_before": old_node.parameters, "parameters_after": parameters},
+                )
+            )
+        assert_acyclic(trial)
+        validate_graph_nodes(trial)
+        graph.nodes = trial
+        graph.graph_version += 1
+        graph.updated_at = utcnow()
+        cursor = self._conn.cursor()
+        try:
+            cursor.execute("BEGIN IMMEDIATE")
+            for node_id, node in trial.items():
+                if node_id in overrides:
+                    cursor.execute(
+                        "UPDATE nodes SET payload_json=? WHERE graph_id=? AND node_id=?",
+                        (node.model_dump_json(), graph_id, node_id),
+                    )
+            cursor.execute(
+                "UPDATE graphs SET graph_version=?, updated_at=?, freshness=? WHERE id=?",
+                (graph.graph_version, graph.updated_at.isoformat(), Freshness.STALE.value, graph_id),
+            )
+            for event in events:
+                cursor.execute(
+                    "INSERT INTO events (id, graph_id, payload_json, timestamp) VALUES (?,?,?,?)",
+                    (event.id, graph_id, event.model_dump_json(), event.timestamp.isoformat()),
+                )
+            self._conn.commit()
+        except Exception:
+            self._conn.rollback()
+            raise
+        return graph, events
+
     def add_node(
         self,
         graph_id: str,

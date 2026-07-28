@@ -11,7 +11,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Surface | Verified state |
 |---|---|
 | Kernel tests | 72 passed on 2026-07-27 after persisted multi-seed/multi-sample stability diagnostics |
-| Server tests | 48 passed on 2026-07-28 after non-mutating shadow simulation API; one upstream deprecation warning |
+| Server tests | 50 passed on 2026-07-28 after version-bound candidate approval; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-27 |
 | Gas UI | Production build passed on 2026-07-27 |
 | Current families | Eight canonical registry families; legacy node payloads remain readable through explicit parameter normalization |
@@ -67,6 +67,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Q3-04 distribution elicitation | Complete | Codex | Median/P90 quantiles transparently derive Normal or LogNormal parameters, statistics, and a limitation-bearing receipt; 44 server tests passed |
 | Q3-05 relationship authoring | Complete | Codex | Proposed-only relationship API validates contracts and returns unresolved-dependence warnings without graph mutation; 46 server tests passed |
 | Q3-06 shadow simulation | Complete | Codex | Active/candidate paired runs simulate in memory and prove active graph immutability; 48 server tests passed |
+| Q3-07 version-bound approval | Complete | Codex | Exact binding hash required; graph edits invalidate pending candidate; approved overrides apply atomically; 50 server tests and 72 kernel tests passed |
 | Gate 3 generalized authoring | Pending | Unassigned | Depends on Gates 1–2 |
 | Gate 4 visual workspace | Pending | Unassigned | Depends on Gate 3 API/contracts |
 | Gate 5 Neodymium acceptance | Pending | Unassigned | Depends on Gates 1–4 |
@@ -88,9 +89,9 @@ Gate 2 exited on 2026-07-27: fixture-tested local URL safety, bounded retrieval,
 
 ## Next Actions
 
-1. Complete Q3-07: add version-bound approval workflow.
-2. Complete Q3-08: run a full deterministic generalized-authoring API journey.
-3. Keep proposals inactive until version-bound human approval.
+1. Complete Q3-08: run a full deterministic generalized-authoring API journey.
+2. Start the shared Prediction Workspace once Gate 3 integration is green.
+3. Keep fixture proposals clearly labeled until live research is consented and completed.
 
 ## Blockers
 

@@ -9,6 +9,7 @@ from lns_kernel.contracts import EvidenceClaim, EvidenceClass, SourceReceipt, Ta
 from lns_server.research_routing import ProviderRoutingReceipt
 from lns_server.research_plan import ResearchCompletenessReport
 from lns_server.research_review import ClaimReview
+from lns_server.candidate_approval import CandidateApprovalProposal
 
 
 class EvidenceStore:
@@ -50,6 +51,10 @@ class EvidenceStore:
                 claim_id TEXT NOT NULL,
                 payload_json TEXT NOT NULL,
                 PRIMARY KEY(target_contract_id, claim_id)
+            );
+            CREATE TABLE IF NOT EXISTS candidate_approval_proposals (
+                id TEXT PRIMARY KEY,
+                payload_json TEXT NOT NULL
             );
             """
         )
@@ -171,3 +176,16 @@ class EvidenceStore:
             (target_contract_id, claim_id),
         ).fetchone()
         return None if row is None else ClaimReview.model_validate_json(row["payload_json"])
+
+    def save_candidate_approval_proposal(self, proposal: CandidateApprovalProposal) -> None:
+        self._connection.execute(
+            "INSERT INTO candidate_approval_proposals(id, payload_json) VALUES (?, ?)",
+            (proposal.id, proposal.model_dump_json()),
+        )
+        self._connection.commit()
+
+    def get_candidate_approval_proposal(self, proposal_id: str) -> CandidateApprovalProposal | None:
+        row = self._connection.execute(
+            "SELECT payload_json FROM candidate_approval_proposals WHERE id=?", (proposal_id,)
+        ).fetchone()
+        return None if row is None else CandidateApprovalProposal.model_validate_json(row["payload_json"])

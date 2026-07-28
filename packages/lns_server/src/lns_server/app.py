@@ -35,6 +35,12 @@ from lns_server.candidate_graph import build_neodymium_fixture
 from lns_server.distribution_elicitation import ElicitDistributionBody, elicit_from_median_p90
 from lns_server.relationship_authoring import RelationshipValidationBody, validate_proposed_relationships
 from lns_server.shadow_simulation import ShadowSimulationBody, ShadowSimulationError, run_shadow_simulation
+from lns_server.candidate_approval import (
+    ApproveCandidateBody,
+    CandidateProposalBody,
+    make_approval_receipt,
+    make_candidate_proposal,
+)
 from lns_server.evidence_store import EvidenceStore
 from lns_server.journal import TradeJournal
 from lns_server.kalshi_client import KalshiClient, KalshiError
@@ -314,6 +320,45 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return run_shadow_simulation(graph, body)
         except ShadowSimulationError as exc:
             raise HTTPException(400, str(exc)) from exc
+
+    @app.post("/authoring/graphs/{graph_id}/candidate-proposals")
+    def create_candidate_proposal(graph_id: str, body: CandidateProposalBody) -> dict[str, Any]:
+        graph = store.get_graph(graph_id)
+        if graph is None:
+            raise HTTPException(404, "graph not found")
+        try:
+            proposal = make_candidate_proposal(
+                graph_id=graph_id, graph_version=graph.graph_version, body=body
+            )
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        app.state.evidence_store.save_candidate_approval_proposal(proposal)
+        return {"proposal": proposal.response_payload()}
+
+    @app.post("/authoring/graphs/{graph_id}/candidate-proposals/{proposal_id}/approve")
+    def approve_candidate_proposal(
+        graph_id: str, proposal_id: str, body: ApproveCandidateBody
+    ) -> dict[str, Any]:
+        proposal = app.state.evidence_store.get_candidate_approval_proposal(proposal_id)
+        if proposal is None or proposal.graph_id != graph_id:
+            raise HTTPException(404, "candidate proposal not found")
+        try:
+            receipt = make_approval_receipt(proposal, body)
+            graph, _ = store.apply_parameter_overrides_atomically(
+                graph_id,
+                expected_graph_version=proposal.graph_version,
+                overrides=proposal.candidate_parameter_overrides,
+                actor=body.approved_by,
+                reason=f"approved candidate proposal {proposal.id}",
+            )
+        except ValidationError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return {
+            "approval_receipt": json.loads(receipt.model_dump_json()),
+            "graph": json.loads(graph.model_dump_json()),
+        }
 
     @app.post("/graphs")
     def create_graph(body: CreateGraphBody) -> dict[str, Any]:
