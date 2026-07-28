@@ -52,3 +52,28 @@ def test_transform_experiment_runs_all_strategies():
     # Strategies should not all produce identical means on this seed graph
     means = [r["derived_mean"] for r in rows]
     assert len(set(round(m, 4) for m in means)) >= 2
+
+
+def test_runtime_ensemble_samples_every_registered_distribution_family():
+    parameters = {
+        DistributionFamily.NORMAL: {"loc": 0, "scale": 1},
+        DistributionFamily.LOGNORMAL: {"log_loc": 0, "log_scale": 0.2},
+        DistributionFamily.BETA: {"alpha": 2, "beta": 3},
+        DistributionFamily.POISSON: {"rate": 4},
+        DistributionFamily.NEGATIVE_BINOMIAL: {"mean": 4, "dispersion": 2},
+        DistributionFamily.GAMMA: {"shape": 2, "scale": 3},
+        DistributionFamily.STUDENT_T: {"loc": 0, "scale": 1, "df": 5},
+        DistributionFamily.DETERMINISTIC: {"value": 7},
+    }
+    nodes = {
+        family.value: Node(id=family.value, name=family.value, distribution_family=family, parameters=family_parameters, status=NodeStatus.ACTIVE)
+        for family, family_parameters in parameters.items()
+    }
+
+    predictives, _, samples = run_ensemble(nodes, seed=29, n_samples=300)
+
+    assert set(predictives) == {family.value for family in DistributionFamily}
+    assert all(len(samples[family.value]) == 300 for family in DistributionFamily)
+    assert np.all(samples[DistributionFamily.POISSON.value] >= 0)
+    assert np.all(samples[DistributionFamily.GAMMA.value] > 0)
+    assert np.all(samples[DistributionFamily.DETERMINISTIC.value] == 7)

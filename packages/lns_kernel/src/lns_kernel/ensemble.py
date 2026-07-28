@@ -7,7 +7,7 @@ from typing import Callable
 import numpy as np
 
 from lns_kernel.dependencies import topological_order
-from lns_kernel.distributions import normalize_parameters
+from lns_kernel.distributions import sample_distribution
 from lns_kernel.models import (
     DistributionFamily,
     Freshness,
@@ -21,16 +21,10 @@ from lns_kernel.models import (
 def _sample_family(
     family: DistributionFamily, parameters: dict[str, float], n: int, rng: np.random.Generator
 ) -> np.ndarray:
-    canonical = normalize_parameters(family.value, parameters)
-    if family == DistributionFamily.NORMAL:
-        return rng.normal(canonical["loc"], canonical["scale"], size=n)
-    if family == DistributionFamily.LOGNORMAL:
-        return rng.lognormal(canonical["log_loc"], canonical["log_scale"], size=n)
-    if family == DistributionFamily.BETA:
-        return rng.beta(canonical["alpha"], canonical["beta"], size=n)
-    if family == DistributionFamily.DETERMINISTIC:
-        return np.full(n, parameters["value"], dtype=float)
-    raise ValueError(f"Unsupported family {family}")
+    """Delegate all runtime sampling to the one canonical distribution registry."""
+
+    seed = int(rng.integers(0, np.iinfo(np.int64).max))
+    return sample_distribution(family.value, parameters, size=n, seed=seed)
 
 
 def _compose(
