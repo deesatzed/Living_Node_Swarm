@@ -10,6 +10,6 @@ describe("submitTargetToProject", () => {
     };
     await submitTargetToProject(client, "project-1", { id: "target-1", question: "Q" });
     expect(calls).toEqual(["target", "project"]);
-    expect(client.patchProject).toHaveBeenCalledWith("project-1", { target_id: "target-1" });
+    expect(client.patchProject).toHaveBeenCalledWith("project-1", { target_id: "target-1", stage: "vet" });
   });
 });

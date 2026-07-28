@@ -30,7 +30,7 @@ describe("PersistedTargetIntake", () => {
     await fillRequiredTargetFields();
 
     expect(await screen.findByRole("status")).toHaveTextContent("Target contract saved to this workspace.");
-    expect(client.patchProject).toHaveBeenCalledWith("project-1", { target_id: "nd-retail-2027" });
+    expect(client.patchProject).toHaveBeenCalledWith("project-1", { target_id: "nd-retail-2027", stage: "vet" });
   });
 
   it("shows an actionable persistence error and does not attach a failed target", async () => {

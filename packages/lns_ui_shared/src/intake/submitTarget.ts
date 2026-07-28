@@ -12,5 +12,5 @@ export async function submitTargetToProject(
 ): Promise<void> {
   if (!target.id) throw new Error("A target id is required before persistence.");
   await client.createTarget(target);
-  await client.patchProject(projectId, { target_id: target.id });
+  await client.patchProject(projectId, { target_id: target.id, stage: "vet" });
 }

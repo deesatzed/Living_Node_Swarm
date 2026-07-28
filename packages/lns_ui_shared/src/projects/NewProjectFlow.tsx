@@ -53,7 +53,12 @@ export function NewProjectFlow({ client, onCreated }: { client: NewProjectClient
     if (!projectId) return;
     await client.patchProject(projectId, { research_consent: { mode: "local_only", provider: "none", model: "none", data_scope: "no content leaves this Mac" } });
   }
-  if (projectId && targetId) return <section aria-label="Build vet stage"><VettingConversation provider="No provider selected" model="No model selected" dataScope="No content will leave this Mac until an explicit provider-routing confirmation is recorded." onRecord={recordVetEntry} onRecordLocalOnly={recordLocalOnlyResearchPreference} onProceed={() => setBuildStage("map")} />{client.getResearchReview && client.reviewResearchClaim ? <EvidenceDrawer targetId={targetId} client={{ getResearchReview: client.getResearchReview, reviewResearchClaim: client.reviewResearchClaim }} /> : <p>No evidence-review client is available.</p>}</section>;
+  async function proceedToMap() {
+    if (!projectId) return;
+    try { await client.patchProject(projectId, { stage: "map" }); setBuildStage("map"); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to advance to candidate mapping."); }
+  }
+  if (projectId && targetId) return <section aria-label="Build vet stage">{error && <p role="alert">{error}</p>}<VettingConversation provider="No provider selected" model="No model selected" dataScope="No content will leave this Mac until an explicit provider-routing confirmation is recorded." onRecord={recordVetEntry} onRecordLocalOnly={recordLocalOnlyResearchPreference} onProceed={proceedToMap} />{client.getResearchReview && client.reviewResearchClaim ? <EvidenceDrawer targetId={targetId} client={{ getResearchReview: client.getResearchReview, reviewResearchClaim: client.reviewResearchClaim }} /> : <p>No evidence-review client is available.</p>}</section>;
   if (projectId) return <PersistedTargetIntake client={client} projectId={projectId} onSaved={setTargetId} />;
   return <section aria-labelledby="new-project-title">
     <h1 id="new-project-title">New prediction project</h1>

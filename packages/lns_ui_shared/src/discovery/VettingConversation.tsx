@@ -15,7 +15,7 @@ export function VettingConversation({ provider, model, dataScope, onProceed, onR
   provider: string;
   model: string;
   dataScope: string;
-  onProceed?: () => void;
+  onProceed?: () => void | Promise<void>;
   onRecord?: (entry: VettingEntry) => Promise<void>;
   onRecordLocalOnly?: () => Promise<void>;
 }) {
@@ -44,7 +44,7 @@ export function VettingConversation({ provider, model, dataScope, onProceed, onR
   return <section aria-labelledby="vetting-title">
     <h2 id="vetting-title">Vet the research brief</h2>
     <p>Record user claims, proposed interpretations, exclusions, scenarios, and unknowns before model structure is proposed.</p>
-    <div><button onClick={() => setPaused((value) => !value)}>{paused ? "Resume" : "Pause"}</button><button onClick={onProceed} disabled={paused}>Proceed now</button>{ACTIONS.map((candidate) => <button key={candidate.label} onClick={() => { setAction(candidate); setStatus(""); }}>{candidate.label}</button>)}</div>
+    <div><button onClick={() => setPaused((value) => !value)}>{paused ? "Resume" : "Pause"}</button><button onClick={() => void onProceed?.()} disabled={paused}>Proceed now</button>{ACTIONS.map((candidate) => <button key={candidate.label} onClick={() => { setAction(candidate); setStatus(""); }}>{candidate.label}</button>)}</div>
     {paused && <p role="status">Discovery is paused. No research or routing action is in progress.</p>}
     {action && <section aria-label="Record discovery action"><label>{action.prompt}<input value={text} onChange={(event) => setText(event.target.value)} /></label><button onClick={() => void record()} disabled={busy || !text.trim()}>{busy ? "Saving discovery entry…" : "Save discovery action"}</button></section>}
     {status && <p role="status">{status}</p>}{error && <p role="alert">{error}</p>}
