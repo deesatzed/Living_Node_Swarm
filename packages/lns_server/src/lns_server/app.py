@@ -759,7 +759,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         proposal = app.state.evidence_store.get_structural_graph_proposal(proposal_id)
         if proposal is None or proposal.graph_id != project.graph_id:
             raise HTTPException(404, "structural proposal not found for project graph")
-        if project.active_graph_version != proposal.graph_version:
+        if project.active_graph_version is None and project.stage != "map":
+            raise HTTPException(409, "project has no Map-stage baseline for first structural approval")
+        if project.active_graph_version is not None and project.active_graph_version != proposal.graph_version:
             raise HTTPException(409, "project active graph version does not match structural proposal")
         try:
             receipt = make_structural_approval_receipt(

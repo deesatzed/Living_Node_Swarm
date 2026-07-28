@@ -97,4 +97,27 @@ describe("CandidateMap", () => {
     expect(await screen.findByLabelText("Fixture structural review")).toHaveTextContent("Binding hash: fixture-hash");
     expect(screen.getByLabelText("Fixture structural review")).toHaveTextContent("No factor is active until exact named approval");
   });
+
+  it("requires a named explicit review before approving a fixture structural binding for its project", async () => {
+    const user = userEvent.setup();
+    const approveProjectStructuralProposal = vi.fn(async () => ({ approval_receipt: { id: "receipt-1" }, graph: { graph_version: 2 }, project: { stage: "decide", active_graph_version: 2 } }));
+    render(<CandidateMap targetId="fixture-nd-retail-2027" projectId="project-1" client={{
+      createFixtureCandidateProposal: async () => createNeodymiumGraphFixture(),
+      materializeFixtureCandidateProposal: async () => ({ graph: { id: "fixture-graph-5" }, active_graph_mutated: false }),
+      createStructuralProposal: async () => ({ proposal: { id: "fixture-review-2", binding_hash: "fixture-hash-2", graph_version: 1 }, active_graph_mutated: false }),
+      approveProjectStructuralProposal,
+    }} />);
+
+    await user.click(screen.getByRole("button", { name: "Load labeled fixture candidate map" }));
+    await user.click(await screen.findByRole("button", { name: "Materialize fixture proposal for review" }));
+    await user.selectOptions(screen.getByLabelText("Candidate factor for fixture refinement"), "china_export_controls");
+    await user.click(screen.getByRole("button", { name: "Create structural review for selected fixture factor" }));
+    expect(screen.getByRole("button", { name: "Approve fixture structural binding" })).toBeDisabled();
+    await user.type(screen.getByLabelText("Fixture structural approver identity"), "operator");
+    await user.click(screen.getByLabelText("I reviewed this fixture structural binding"));
+    await user.click(screen.getByRole("button", { name: "Approve fixture structural binding" }));
+
+    expect(approveProjectStructuralProposal).toHaveBeenCalledWith("project-1", "fixture-review-2", { approved_by: "operator", binding_hash: "fixture-hash-2" });
+    expect(await screen.findByLabelText("Fixture structural approval receipt")).toHaveTextContent("Approved graph version: 2");
+  });
 });

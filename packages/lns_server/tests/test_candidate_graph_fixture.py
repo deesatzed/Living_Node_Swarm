@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from lns_server.app import create_app
 from lns_server.settings import Settings
+from lns_server.workspace_models import WorkspaceProject
 
 
 def target_body() -> dict[str, object]:
@@ -83,3 +84,23 @@ def test_materialized_fixture_can_create_a_non_active_exact_structural_review_fo
     assert proposal.json()["proposal"]["activated_node_ids"] == ["china_export_controls"]
     assert unchanged["nodes"]["china_export_controls"]["status"] == "proposed"
     assert unchanged["relationships"] == {}
+
+
+def test_map_stage_project_can_make_its_first_exact_structural_approval(tmp_path: Path):
+    app = create_app(Settings(db_path=str(tmp_path / "graph.db")))
+    with TestClient(app) as client:
+        assert client.post("/targets", json=target_body()).status_code == 200
+        graph = client.post("/authoring/targets/nd-retail-2027/candidate-proposals/fixture/materialize").json()["graph"]
+        app.state.workspace_store.create_project(WorkspaceProject(id="project-1", name="Fixture Build", target_id="nd-retail-2027", graph_id=graph["id"], stage="map"))
+        fixture = client.post("/authoring/targets/nd-retail-2027/candidate-proposals/fixture").json()
+        relationship = next(item for item in fixture["relationships"] if item["id"] == "china_export_controls_to_target")
+        proposal = client.post(f"/authoring/graphs/{graph['id']}/structural-proposals", json={"relationships": [relationship], "activated_node_ids": ["china_export_controls"]}).json()["proposal"]
+        approved = client.post(
+            f"/projects/project-1/structural-proposals/{proposal['id']}/approve",
+            json={"approved_by": "operator", "binding_hash": proposal["binding_hash"]},
+        )
+
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["project"]["stage"] == "decide"
+    assert approved.json()["project"]["active_graph_version"] == 2
+    assert approved.json()["graph"]["nodes"]["china_export_controls"]["status"] == "active"

@@ -7,6 +7,7 @@ export interface CandidateMapClient {
   createFixtureCandidateProposal(targetId: string): Promise<CandidateGraphFixture>;
   materializeFixtureCandidateProposal?(targetId: string): Promise<{ graph?: { id?: string }; active_graph_mutated?: boolean }>;
   createStructuralProposal?(graphId: string, body: { relationships: Record<string, unknown>[]; activated_node_ids: string[] }): Promise<{ proposal?: { id?: string; binding_hash?: string; graph_version?: number }; active_graph_mutated?: boolean }>;
+  approveProjectStructuralProposal?(projectId: string, proposalId: string, body: { approved_by: string; binding_hash: string }): Promise<{ approval_receipt?: { id?: string }; graph?: { graph_version?: number }; project?: { stage?: string; active_graph_version?: number } }>;
 }
 
 type FixtureCandidateRevision = Pick<CandidateGraphFixture, "factors" | "relationships">;
@@ -15,7 +16,7 @@ function copyRevision(revision: FixtureCandidateRevision): FixtureCandidateRevis
   return { factors: revision.factors.map((factor) => ({ ...factor })), relationships: revision.relationships.map((relationship) => ({ ...relationship })) };
 }
 
-export function CandidateMap({ targetId, client, onMaterialized }: { targetId: string; client: CandidateMapClient; onMaterialized?: (graphId: string) => Promise<void> | void }) {
+export function CandidateMap({ targetId, projectId, client, onMaterialized }: { targetId: string; projectId?: string; client: CandidateMapClient; onMaterialized?: (graphId: string) => Promise<void> | void }) {
   const [fixture, setFixture] = useState<CandidateGraphFixture | null>(null);
   const [revision, setRevision] = useState<FixtureCandidateRevision | null>(null);
   const [savedRevision, setSavedRevision] = useState<FixtureCandidateRevision | null>(null);
@@ -24,6 +25,9 @@ export function CandidateMap({ targetId, client, onMaterialized }: { targetId: s
   const [error, setError] = useState("");
   const [materializedGraphId, setMaterializedGraphId] = useState("");
   const [structuralReview, setStructuralReview] = useState<{ id?: string; binding_hash?: string; graph_version?: number } | null>(null);
+  const [structuralApprover, setStructuralApprover] = useState("");
+  const [structuralReviewed, setStructuralReviewed] = useState(false);
+  const [structuralApproval, setStructuralApproval] = useState<{ approval_receipt?: { id?: string }; graph?: { graph_version?: number }; project?: { stage?: string; active_graph_version?: number } } | null>(null);
   const [loading, setLoading] = useState(false);
   async function load() {
     setLoading(true); setError("");
@@ -109,7 +113,13 @@ export function CandidateMap({ targetId, client, onMaterialized }: { targetId: s
     try {
       const result = await client.createStructuralProposal(materializedGraphId, { relationships: [relationship], activated_node_ids: [selectedFactorId] });
       setStructuralReview(result.proposal ?? null);
+      setStructuralApprover(""); setStructuralReviewed(false); setStructuralApproval(null);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to create structural review."); }
+  }
+  async function approveStructuralReview() {
+    if (!projectId || !structuralReview?.id || !structuralReview.binding_hash || !client.approveProjectStructuralProposal) return;
+    try { setStructuralApproval(await client.approveProjectStructuralProposal(projectId, structuralReview.id, { approved_by: structuralApprover.trim(), binding_hash: structuralReview.binding_hash })); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to approve fixture structural binding."); }
   }
 
   return <section aria-label="Candidate map">
@@ -124,7 +134,8 @@ export function CandidateMap({ targetId, client, onMaterialized }: { targetId: s
         {client.materializeFixtureCandidateProposal && <button onClick={() => void materialize()}>Materialize fixture proposal for review</button>}
         {materializedGraphId && <p role="status">Fixture candidate graph {materializedGraphId} persisted for separate review; no factor is active.</p>}
         {materializedGraphId && client.createStructuralProposal && <button onClick={() => void createStructuralReview()}>Create structural review for selected fixture factor</button>}
-        {structuralReview && <section aria-label="Fixture structural review"><h3>Fixture structural review</h3><p>Proposal {structuralReview.id ?? "Not recorded"} · graph version {structuralReview.graph_version ?? "Not recorded"}</p><p>Binding hash: {structuralReview.binding_hash ?? "Not recorded"}</p><p>Fixture scenario assumptions only. No factor is active until exact named approval.</p></section>}
+        {structuralReview && <section aria-label="Fixture structural review"><h3>Fixture structural review</h3><p>Proposal {structuralReview.id ?? "Not recorded"} · graph version {structuralReview.graph_version ?? "Not recorded"}</p><p>Binding hash: {structuralReview.binding_hash ?? "Not recorded"}</p><p>Fixture scenario assumptions only. No factor is active until exact named approval.</p>{projectId && client.approveProjectStructuralProposal && <><label>Fixture structural approver identity<input aria-label="Fixture structural approver identity" value={structuralApprover} onChange={(event) => setStructuralApprover(event.target.value)} /></label><label><input aria-label="I reviewed this fixture structural binding" type="checkbox" checked={structuralReviewed} onChange={(event) => setStructuralReviewed(event.target.checked)} />I reviewed this fixture structural binding</label><button onClick={() => void approveStructuralReview()} disabled={!structuralApprover.trim() || !structuralReviewed}>Approve fixture structural binding</button></>}</section>}
+        {structuralApproval && <section aria-label="Fixture structural approval receipt"><h3>Fixture structural approval receipt</h3><p>Approval receipt: {structuralApproval.approval_receipt?.id ?? "Not recorded"}</p><p>Approved graph version: {structuralApproval.graph?.graph_version ?? "Not recorded"}</p><p>Project stage: {structuralApproval.project?.stage ?? "Not recorded"}</p></section>}
         {revisionStatus && <p role="status">{revisionStatus}</p>}
         <section aria-label="Fixture revision delta"><h3>Fixture revision delta</h3>{removedFactors.length === 0 && addedFactors.length === 0 ? <p>No fixture candidate changes staged.</p> : <>{removedFactors.map((factor) => <p key={`removed-${factor.id}`}>Removed factor: {factor.label}.</p>)}{addedFactors.map((factor) => <p key={`added-${factor.id}`}>Added factor: {factor.label}.</p>)}{addedEdges.map((edge) => <p key={`edge-${String(edge.parent_node_id)}-${String(edge.child_node_id)}`}>Added model dependency: {String(edge.parent_node_id)} → {String(edge.child_node_id)}.</p>)}</>}<p>Active graph unchanged: yes.</p></section>
       </section>
