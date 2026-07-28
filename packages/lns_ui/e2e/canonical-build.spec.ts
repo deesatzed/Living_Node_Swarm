@@ -24,8 +24,8 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.route("**/api/projects/approved-1/drafts", (route) => route.fulfill({ json: { id: "draft-1", base_graph_version: 4 } }));
   await page.route("**/api/projects/approved-1/revisions", (route) => route.fulfill({ json: { drafts: [{ id: "draft-earlier", base_graph_version: 4 }] } }));
   await page.route("**/api/graphs/graph-1", (route) => route.fulfill({ json: { nodes: {
-    input_signal: { id: "input_signal", name: "Input signal", parameters: { mu: 0, sigma: 1 }, depends_on: [] },
-    outcome: { id: "outcome", name: "Outcome", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["input_signal"] },
+    input_signal: { id: "input_signal", name: "Input signal", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: [] },
+    outcome: { id: "outcome", name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["input_signal"] },
   } } }));
   await page.route("**/api/authoring/graphs/graph-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 5, p50: 5 }, limitations: ["Candidate changes are simulated in memory and are not persisted or activated."] } }));
   await page.route("**/api/authoring/graphs/graph-1/candidate-proposals", (route) => route.fulfill({ json: { proposal: { id: "proposal-1", graph_version: 4, binding_hash: "binding-123" } } }));
@@ -40,6 +40,7 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByRole("heading", { name: "Edit model through a draft" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Active versus candidate" })).toBeVisible();
   await expect(page.getByLabel("Candidate value")).toBeVisible();
+  await expect(page.getByLabel("Distribution inspector")).toContainText("As of: Not recorded on graph node");
   await page.getByLabel("Candidate value").fill("5");
   await page.getByRole("button", { name: "Run in-memory comparison" }).click();
   await expect(page.getByText("Affected path: Input signal → Outcome")).toBeVisible();

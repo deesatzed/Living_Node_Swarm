@@ -16,13 +16,14 @@ describe("ShadowComparison", () => {
     }));
     render(<ShadowComparison graphId="graph-1" client={{
       getGraph: async () => ({ nodes: {
-        input_signal: { id: "input_signal", name: "Input signal", parameters: { mu: 0, sigma: 1 }, depends_on: [] },
-        outcome: { id: "outcome", name: "Outcome", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["input_signal"] },
+        input_signal: { id: "input_signal", name: "Input signal", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: [] },
+        outcome: { id: "outcome", name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["input_signal"] },
       }}),
       shadowSimulate,
     }} />);
 
     await screen.findByLabelText("Target outcome");
+    expect(screen.getByLabelText("Distribution inspector")).toHaveTextContent("As of: Not recorded on graph node");
     await user.clear(screen.getByLabelText("Candidate value"));
     await user.type(screen.getByLabelText("Candidate value"), "5");
     await user.click(screen.getByRole("button", { name: "Run in-memory comparison" }));

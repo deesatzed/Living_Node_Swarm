@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { CandidateApprovalInput, CandidateProposalInput, JsonObject, ShadowSimulationInput } from "../api/types";
+import { DistributionInspector } from "../inspectors/DistributionInspector";
 
 export interface ShadowComparisonClient {
   getGraph(graphId: string): Promise<JsonObject>;
@@ -11,6 +12,8 @@ export interface ShadowComparisonClient {
 interface GraphNode {
   id: string;
   name: string;
+  family?: string;
+  provenance: string;
   parameters: Record<string, number>;
   dependsOn: string[];
 }
@@ -21,7 +24,7 @@ function graphNodes(graph: JsonObject): GraphNode[] {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
     const node = raw as Record<string, unknown>;
     const parameters = Object.fromEntries(Object.entries(node.parameters as Record<string, unknown> | undefined ?? {}).filter((entry): entry is [string, number] => typeof entry[1] === "number"));
-    return [{ id, name: typeof node.name === "string" ? node.name : id, parameters, dependsOn: Array.isArray(node.depends_on) ? node.depends_on.filter((item): item is string => typeof item === "string") : [] }];
+    return [{ id, name: typeof node.name === "string" ? node.name : id, family: typeof node.distribution_family === "string" ? node.distribution_family : undefined, provenance: typeof node.evidence_classification === "string" ? node.evidence_classification : "Not recorded on graph node", parameters, dependsOn: Array.isArray(node.depends_on) ? node.depends_on.filter((item): item is string => typeof item === "string") : [] }];
   });
 }
 
@@ -50,6 +53,11 @@ function affectedPath(nodes: GraphNode[], startId: string, endId: string): Graph
 function numeric(value: unknown): string {
   return typeof value === "number" || typeof value === "string" ? String(value) : "unknown";
 }
+
+const SUPPORT: Record<string, string> = {
+  Normal: "real", LogNormal: "positive", Beta: "[0, 1]", Poisson: "non-negative integers",
+  NegativeBinomial: "non-negative integers", Gamma: "positive", StudentT: "real", Deterministic: "one value",
+};
 
 export function ShadowComparison({ graphId, client }: { graphId: string; client: ShadowComparisonClient }) {
   const [nodes, setNodes] = useState<GraphNode[]>([]);
@@ -143,6 +151,7 @@ export function ShadowComparison({ graphId, client }: { graphId: string; client:
       <label>Parameter<select aria-label="Candidate parameter" value={selectedParameter} onChange={(event) => chooseParameter(event.target.value)}>{Object.keys(selected?.parameters ?? {}).map((parameter) => <option key={parameter} value={parameter}>{parameter}</option>)}</select></label>
       <label>Candidate value<input aria-label="Candidate value" type="number" value={candidateValue} onChange={(event) => setCandidateValue(event.target.value)} /></label>
       <button onClick={runComparison} disabled={running}>{running ? "Comparing in memory…" : "Run in-memory comparison"}</button>
+      {selected?.family && <DistributionInspector family={selected.family} parameters={selected.parameters} support={SUPPORT[selected.family] ?? "not recorded"} asOf="Not recorded on graph node" provenance={selected.provenance} />}
     </>}
     {nodes.length === 0 && !error && <p role="alert">This graph has no editable numeric node parameters.</p>}
     {error && <p role="alert">{error}</p>}
