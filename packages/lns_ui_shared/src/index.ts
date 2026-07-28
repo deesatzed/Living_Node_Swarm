@@ -39,4 +39,5 @@ export { submitTargetToProject, type TargetPersistenceClient } from "./intake/su
 export { layoutHopGraph, type GraphPoint } from "./graph/layout";
 export { HopGraph } from "./graph/HopGraph";
 export { WarningCenter, type WorkspaceWarning } from "./inspectors/WarningCenter";
+export { DistributionInspector } from "./inspectors/DistributionInspector";
 export { VettingConversation } from "./discovery/VettingConversation";
