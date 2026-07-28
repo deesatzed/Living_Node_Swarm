@@ -34,6 +34,7 @@ from lns_server.gas_ai import expand_gas_factors, layout_for_new_nodes
 from lns_server.candidate_graph import build_neodymium_fixture
 from lns_server.distribution_elicitation import ElicitDistributionBody, elicit_from_median_p90
 from lns_server.relationship_authoring import RelationshipValidationBody, validate_proposed_relationships
+from lns_server.shadow_simulation import ShadowSimulationBody, ShadowSimulationError, run_shadow_simulation
 from lns_server.evidence_store import EvidenceStore
 from lns_server.journal import TradeJournal
 from lns_server.kalshi_client import KalshiClient, KalshiError
@@ -303,6 +304,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/authoring/relationships/validate")
     def validate_relationships(body: RelationshipValidationBody) -> dict[str, Any]:
         return validate_proposed_relationships(body)
+
+    @app.post("/authoring/graphs/{graph_id}/shadow-simulate")
+    def shadow_simulate(graph_id: str, body: ShadowSimulationBody) -> dict[str, Any]:
+        graph = store.get_graph(graph_id)
+        if graph is None:
+            raise HTTPException(404, "graph not found")
+        try:
+            return run_shadow_simulation(graph, body)
+        except ShadowSimulationError as exc:
+            raise HTTPException(400, str(exc)) from exc
 
     @app.post("/graphs")
     def create_graph(body: CreateGraphBody) -> dict[str, Any]:
