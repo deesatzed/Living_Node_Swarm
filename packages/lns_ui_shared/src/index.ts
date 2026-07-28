@@ -36,4 +36,5 @@ export { canMoveToStage, type StageTransitionContext } from "./workflow/guards";
 export { TargetIntake } from "./intake/TargetIntake";
 export { submitTargetToProject, type TargetPersistenceClient } from "./intake/submitTarget";
 export { layoutHopGraph, type GraphPoint } from "./graph/layout";
+export { HopGraph } from "./graph/HopGraph";
 export { VettingConversation } from "./discovery/VettingConversation";
