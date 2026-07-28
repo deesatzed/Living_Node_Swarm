@@ -36,3 +36,21 @@ def test_distribution_catalog_exposes_kernel_registry_metadata_in_frozen_order(t
         "lower_open": True,
         "upper_open": False,
     }
+
+
+def test_distribution_statistics_are_kernel_derived_and_accept_legacy_node_parameters(tmp_path: Path):
+    app = create_app(Settings(db_path=str(tmp_path / "graph.db")))
+    with TestClient(app) as client:
+        response = client.post(
+            "/authoring/distributions/statistics",
+            json={"family_id": "Normal", "parameters": {"mu": 4.0, "sigma": 2.0}},
+        )
+        invalid = client.post(
+            "/authoring/distributions/statistics",
+            json={"family_id": "Gamma", "parameters": {"shape": 2.0, "scale": -1.0}},
+        )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["parameters"] == {"loc": 4.0, "scale": 2.0}
+    assert response.json()["statistics"] == {"mean": 4.0, "median": 4.0, "mode": 4.0, "variance": 4.0, "support_lower": None, "support_upper": None}
+    assert invalid.status_code == 400

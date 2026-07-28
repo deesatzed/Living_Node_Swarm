@@ -47,14 +47,18 @@ describe("ShadowComparison", () => {
     }));
     render(<ShadowComparison graphId="graph-1" client={{
       getGraph: async () => ({ nodes: {
-        input_signal: { id: "input_signal", name: "Input signal", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: [] },
+        input_signal: { id: "input_signal", name: "Input signal", distribution_family: "Normal", units: "USD/kg", support_lower: -5, support_upper: 5, parameters: { mu: 0, sigma: 1 }, depends_on: [] },
         outcome: { id: "outcome", name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["input_signal"] },
       }}),
       shadowSimulate,
+      getDistributionStatistics: async () => ({ family_id: "Normal", parameters: { loc: 0, scale: 1 }, statistics: { mean: 0, median: 0, mode: 0, variance: 1, support_lower: null, support_upper: null } }),
     }} />);
 
     await screen.findByLabelText("Target outcome");
     expect(screen.getByLabelText("Distribution inspector")).toHaveTextContent("As of: Not recorded on graph node");
+    expect(await screen.findByText("Support: -5 to 5")).toBeVisible();
+    expect(screen.getByLabelText("Distribution inspector")).toHaveTextContent("Units: USD/kg");
+    expect(screen.getByLabelText("Derived distribution values")).toHaveTextContent("Standard deviation: 1");
     await user.clear(screen.getByLabelText("Candidate value"));
     await user.type(screen.getByLabelText("Candidate value"), "5");
     await user.click(screen.getByRole("button", { name: "Run in-memory comparison" }));

@@ -64,6 +64,22 @@ describe("workspace API client", () => {
     });
   });
 
+  it("requests read-only derived statistics from the kernel route", async () => {
+    const client = createWorkspaceClient({
+      baseUrl: "http://localhost:8787",
+      fetch: async (input, init) => {
+        expect(input).toBe("http://localhost:8787/authoring/distributions/statistics");
+        expect(init?.method).toBe("POST");
+        expect(init?.body).toBe(JSON.stringify({ family_id: "Normal", parameters: { mu: 4, sigma: 2 } }));
+        return new Response(JSON.stringify({ family_id: "Normal", parameters: { loc: 4, scale: 2 }, statistics: { mean: 4, median: 4, mode: 4, variance: 4, support_lower: null, support_upper: null } }));
+      },
+    });
+
+    await expect(client.getDistributionStatistics("Normal", { mu: 4, sigma: 2 })).resolves.toMatchObject({
+      statistics: { mean: 4, variance: 4 },
+    });
+  });
+
   it("lists persisted projects through the workspace endpoint", async () => {
     const client = createWorkspaceClient({
       baseUrl: "http://localhost:8787",
@@ -215,6 +231,7 @@ describe("workspace API client", () => {
       "createTarget",
       "elicitDistribution",
       "getDistributionCatalog",
+      "getDistributionStatistics",
       "getGraph",
       "getMonitoring",
       "getProject",

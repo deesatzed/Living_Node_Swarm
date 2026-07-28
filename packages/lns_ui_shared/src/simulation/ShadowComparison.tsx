@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { CandidateApprovalInput, CandidateProposalInput, JsonObject, ShadowSimulationInput, WorkspaceCandidateRevisionInput } from "../api/types";
+import type { CandidateApprovalInput, CandidateProposalInput, DistributionStatisticsResult, JsonObject, ShadowSimulationInput, WorkspaceCandidateRevisionInput } from "../api/types";
 import { DistributionInspector } from "../inspectors/DistributionInspector";
 
 export interface ShadowComparisonClient {
@@ -10,6 +10,7 @@ export interface ShadowComparisonClient {
   approveProjectCandidateProposal?(projectId: string, proposalId: string, body: CandidateApprovalInput): Promise<JsonObject>;
   createCandidateRevision?(projectId: string, revision: WorkspaceCandidateRevisionInput): Promise<JsonObject>;
   listCandidateRevisions?(projectId: string): Promise<{ candidate_revisions: JsonObject[] }>;
+  getDistributionStatistics?(familyId: string, parameters: Record<string, number>): Promise<DistributionStatisticsResult>;
 }
 
 interface GraphNode {
@@ -17,6 +18,8 @@ interface GraphNode {
   name: string;
   family?: string;
   provenance: string;
+  units: string;
+  support: string;
   parameters: Record<string, number>;
   dependsOn: string[];
 }
@@ -32,7 +35,10 @@ function graphNodes(graph: JsonObject): GraphNode[] {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
     const node = raw as Record<string, unknown>;
     const parameters = Object.fromEntries(Object.entries(node.parameters as Record<string, unknown> | undefined ?? {}).filter((entry): entry is [string, number] => typeof entry[1] === "number"));
-    return [{ id, name: typeof node.name === "string" ? node.name : id, family: typeof node.distribution_family === "string" ? node.distribution_family : undefined, provenance: typeof node.evidence_classification === "string" ? node.evidence_classification : "Not recorded on graph node", parameters, dependsOn: Array.isArray(node.depends_on) ? node.depends_on.filter((item): item is string => typeof item === "string") : [] }];
+    const supportLower = typeof node.support_lower === "number" ? node.support_lower : undefined;
+    const supportUpper = typeof node.support_upper === "number" ? node.support_upper : undefined;
+    const support = supportLower !== undefined || supportUpper !== undefined ? `${supportLower ?? "−∞"} to ${supportUpper ?? "∞"}` : SUPPORT[typeof node.distribution_family === "string" ? node.distribution_family : ""] ?? "Not recorded on graph node";
+    return [{ id, name: typeof node.name === "string" ? node.name : id, family: typeof node.distribution_family === "string" ? node.distribution_family : undefined, provenance: typeof node.evidence_classification === "string" ? node.evidence_classification : "Not recorded on graph node", units: typeof node.units === "string" ? node.units : "Not recorded on graph node", support, parameters, dependsOn: Array.isArray(node.depends_on) ? node.depends_on.filter((item): item is string => typeof item === "string") : [] }];
   });
 }
 
@@ -95,6 +101,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   const [revisionStatus, setRevisionStatus] = useState("");
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
+  const [derived, setDerived] = useState<DistributionStatisticsResult | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -127,6 +134,15 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   }, [client, projectId]);
 
   const selected = nodes.find((node) => node.id === selectedNode);
+  useEffect(() => {
+    let active = true;
+    setDerived(null);
+    if (!selected?.family || !client.getDistributionStatistics) return;
+    void client.getDistributionStatistics(selected.family, selected.parameters).then((next) => {
+      if (active) setDerived(next);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [client, selected]);
   function captureStaging() { setStagingHistory((current) => [...current, snapshot(stagedOverrides, stagedNodeStates, stagedRelationshipStates, stagedNewNodes)]); setStagingRedo([]); }
   function restoreStaging(next: StagingSnapshot) { setStagedOverrides(next.overrides); setStagedNodeStates(next.nodeStates); setStagedRelationshipStates(next.relationshipStates); setStagedNewNodes(next.newNodes); }
   function undoStaging() { const previous = stagingHistory.at(-1); if (!previous) return; setStagingHistory((current) => current.slice(0, -1)); setStagingRedo((current) => [...current, snapshot(stagedOverrides, stagedNodeStates, stagedRelationshipStates, stagedNewNodes)]); restoreStaging(previous); }
@@ -268,7 +284,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
       <section aria-label="Candidate structural change set"><h3>Candidate structural change set</h3>{Object.keys(stagedNodeStates).length === 0 ? <p>No local candidate node-state changes staged.</p> : <ul>{Object.entries(stagedNodeStates).map(([nodeId, state]) => <li key={nodeId}>{nodes.find((node) => node.id === nodeId)?.name ?? nodeId}: {state} <button onClick={() => removeStagedNodeState(nodeId)}>Remove {nodes.find((node) => node.id === nodeId)?.name ?? nodeId} state change</button></li>)}</ul>}<p>Node-state changes are revision-only and cannot be shadow-simulated or approved until a structural proposal contract exists.</p></section>
       <section aria-label="Candidate relationship change set"><h3>Candidate relationship change set</h3><label>Candidate dependency<select aria-label="Candidate dependency" value={selectedRelationship} onChange={(event) => setSelectedRelationship(event.target.value)}>{nodes.flatMap((node) => node.dependsOn.map((parent) => <option key={`${parent}:${node.id}`} value={`${parent}:${node.id}`}>{nodes.find((item) => item.id === parent)?.name ?? parent} → {node.name}</option>))}</select></label><button onClick={() => stageSelectedRelationshipState("excluded")}>Exclude selected dependency in candidate</button><button onClick={() => stageSelectedRelationshipState("active")}>Include selected dependency in candidate</button>{Object.keys(stagedRelationshipStates).length === 0 ? <p>No local candidate relationship-state changes staged.</p> : <ul>{Object.entries(stagedRelationshipStates).map(([relationship, state]) => <li key={relationship}>{relationship}: {state} <button onClick={() => removeStagedRelationshipState(relationship)}>Remove {relationship} state change</button></li>)}</ul>}<p>Relationship-state changes are revision-only and cannot be shadow-simulated or approved until a structural proposal contract exists.</p></section>
       <section aria-label="Candidate new-factor set"><h3>Candidate new-factor set</h3><label>New factor ID<input aria-label="New factor ID" value={newNodeId} onChange={(event) => setNewNodeId(event.target.value)} /></label><label>New factor name<input aria-label="New factor name" value={newNodeName} onChange={(event) => setNewNodeName(event.target.value)} /></label><label>New factor location<input aria-label="New factor location" type="number" value={newNodeLocation} onChange={(event) => setNewNodeLocation(event.target.value)} /></label><label>New factor scale<input aria-label="New factor scale" type="number" min="0" value={newNodeScale} onChange={(event) => setNewNodeScale(event.target.value)} /></label><button onClick={stageNewNode}>Stage proposed Normal factor</button>{stagedNewNodes.length === 0 ? <p>No proposed new factors staged.</p> : <ul>{stagedNewNodes.map((node) => <li key={numeric(node.id)}>{numeric(node.name)} · proposed Normal root factor <button onClick={() => removeStagedNewNode(numeric(node.id))}>Remove proposed factor {numeric(node.id)}</button></li>)}</ul>}<p>New factors are proposed-only, require human approval, and cannot be simulated or approved until a complete structural proposal exists.</p></section>
-      {selected?.family && <DistributionInspector family={selected.family} parameters={selected.parameters} support={SUPPORT[selected.family] ?? "not recorded"} asOf="Not recorded on graph node" provenance={selected.provenance} />}
+      {selected?.family && <DistributionInspector family={selected.family} parameters={selected.parameters} support={selected.support} asOf="Not recorded on graph node" provenance={`${selected.provenance} · Units: ${selected.units}`} derived={derived ? { mean: derived.statistics.mean ?? undefined, median: derived.statistics.median ?? undefined, mode: derived.statistics.mode ?? undefined, standardDeviation: derived.statistics.variance === null ? undefined : Math.sqrt(derived.statistics.variance) } : undefined} />}
     </>}
     {nodes.length === 0 && !error && <p role="alert">This graph has no editable numeric node parameters.</p>}
     {error && <p role="alert">{error}</p>}{revisionStatus && <p role="status">{revisionStatus}</p>}

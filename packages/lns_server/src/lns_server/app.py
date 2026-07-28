@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from lns_kernel.ensemble import compare_transforms
 from lns_kernel.contracts import TargetContract
-from lns_kernel.distributions import REGISTRY
+from lns_kernel.distributions import REGISTRY, distribution_statistics, get_family, normalize_parameters
 from lns_kernel.models import (
     Node,
     NodeLayout,
@@ -71,6 +71,13 @@ class PatchNodeBody(BaseModel):
     reason: str = "parameter edit"
     actor: str = "human"
     run_sim: bool = True
+
+
+class DistributionStatisticsBody(BaseModel):
+    """A read-only request for analytic statistics from the kernel registry."""
+
+    family_id: str
+    parameters: dict[str, float]
 
 
 class LayoutBody(BaseModel):
@@ -413,6 +420,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 for family in REGISTRY.values()
             ]
         }
+
+    @app.post("/authoring/distributions/statistics")
+    def inspect_distribution_statistics(body: DistributionStatisticsBody) -> dict[str, Any]:
+        """Calculate registry-defined analytic statistics without fitting or mutating a node."""
+
+        try:
+            family = get_family(body.family_id)
+            parameters = normalize_parameters(family.id, body.parameters)
+            return {
+                "family_id": family.id,
+                "parameters": parameters,
+                "statistics": distribution_statistics(family.id, parameters),
+            }
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(400, str(exc)) from exc
 
     @app.post("/targets")
     def create_target(target: TargetContract) -> dict[str, Any]:

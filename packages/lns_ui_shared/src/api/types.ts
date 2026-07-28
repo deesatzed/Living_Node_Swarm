@@ -42,6 +42,21 @@ export interface DistributionCatalog {
   families: DistributionCatalogEntry[];
 }
 
+export interface DistributionStatistics {
+  mean: number | null;
+  median: number | null;
+  mode: number | null;
+  variance: number | null;
+  support_lower: number | null;
+  support_upper: number | null;
+}
+
+export interface DistributionStatisticsResult {
+  family_id: string;
+  parameters: Record<string, number>;
+  statistics: DistributionStatistics;
+}
+
 export interface CandidateFactor {
   id: string;
   label: string;

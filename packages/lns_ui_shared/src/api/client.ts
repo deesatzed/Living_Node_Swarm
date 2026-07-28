@@ -5,6 +5,7 @@ import {
   type CandidateGraphFixture,
   type ClaimReviewInput,
   type DistributionCatalog,
+  type DistributionStatisticsResult,
   type ElicitDistributionInput,
   type JsonObject,
   type MonitoringConfigInput,
@@ -57,6 +58,7 @@ export interface WorkspaceClient {
   createTarget(target: Partial<TargetContractInput>): Promise<JsonObject>;
   getTarget(targetId: string): Promise<JsonObject>;
   getDistributionCatalog(): Promise<DistributionCatalog>;
+  getDistributionStatistics(familyId: string, parameters: Record<string, number>): Promise<DistributionStatisticsResult>;
   getResearchReview(targetId: string): Promise<JsonObject>;
   reviewResearchClaim(targetId: string, claimId: string, body: ClaimReviewInput): Promise<JsonObject>;
   createFixtureCandidateProposal(targetId: string): Promise<CandidateGraphFixture>;
@@ -159,6 +161,7 @@ export function createWorkspaceClient({
       }),
     getTarget: (targetId) => request<JsonObject>(`/targets/${encodeURIComponent(targetId)}`, { method: "GET" }),
     getDistributionCatalog: () => request<DistributionCatalog>("/catalog/distributions", { method: "GET" }),
+    getDistributionStatistics: (familyId, parameters) => request<DistributionStatisticsResult>("/authoring/distributions/statistics", { method: "POST", body: JSON.stringify({ family_id: familyId, parameters }) }),
     getResearchReview: (targetId) =>
       request<JsonObject>(`/research/targets/${encodeURIComponent(targetId)}/review`, { method: "GET" }),
     reviewResearchClaim: (targetId, claimId, body) =>

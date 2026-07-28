@@ -23,6 +23,8 @@ const CURVE_PATHS: Record<string, string> = {
 export interface DistributionDerivedValues {
   mean?: number;
   median?: number;
+  mode?: number;
+  standardDeviation?: number;
   interval?: string;
 }
 
@@ -41,9 +43,11 @@ export function DistributionInspector({ family, parameters, support, asOf, prove
     <p>Plain-language fit: {explanation}</p>
     <svg role="img" aria-label={`${family} distribution curve`} viewBox="0 0 160 100" width="240" height="120"><path d={curve} fill="none" stroke="currentColor" strokeWidth="3" /></svg>
     <p>Support: {support}</p><p>As of: {asOf}</p><p>Provenance: <span>{provenance}</span></p>
-    {(derived.mean !== undefined || derived.median !== undefined || derived.interval !== undefined) && <section aria-label="Derived distribution values">
+    {(derived.mean !== undefined || derived.median !== undefined || derived.mode !== undefined || derived.standardDeviation !== undefined || derived.interval !== undefined) && <section aria-label="Derived distribution values">
       {derived.mean !== undefined && <p>Mean: {derived.mean}</p>}
       {derived.median !== undefined && <p>Median: {derived.median}</p>}
+      {derived.mode !== undefined && <p>Mode: {derived.mode}</p>}
+      {derived.standardDeviation !== undefined && <p>Standard deviation: {derived.standardDeviation}</p>}
       {derived.interval !== undefined && <p>Central interval: {derived.interval}</p>}
     </section>}
     <dl>{Object.entries(parameters).map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>
