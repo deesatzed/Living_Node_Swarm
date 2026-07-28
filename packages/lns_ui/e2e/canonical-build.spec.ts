@@ -33,7 +33,7 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.route("**/api/projects/approved-1/revisions", (route) => route.fulfill({ json: { drafts: [{ id: "draft-earlier", base_graph_version: 4 }] } }));
   await page.route("**/api/graphs/graph-1", (route) => route.fulfill({ json: { nodes: {
     input_signal: { id: "input_signal", name: "Input signal", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: [] },
-    process_stage: { id: "process_stage", name: "Process stage", distribution_family: "Normal", parameters: { mu: 0, sigma: 0.3 }, depends_on: ["input_signal"] },
+    process_stage: { id: "process_stage", name: "Process stage", distribution_family: "Gamma", parameters: { shape: 2, scale: 1 }, depends_on: ["input_signal"] },
     outcome: { id: "outcome", name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["process_stage"] },
   }, relationships: { "process-to-outcome": { id: "process-to-outcome", parent_node_id: "process_stage", child_node_id: "outcome", state: "active" } } } }));
   await page.route("**/api/authoring/graphs/graph-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 5, p50: 5 }, limitations: ["Candidate changes are simulated in memory and are not persisted or activated."] } }));
@@ -59,6 +59,10 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.route("**/api/authoring/distributions/elicit", (route) => {
     expect(route.request().postDataJSON()).toMatchObject({ id: "input_signal-median-p90", family_id: "Normal", median: 5, p90: 7.56 });
     return route.fulfill({ json: { distribution_spec: { id: "input_signal-median-p90", family_id: "Normal", parameters: [{ id: "loc", value: 5 }, { id: "scale", value: 2 }], elicitation_method: "median_p90_quantile_match", evidence_claim_ids: [], as_of: "2026-07-28T00:00:00Z", confidence_rationale: "Initial operator range; requires evidence review." }, derived_statistics: { mean: 5, median: 5, mode: 5, variance: 4 }, receipt: { method: "median_p90_quantile_match", limitations: ["Fixture initial prior only."] } } });
+  });
+  await page.route("**/api/authoring/distributions/derive", (route) => {
+    expect(route.request().postDataJSON()).toMatchObject({ id: "process_stage-intuitive-prior", family_id: "Gamma", values: { mean: 8, standard_deviation: 4 } });
+    return route.fulfill({ json: { distribution_spec: { id: "process_stage-intuitive-prior", family_id: "Gamma", parameters: [{ id: "shape", value: 4 }, { id: "scale", value: 2 }], elicitation_method: "intuitive_family_derivation", evidence_claim_ids: [], as_of: "2026-07-28T00:00:00Z", confidence_rationale: "Initial operator range; requires evidence review." }, derived_statistics: { mean: 8, median: null, mode: 6, variance: 16 }, receipt: { method: "intuitive_family_derivation", limitations: ["Fixture gamma prior only."] } } });
   });
   await page.route("**/api/projects/approved-1/candidate-proposals/proposal-1/approve", (route) => route.fulfill({ json: { approval_receipt: { id: "receipt-1", binding_hash: "binding-123" }, graph: { graph_version: 5 }, project: { ...project, stage: "decide", active_graph_version: 5 } } }));
   await page.route("**/api/projects/approved-1", (route) => route.request().url().endsWith("/api/projects/approved-1") ? route.fulfill({ json: project }) : route.fallback());
@@ -131,6 +135,13 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByRole("button", { name: "Save candidate for review" })).toHaveCount(0);
   await page.getByRole("button", { name: "Save durable candidate revision" }).click();
   await expect(page.getByText(/Revision revision-elicited .*1 elicited distribution candidate/)).toBeVisible();
+  await page.getByLabel("Candidate factor").selectOption("process_stage");
+  await page.getByLabel("Gamma mean").fill("8");
+  await page.getByLabel("Gamma standard deviation").fill("4");
+  await page.getByRole("button", { name: "Stage derived distribution candidate" }).click();
+  await expect(page.getByLabel("Derived distribution candidate")).toContainText("Fixture gamma prior only.");
+  await page.getByRole("button", { name: "Run in-memory comparison" }).click();
+  await expect(page.getByRole("button", { name: "Save candidate for review" })).toHaveCount(0);
 });
 
 test("canonical Edit retires an isolated non-target factor through a reviewed structural proposal", async ({ page }) => {
