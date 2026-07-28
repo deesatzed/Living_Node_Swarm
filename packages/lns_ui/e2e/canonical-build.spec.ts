@@ -27,11 +27,19 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
     input_signal: { id: "input_signal", name: "Input signal", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: [] },
     process_stage: { id: "process_stage", name: "Process stage", distribution_family: "Normal", parameters: { mu: 0, sigma: 0.3 }, depends_on: ["input_signal"] },
     outcome: { id: "outcome", name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["process_stage"] },
-  } } }));
+  }, relationships: { "process-to-outcome": { id: "process-to-outcome", parent_node_id: "process_stage", child_node_id: "outcome", state: "active" } } } }));
   await page.route("**/api/authoring/graphs/graph-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 5, p50: 5 }, limitations: ["Candidate changes are simulated in memory and are not persisted or activated."] } }));
   await page.route("**/api/authoring/relationships/validate", (route) => route.fulfill({ json: { dependence_warnings: [{ code: "unresolved_proxy_correlation", message: "Fixture shared cause remains unresolved." }], active_graph_mutated: false } }));
-  await page.route("**/api/authoring/graphs/graph-1/structural-proposals", (route) => route.fulfill({ json: { proposal: { id: "structural-1", graph_version: 4, binding_hash: "structural-hash", candidate_relationship_ids: ["proposal-input_signal-to-outcome"] }, active_graph_mutated: false } }));
+  await page.route("**/api/authoring/graphs/graph-1/structural-proposals", (route) => {
+    const body = route.request().postDataJSON() as { removed_relationship_ids?: string[] };
+    return route.fulfill({ json: body.removed_relationship_ids?.length
+      ? { proposal: { id: "remove-1", graph_version: 4, binding_hash: "remove-hash", candidate_relationship_ids: [], removed_relationship_ids: ["process-to-outcome"] }, active_graph_mutated: false }
+      : { proposal: { id: "structural-1", graph_version: 4, binding_hash: "structural-hash", candidate_relationship_ids: ["proposal-input_signal-to-outcome"], removed_relationship_ids: [] }, active_graph_mutated: false },
+    });
+  });
+  await page.route("**/api/projects/approved-1/structural-proposals/remove-1/approve", (route) => route.fulfill({ json: { approval_receipt: { id: "remove-receipt", binding_hash: "remove-hash" }, graph: { graph_version: 5 }, project: { ...project, stage: "decide", active_graph_version: 5 } } }));
   await page.route("**/api/projects/approved-1/structural-proposals/structural-1/approve", (route) => route.fulfill({ json: { approval_receipt: { id: "structural-receipt", binding_hash: "structural-hash" }, graph: { graph_version: 5 }, project: { ...project, stage: "decide", active_graph_version: 5 } } }));
+  await page.route("**/api/authoring/graphs/graph-1/structural-proposals/remove-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, candidate_relationship_ids: [], removed_relationship_ids: ["process-to-outcome"], active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: -0.25, p50: -0.25 }, limitations: ["Candidate structural relationships are simulated only in memory and are not persisted or activated."] } }));
   await page.route("**/api/authoring/graphs/graph-1/structural-proposals/structural-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, candidate_relationship_ids: ["proposal-input_signal-to-outcome"], active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 0.25, p50: 0.25 }, limitations: ["Candidate structural relationships are simulated only in memory and are not persisted or activated."] } }));
   await page.route("**/api/authoring/graphs/graph-1/candidate-proposals", (route) => route.fulfill({ json: { proposal: { id: "proposal-1", graph_version: 4, binding_hash: "binding-123" } } }));
   await page.route("**/api/projects/approved-1/candidate-revisions", (route) => route.request().method() === "GET"
@@ -51,6 +59,16 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByLabel("Approved model dependency graph").getByRole("status")).toContainText("Traced path: Input signal → Process stage → Outcome");
   await expect(page.getByRole("heading", { name: "Active versus candidate" })).toBeVisible();
   await expect(page.getByLabel("Candidate value")).toBeVisible();
+  await page.getByLabel("Candidate dependency").selectOption("process_stage:outcome");
+  await page.getByRole("button", { name: "Exclude selected dependency in candidate" }).click();
+  await page.getByRole("button", { name: "Create structural proposal for review" }).click();
+  await expect(page.getByLabel("Structural proposal review")).toContainText("Binding hash: remove-hash");
+  await page.getByRole("button", { name: "Run structural in-memory comparison" }).click();
+  await expect(page.getByLabel("Structural comparison receipt")).toContainText("Removed relationships: process-to-outcome.");
+  await page.getByLabel("Structural approver identity").fill("fixture-operator");
+  await page.getByLabel("I reviewed this structural binding").check();
+  await page.getByRole("button", { name: "Approve structural proposal" }).click();
+  await expect(page.getByLabel("Structural approval receipt")).toContainText("Approval receipt: remove-receipt");
   await page.getByLabel("Proposed relationship parent").selectOption("input_signal");
   await page.getByLabel("Proposed relationship child").selectOption("outcome");
   await page.getByRole("spinbutton", { name: "Proposed relationship coefficient", exact: true }).fill("0.25");

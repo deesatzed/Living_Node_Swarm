@@ -251,6 +251,7 @@ describe("ShadowComparison", () => {
   it("turns an excluded active dependency into an exact structural removal proposal", async () => {
     const user = userEvent.setup();
     const createStructuralProposal = vi.fn(async () => ({ proposal: { id: "remove-1", graph_version: 4, binding_hash: "remove-hash", removed_relationship_ids: ["input-to-outcome"] } }));
+    const approveStructuralProposal = vi.fn(async () => ({ approval_receipt: { id: "remove-receipt", binding_hash: "remove-hash" }, graph: { graph_version: 5 } }));
     render(<ShadowComparison graphId="graph-1" client={{
       getGraph: async () => ({
         nodes: {
@@ -261,7 +262,7 @@ describe("ShadowComparison", () => {
           "input-to-outcome": { id: "input-to-outcome", parent_node_id: "input_signal", child_node_id: "outcome", state: "active" },
         },
       }),
-      shadowSimulate: async () => ({}), createStructuralProposal,
+      shadowSimulate: async () => ({}), createStructuralProposal, approveStructuralProposal,
     } as never} />);
     await screen.findByLabelText("Candidate dependency");
     await user.click(screen.getByRole("button", { name: "Exclude selected dependency in candidate" }));
@@ -269,6 +270,12 @@ describe("ShadowComparison", () => {
 
     expect(createStructuralProposal).toHaveBeenCalledWith("graph-1", { relationships: [], removed_relationship_ids: ["input-to-outcome"] });
     expect(await screen.findByLabelText("Structural proposal review")).toHaveTextContent("Binding hash: remove-hash");
+    await user.type(screen.getByLabelText("Structural approver identity"), "operator");
+    await user.click(screen.getByLabelText("I reviewed this structural binding"));
+    await user.click(screen.getByRole("button", { name: "Approve structural proposal" }));
+    expect(await screen.findByLabelText("Structural approval receipt")).toHaveTextContent("Approved graph version: 5");
+    expect(screen.getByLabelText("Candidate relationship change set")).toHaveTextContent("No local candidate relationship-state changes staged.");
+    expect(screen.queryByLabelText("Structural proposal review")).not.toBeInTheDocument();
   });
 
   it("loads a matching-base persisted revision back into local staging without activation", async () => {

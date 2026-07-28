@@ -267,7 +267,8 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
       const response = projectId && client.approveProjectStructuralProposal
         ? await client.approveProjectStructuralProposal(projectId, proposalId, body)
         : await client.approveStructuralProposal!(graphId, proposalId, body);
-      setStructuralApproval(response); setStructuralComparison(null);
+      setStructuralApproval(response); setStructuralComparison(null); setStructuralProposal(null); setStructuralReviewed(false); setStructuralApprover("");
+      setStagedRelationshipContracts([]); setStagedRelationshipStates({}); setRelationshipValidation(null);
       if (response.project && typeof response.project === "object" && !Array.isArray(response.project)) onApproved?.(response.project as JsonObject);
     }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to approve structural proposal."); }
