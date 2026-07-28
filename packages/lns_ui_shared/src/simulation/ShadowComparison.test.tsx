@@ -190,6 +190,31 @@ describe("ShadowComparison", () => {
     expect(await screen.findByLabelText("Relationship validation warnings")).toHaveTextContent("Shared cause remains unresolved.");
   });
 
+  it("confirms a clean proposed-relationship validation result", async () => {
+    const user = userEvent.setup();
+    render(<ShadowComparison graphId="graph-1" client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] } } }), shadowSimulate: async () => ({}), validateRelationships: async () => ({ dependence_warnings: [], active_graph_mutated: false }) } as never} />);
+    await screen.findByLabelText("Proposed relationship type");
+    await user.click(screen.getByRole("button", { name: "Stage proposed relationship contract" }));
+    await user.click(screen.getByRole("button", { name: "Validate proposed relationships" }));
+
+    expect(await screen.findByText("No dependence warnings returned for this proposed relationship set.")).toBeVisible();
+    expect(screen.getByText("Active graph unchanged: yes.")).toBeVisible();
+  });
+
+  it("clears relationship validation when the staged contract changes", async () => {
+    const user = userEvent.setup();
+    render(<ShadowComparison graphId="graph-1" client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] } } }), shadowSimulate: async () => ({}), validateRelationships: async () => ({ dependence_warnings: [{ code: "unresolved_proxy_correlation", message: "Shared cause remains unresolved." }], active_graph_mutated: false }) } as never} />);
+    await screen.findByLabelText("Proposed relationship type");
+    await user.click(screen.getByRole("button", { name: "Stage proposed relationship contract" }));
+    await user.click(screen.getByRole("button", { name: "Validate proposed relationships" }));
+    expect(await screen.findByText("Shared cause remains unresolved.")).toBeVisible();
+
+    await user.selectOptions(screen.getByLabelText("Proposed relationship type"), "observed_relation");
+    await user.click(screen.getByRole("button", { name: "Stage proposed relationship contract" }));
+    expect(screen.queryByText("Shared cause remains unresolved.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Active graph unchanged: yes.")).not.toBeInTheDocument();
+  });
+
   it("loads a matching-base persisted revision back into local staging without activation", async () => {
     const user = userEvent.setup();
     render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] } } }), shadowSimulate: async () => ({}), listCandidateRevisions: async () => ({ candidate_revisions: [{ id: "saved-1", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 5 } }, candidate_node_state_overrides: { input_signal: "excluded" }, candidate_relationship_state_overrides: { "input_signal:outcome": "excluded" } }] }) }} />);
