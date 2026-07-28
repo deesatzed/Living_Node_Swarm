@@ -90,6 +90,7 @@ export interface WorkspaceClient {
   listCandidateRevisions(projectId: string): Promise<{ candidate_revisions: JsonObject[] }>;
   createScenario(projectId: string, scenario: WorkspaceScenarioInput): Promise<JsonObject>;
   listScenarios(projectId: string): Promise<{ scenarios: JsonObject[] }>;
+  simulateScenario(projectId: string, scenarioId: string): Promise<JsonObject>;
   getProject(projectId: string): Promise<JsonObject>;
   patchProject(projectId: string, patch: JsonObject): Promise<JsonObject>;
   getMonitoring(projectId: string): Promise<JsonObject>;
@@ -220,6 +221,7 @@ export function createWorkspaceClient({
     listCandidateRevisions: (projectId) => request<{ candidate_revisions: JsonObject[] }>(`/projects/${encodeURIComponent(projectId)}/candidate-revisions`, { method: "GET" }),
     createScenario: (projectId, scenario) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/scenarios`, { method: "POST", body: JSON.stringify(scenario) }),
     listScenarios: (projectId) => request<{ scenarios: JsonObject[] }>(`/projects/${encodeURIComponent(projectId)}/scenarios`, { method: "GET" }),
+    simulateScenario: (projectId, scenarioId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/scenarios/${encodeURIComponent(scenarioId)}/simulate`, { method: "POST" }),
     getProject: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "GET" }),
     patchProject: (projectId, patch) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "PATCH", body: JSON.stringify(patch) }),
     getMonitoring: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/monitoring`, { method: "GET" }),

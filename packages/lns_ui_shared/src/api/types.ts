@@ -99,7 +99,7 @@ export interface WorkspaceProjectInput { id: string; name: string; stage: string
 export interface MonitoringConfigInput { cadence: string; freshness_threshold_days: number; mode: "fixture" | "local" | "live"; }
 export interface WorkspaceDraftInput { id: string; base_graph_version: number; }
 export interface WorkspaceCandidateRevisionInput { id: string; base_graph_version: number; candidate_parameter_overrides?: Record<string, Record<string, number>>; candidate_node_state_overrides?: Record<string, "active" | "excluded">; candidate_relationship_state_overrides?: Record<string, "active" | "excluded">; candidate_new_nodes?: JsonObject[]; }
-export interface WorkspaceScenarioInput { id: string; name: string; assumptions: Record<string, string>; }
+export interface WorkspaceScenarioInput { id: string; name: string; assumptions: Record<string, string>; base_graph_version?: number; target_node_id?: string; parameter_overrides?: Record<string, Record<string, number>>; }
 
 export interface ClaimReviewInput {
   decision: "included" | "excluded";

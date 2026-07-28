@@ -46,6 +46,7 @@ This file records product and architecture decisions that future agents must pre
 | D-036 | 2026-07-28 | The Gas adapter exposes previews and dry-run exits only; live buy and live auto-sell controls are hard-disabled in this goal build. | Accepted | Browser confirms are not a sufficient isolation boundary for real-money execution. The accepted scope prohibits live trades, so the UI must not construct execution requests. |
 | D-037 | 2026-07-28 | Factor-bound distribution statistics in the workspace come from a read-only kernel-backed server route, not duplicated browser formulas. | Accepted | One source preserves canonical-family validation, legacy parameter normalization, and the distinction between analytic display values and fitting or graph mutation. |
 | D-038 | 2026-07-28 | Run receipt history is a bounded read-only list of persisted simulation snapshots, ordered newest first. | Accepted | Reproducibility requires more than a last-run pointer, but exposing history must not rerun the graph or turn prior receipts into mutable browser state. |
+| D-039 | 2026-07-28 | A saved scenario becomes executable only when it binds finite numeric parameter overrides to an exact active graph version and target node; execution uses the existing in-memory shadow engine. | Accepted | Narrative assumptions must remain clearly non-executed. Reusing the version-aware non-mutating comparison boundary prevents a scenario run from silently changing, approving, or persisting active graph structure. |
 
 ## Initial Default Decisions
 

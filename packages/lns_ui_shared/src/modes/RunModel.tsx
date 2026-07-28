@@ -19,7 +19,7 @@ function object(value: unknown): JsonObject | undefined {
   return value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : undefined;
 }
 
-export function RunModel({ graphId, client, projectId, scenarioClient, onReceipt }: { graphId: string; client: RunModelClient; projectId?: string; scenarioClient?: ScenarioClient; onReceipt?: (result: JsonObject) => Promise<void> }) {
+export function RunModel({ graphId, client, projectId, scenarioClient, targetNodeId, activeGraphVersion, onReceipt }: { graphId: string; client: RunModelClient; projectId?: string; scenarioClient?: ScenarioClient; targetNodeId?: string; activeGraphVersion?: number; onReceipt?: (result: JsonObject) => Promise<void> }) {
   const [result, setResult] = useState<JsonObject | null>(null);
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
@@ -47,7 +47,7 @@ export function RunModel({ graphId, client, projectId, scenarioClient, onReceipt
   return <section aria-label="Run approved model controls">
     <p>Run uses the approved graph exactly as selected; it does not create, activate, or edit structure.</p>
     <button onClick={run} disabled={running}>{running ? "Running approved version…" : "Run approved version"}</button>
-    {projectId && scenarioClient && <ScenarioEditor projectId={projectId} client={scenarioClient} />}
+    {projectId && scenarioClient && <ScenarioEditor projectId={projectId} client={scenarioClient} targetNodeId={targetNodeId} activeGraphVersion={activeGraphVersion} />}
     {error && <p role="alert">{error}</p>}
     {snapshot && <section aria-label="Run receipt">
       <h2>Run receipt: {text(snapshot.id, "unknown")}</h2>

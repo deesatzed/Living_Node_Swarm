@@ -364,6 +364,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         require_project(project_id)
         return {"scenarios": [scenario.model_dump(mode="json") for scenario in app.state.workspace_store.list_scenarios(project_id)]}
 
+    @app.post("/projects/{project_id}/scenarios/{scenario_id}/simulate")
+    def simulate_workspace_scenario(project_id: str, scenario_id: str) -> dict[str, Any]:
+        project = require_project(project_id)
+        scenario = next((item for item in app.state.workspace_store.list_scenarios(project_id) if item.id == scenario_id), None)
+        if scenario is None:
+            raise HTTPException(404, "scenario not found")
+        if not project.graph_id or project.active_graph_version is None:
+            raise HTTPException(409, "project has no approved graph version")
+        if scenario.base_graph_version != project.active_graph_version or not scenario.target_node_id or not scenario.parameter_overrides:
+            raise HTTPException(409, "scenario is not executable against the current approved graph version")
+        graph = app.state.store.get_graph(project.graph_id)
+        if graph is None:
+            raise HTTPException(404, "project active graph not found")
+        if graph.graph_version != scenario.base_graph_version:
+            raise HTTPException(409, "scenario base graph version is stale")
+        try:
+            comparison = run_shadow_simulation(graph, ShadowSimulationBody(
+                target_node_id=scenario.target_node_id,
+                candidate_parameter_overrides=scenario.parameter_overrides,
+            ))
+        except ShadowSimulationError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return {
+            "scenario": scenario.model_dump(mode="json"),
+            "comparison": comparison,
+            "active_graph_mutated": False,
+            "limitations": ["Scenario execution is an in-memory parameter comparison. It does not activate, approve, or persist a changed graph."],
+        }
+
     @app.put("/projects/{project_id}/monitoring")
     def put_workspace_monitoring(project_id: str, config: MonitoringConfig) -> dict[str, Any]:
         require_project(project_id)

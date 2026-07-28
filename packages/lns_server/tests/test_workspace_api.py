@@ -113,6 +113,26 @@ def test_workspace_scenarios_do_not_mutate_the_active_graph(tmp_path: Path):
     assert restored.json()["nodes"] == graph["nodes"]
 
 
+def test_version_bound_parameter_scenario_executes_without_mutating_active_graph(tmp_path: Path):
+    settings = _settings(tmp_path)
+    with TestClient(create_app(settings)) as client:
+        graph = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        client.post("/projects", json={**_project_payload(), "graph_id": graph["id"], "active_graph_version": graph["graph_version"]})
+        saved = client.post("/projects/nd-project/scenarios", json={
+            "id": "demand-upside", "name": "Demand upside", "assumptions": {"note": "Higher demand signal."},
+            "base_graph_version": graph["graph_version"], "target_node_id": "outcome",
+            "parameter_overrides": {"input_signal": {"mu": 5.0}},
+        })
+        executed = client.post("/projects/nd-project/scenarios/demand-upside/simulate")
+        active = client.get(f"/graphs/{graph['id']}")
+
+    assert saved.status_code == 200, saved.text
+    assert executed.status_code == 200, executed.text
+    assert executed.json()["active_graph_mutated"] is False
+    assert executed.json()["comparison"]["candidate_summary"]["mean"] != executed.json()["comparison"]["active_summary"]["mean"]
+    assert active.json()["nodes"]["input_signal"]["parameters"] == graph["nodes"]["input_signal"]["parameters"]
+
+
 def test_project_bound_approval_syncs_the_persisted_project_lifecycle(tmp_path: Path):
     settings = _settings(tmp_path)
     with TestClient(create_app(settings)) as client:

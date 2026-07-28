@@ -104,6 +104,19 @@ describe("workspace API client", () => {
     await expect(client.listSnapshots("graph/1", 5)).resolves.toEqual({ snapshots: [{ id: "snapshot-1" }] });
   });
 
+  it("runs a saved scenario through its project-scoped in-memory route", async () => {
+    const client = createWorkspaceClient({
+      baseUrl: "http://localhost:8787",
+      fetch: async (input, init) => {
+        expect(input).toBe("http://localhost:8787/projects/project-1/scenarios/upside%2F1/simulate");
+        expect(init?.method).toBe("POST");
+        return new Response(JSON.stringify({ active_graph_mutated: false }));
+      },
+    });
+
+    await expect(client.simulateScenario("project-1", "upside/1")).resolves.toEqual({ active_graph_mutated: false });
+  });
+
   it("retrieves a persisted target contract for Project Home summaries", async () => {
     const client = createWorkspaceClient({
       baseUrl: "http://localhost:8787",
@@ -262,6 +275,7 @@ describe("workspace API client", () => {
       "runSimulation",
       "saveMonitoring",
       "shadowSimulate",
+      "simulateScenario",
       "validateRelationships",
     ]);
   });

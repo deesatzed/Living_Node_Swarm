@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import math
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -87,7 +88,20 @@ class WorkspaceScenario(BaseModel):
     id: str
     name: str
     assumptions: dict[str, str] = Field(default_factory=dict)
+    base_graph_version: int | None = Field(default=None, ge=1)
+    target_node_id: str | None = None
+    parameter_overrides: dict[str, dict[str, float]] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=utcnow)
+
+    @model_validator(mode="after")
+    def require_complete_executable_scenario(self) -> "WorkspaceScenario":
+        executable_fields = (self.base_graph_version, self.target_node_id, self.parameter_overrides)
+        if any(value is not None and value != {} for value in executable_fields):
+            if self.base_graph_version is None or not self.target_node_id or not self.parameter_overrides:
+                raise ValueError("executable scenarios require base_graph_version, target_node_id, and parameter_overrides")
+            if any(not math.isfinite(value) for parameters in self.parameter_overrides.values() for value in parameters.values()):
+                raise ValueError("scenario parameter overrides must be finite")
+        return self
 
 
 class MonitoringConfig(BaseModel):

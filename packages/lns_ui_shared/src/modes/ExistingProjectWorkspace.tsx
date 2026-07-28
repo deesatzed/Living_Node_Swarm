@@ -80,7 +80,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
   >
     <h1>{copy.title}</h1>
     <p>{copy.summary}</p>
-    {mode === "run" && typeof project.graph_id === "string" && <RunModel graphId={project.graph_id} client={client} projectId={projectId} scenarioClient={client} onReceipt={async (result) => {
+    {mode === "run" && typeof project.graph_id === "string" && <RunModel graphId={project.graph_id} client={client} projectId={projectId} scenarioClient={client} targetNodeId={typeof target?.target_node_id === "string" ? target.target_node_id : undefined} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : undefined} onReceipt={async (result) => {
       const snapshot = result.snapshot as JsonObject | undefined;
       await client.patchProject?.(projectId, { last_run: { snapshot_id: stringValue(snapshot?.id, "unknown"), graph_version: stringValue(snapshot?.graph_version, "unknown"), freshness: stringValue((result.sim_status as JsonObject | undefined)?.freshness, "unknown") } });
     }} />}

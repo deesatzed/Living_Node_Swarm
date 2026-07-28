@@ -147,7 +147,7 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await expect(page.getByText("Fixture candidate map — not live research")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Warnings and limitations" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Visual target-centered graph" })).toBeVisible();
-  await expect(page.getByText("15 factors shown. Textual graph alternative:")).toBeVisible();
+  await expect(page.getByText(/15 factors shown\. Use arrow keys while this graph is focused/)).toBeVisible();
   await page.getByRole("button", { name: "Weather disruption" }).click();
   await expect(page.getByRole("status")).toContainText("Traced path: Weather disruption → Freight capacity → Rare-earth refining throughput → Private-investor retail neodymium price");
   await page.screenshot({ path: `../../docs/verification/gui/canonical-fixture-build-${viewport.width}x${viewport.height}.png`, fullPage: true });
