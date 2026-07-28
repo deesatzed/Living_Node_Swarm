@@ -27,4 +27,23 @@ describe("RunModel", () => {
     await user.click(screen.getByRole("button", { name: "Run approved version" }));
     expect(onReceipt).toHaveBeenCalledWith(result);
   });
+
+  it("renders authoritative outcome quantiles and stability limits from the run receipt", async () => {
+    const user = userEvent.setup();
+    render(<RunModel graphId="graph-1" client={{ runSimulation: async () => ({
+      snapshot: {
+        id: "snapshot-9", graph_version: 6, seed: 21, n_samples: 2000,
+        node_predictives: { target_price: { node_id: "target_price", derived_mean: 48.2, derived_median: 47.8, derived_std: 5.1, quantiles: { p05: 40.1, p50: 47.8, p95: 56.4 } } },
+        stability_diagnostic: { method: "multi_seed_multi_sample_quantile_range", seeds: [21, 22], sample_counts: [1000, 2000], node_metric_ranges: { target_price: { mean: 0.4, p50: 0.3 } }, limitations: "This measures Monte Carlo stability only; it does not establish forecast accuracy or model calibration." },
+      }, sim_status: { freshness: "fresh" },
+    }) }} />);
+
+    await user.click(screen.getByRole("button", { name: "Run approved version" }));
+
+    expect(await screen.findByLabelText("Run outcome summaries")).toHaveTextContent("target_price · mean 48.2 · median 47.8 · p05 40.1 · p95 56.4 · standard deviation 5.1");
+    expect(screen.getByLabelText("Run stability diagnostic")).toHaveTextContent("Method: multi_seed_multi_sample_quantile_range");
+    expect(screen.getByLabelText("Run stability diagnostic")).toHaveTextContent("Seeds: 21, 22 · sample counts: 1000, 2000");
+    expect(screen.getByLabelText("Run stability diagnostic")).toHaveTextContent("target_price: mean range 0.4 · p50 range 0.3");
+    expect(screen.getByText(/does not establish forecast accuracy/i)).toBeVisible();
+  });
 });
