@@ -27,6 +27,9 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
     input_signal: { id: "input_signal", name: "Input signal", parameters: { mu: 0, sigma: 1 }, depends_on: [] },
     outcome: { id: "outcome", name: "Outcome", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["input_signal"] },
   } } }));
+  await page.route("**/api/authoring/graphs/graph-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 5, p50: 5 }, limitations: ["Candidate changes are simulated in memory and are not persisted or activated."] } }));
+  await page.route("**/api/authoring/graphs/graph-1/candidate-proposals", (route) => route.fulfill({ json: { proposal: { id: "proposal-1", graph_version: 4, binding_hash: "binding-123" } } }));
+  await page.route("**/api/authoring/graphs/graph-1/candidate-proposals/proposal-1/approve", (route) => route.fulfill({ json: { approval_receipt: { id: "receipt-1", binding_hash: "binding-123" }, graph: { graph_version: 5 } } }));
   await page.route("**/api/projects/approved-1", (route) => route.fulfill({ json: project }));
   await page.goto("/");
   await page.getByRole("button", { name: "Monitor" }).click();
@@ -37,6 +40,14 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByRole("heading", { name: "Edit model through a draft" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Active versus candidate" })).toBeVisible();
   await expect(page.getByLabel("Candidate value")).toBeVisible();
+  await page.getByLabel("Candidate value").fill("5");
+  await page.getByRole("button", { name: "Run in-memory comparison" }).click();
+  await page.getByRole("button", { name: "Save candidate for review" }).click();
+  await expect(page.getByText("Binding hash: binding-123")).toBeVisible();
+  await page.getByLabel("Approver identity").fill("fixture-operator");
+  await page.getByLabel("I reviewed this exact binding").check();
+  await page.getByRole("button", { name: "Approve candidate version" }).click();
+  await expect(page.getByText("Approval receipt: receipt-1")).toBeVisible();
   await page.getByRole("button", { name: "Create version-bound draft" }).click();
   await expect(page.getByRole("status")).toContainText("Draft draft-1 is ready");
 });

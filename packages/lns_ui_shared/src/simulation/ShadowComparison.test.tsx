@@ -35,4 +35,35 @@ describe("ShadowComparison", () => {
     expect(screen.getByText("Candidate median: 5")).toBeVisible();
     expect(screen.getByText(/not evidence of improved forecast accuracy/i)).toBeVisible();
   });
+
+  it("requires an exact saved proposal and operator identity before approval", async () => {
+    const user = userEvent.setup();
+    const createCandidateProposal = vi.fn(async () => ({ proposal: { id: "proposal-1", graph_version: 4, binding_hash: "binding-123" } }));
+    const approveCandidateProposal = vi.fn(async () => ({ approval_receipt: { id: "receipt-1", binding_hash: "binding-123" }, graph: { graph_version: 5 } }));
+    render(<ShadowComparison graphId="graph-1" client={{
+      getGraph: async () => ({ nodes: {
+        input_signal: { id: "input_signal", name: "Input signal", parameters: { mu: 0 }, depends_on: [] },
+        outcome: { id: "outcome", name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] },
+      }}),
+      shadowSimulate: async () => ({ active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 5, p50: 5 } }),
+      createCandidateProposal,
+      approveCandidateProposal,
+    } as never} />);
+
+    await screen.findByLabelText("Candidate value");
+    await user.clear(screen.getByLabelText("Candidate value"));
+    await user.type(screen.getByLabelText("Candidate value"), "5");
+    await user.click(screen.getByRole("button", { name: "Run in-memory comparison" }));
+    await user.click(await screen.findByRole("button", { name: "Save candidate for review" }));
+
+    expect(createCandidateProposal).toHaveBeenCalledWith("graph-1", { candidate_parameter_overrides: { input_signal: { mu: 5 } } });
+    expect(await screen.findByText("Binding hash: binding-123")).toBeVisible();
+    await user.type(screen.getByLabelText("Approver identity"), "operator");
+    await user.click(screen.getByLabelText("I reviewed this exact binding"));
+    await user.click(screen.getByRole("button", { name: "Approve candidate version" }));
+
+    expect(approveCandidateProposal).toHaveBeenCalledWith("graph-1", "proposal-1", { approved_by: "operator", binding_hash: "binding-123" });
+    expect(await screen.findByText("Approval receipt: receipt-1")).toBeVisible();
+    expect(screen.getByText("Approved graph version: 5")).toBeVisible();
+  });
 });

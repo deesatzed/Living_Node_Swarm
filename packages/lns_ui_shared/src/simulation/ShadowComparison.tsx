@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import type { JsonObject, ShadowSimulationInput } from "../api/types";
+import type { CandidateApprovalInput, CandidateProposalInput, JsonObject, ShadowSimulationInput } from "../api/types";
 
 export interface ShadowComparisonClient {
   getGraph(graphId: string): Promise<JsonObject>;
   shadowSimulate(graphId: string, body: ShadowSimulationInput): Promise<JsonObject>;
+  createCandidateProposal?(graphId: string, body: CandidateProposalInput): Promise<JsonObject>;
+  approveCandidateProposal?(graphId: string, proposalId: string, body: CandidateApprovalInput): Promise<JsonObject>;
 }
 
 interface GraphNode {
@@ -29,7 +31,7 @@ function targetId(nodes: GraphNode[]): string {
 }
 
 function numeric(value: unknown): string {
-  return typeof value === "number" ? String(value) : "unknown";
+  return typeof value === "number" || typeof value === "string" ? String(value) : "unknown";
 }
 
 export function ShadowComparison({ graphId, client }: { graphId: string; client: ShadowComparisonClient }) {
@@ -39,6 +41,11 @@ export function ShadowComparison({ graphId, client }: { graphId: string; client:
   const [selectedParameter, setSelectedParameter] = useState("");
   const [candidateValue, setCandidateValue] = useState("");
   const [result, setResult] = useState<JsonObject | null>(null);
+  const [comparedOverrides, setComparedOverrides] = useState<Record<string, Record<string, number>> | null>(null);
+  const [proposal, setProposal] = useState<JsonObject | null>(null);
+  const [approver, setApprover] = useState("");
+  const [reviewed, setReviewed] = useState(false);
+  const [approval, setApproval] = useState<JsonObject | null>(null);
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
 
@@ -80,13 +87,33 @@ export function ShadowComparison({ graphId, client }: { graphId: string; client:
     }
     setRunning(true); setError("");
     try {
-      setResult(await client.shadowSimulate(graphId, { target_node_id: selectedTarget, candidate_parameter_overrides: { [selectedNode]: { [selectedParameter]: value } } }));
+      const overrides = { [selectedNode]: { [selectedParameter]: value } };
+      setResult(await client.shadowSimulate(graphId, { target_node_id: selectedTarget, candidate_parameter_overrides: overrides }));
+      setComparedOverrides(overrides); setProposal(null); setApproval(null); setReviewed(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to run in-memory comparison."); }
     finally { setRunning(false); }
   }
   const active = result?.active_summary as JsonObject | undefined;
   const candidate = result?.candidate_summary as JsonObject | undefined;
   const limitations = Array.isArray(result?.limitations) ? result.limitations.filter((item): item is string => typeof item === "string") : [];
+  const proposalId = typeof proposal?.id === "string" ? proposal.id : "";
+  const bindingHash = typeof proposal?.binding_hash === "string" ? proposal.binding_hash : "";
+  async function saveCandidate() {
+    if (!client.createCandidateProposal || !comparedOverrides) return;
+    setError("");
+    try {
+      const response = await client.createCandidateProposal(graphId, { candidate_parameter_overrides: comparedOverrides });
+      const saved = response.proposal;
+      if (!saved || typeof saved !== "object" || Array.isArray(saved)) throw new Error("Server did not return a candidate proposal.");
+      setProposal(saved as JsonObject); setApproval(null); setReviewed(false);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save candidate for review."); }
+  }
+  async function approveCandidate() {
+    if (!client.approveCandidateProposal || !proposalId || !bindingHash || !approver.trim() || !reviewed) return;
+    setError("");
+    try { setApproval(await client.approveCandidateProposal(graphId, proposalId, { approved_by: approver.trim(), binding_hash: bindingHash })); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to approve this candidate version."); }
+  }
   return <section aria-label="Active versus candidate comparison">
     <h2>Active versus candidate</h2>
     <p>Compare one proposed parameter change in memory. It does not persist, activate, or overwrite the approved graph.</p>
@@ -100,6 +127,9 @@ export function ShadowComparison({ graphId, client }: { graphId: string; client:
     {nodes.length === 0 && !error && <p role="alert">This graph has no editable numeric node parameters.</p>}
     {error && <p role="alert">{error}</p>}
     {active && candidate && <section aria-label="Comparison receipt"><h3>Comparison receipt</h3><p>Active median: {numeric(active.p50)}</p><p>Candidate median: {numeric(candidate.p50)}</p><p>Active mean: {numeric(active.mean)} · Candidate mean: {numeric(candidate.mean)}</p>{result?.active_graph_mutated === false && <p>Active graph unchanged.</p>}</section>}
+    {result && client.createCandidateProposal && !proposal && <button onClick={saveCandidate}>Save candidate for review</button>}
+    {proposal && <section aria-label="Candidate approval"><h3>Candidate approval</h3><p>Proposal {proposalId} · graph version {numeric(proposal.graph_version)}</p><p>Binding hash: {bindingHash || "unavailable"}</p><p>Approval applies this exact proposal to the active graph. Review the binding before continuing.</p><label>Approver identity<input aria-label="Approver identity" value={approver} onChange={(event) => setApprover(event.target.value)} /></label><label><input aria-label="I reviewed this exact binding" type="checkbox" checked={reviewed} onChange={(event) => setReviewed(event.target.checked)} />I reviewed this exact binding</label>{client.approveCandidateProposal && <button onClick={approveCandidate} disabled={!approver.trim() || !reviewed || !bindingHash}>Approve candidate version</button>}</section>}
+    {approval && <section aria-label="Approval receipt"><h3>Approval receipt: {numeric((approval.approval_receipt as JsonObject | undefined)?.id)}</h3><p>Approved graph version: {numeric((approval.graph as JsonObject | undefined)?.graph_version)}</p><p>The server validated the proposal binding before applying this version.</p></section>}
     {(limitations.length > 0 || result) && <section aria-label="Comparison limitations"><h3>Limitations</h3><ul>{limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}<li>A distribution shift is structural impact, not evidence of improved forecast accuracy.</li></ul></section>}
   </section>;
 }
