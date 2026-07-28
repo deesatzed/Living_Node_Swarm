@@ -49,6 +49,15 @@ from lns_server.openrouter import OpenRouterClient, OpenRouterError
 from lns_server.proposal_normalize import proposal_to_node
 from lns_server.research_review import ClaimReviewBody, make_claim_review
 from lns_server.settings import Settings
+from lns_server.workspace_models import (
+    MonitoringConfig,
+    MonitoringFixtureEvent,
+    WorkspaceDraft,
+    WorkspaceProject,
+    WorkspaceProjectPatch,
+    WorkspaceScenario,
+)
+from lns_server.workspace_store import WorkspaceStore
 
 logger = logging.getLogger("lns_server")
 
@@ -177,6 +186,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     store = GraphStore(settings.resolved_db_path())
     evidence_db_path = Path(settings.resolved_db_path()).with_name("lns_evidence.db")
+    workspace_db_path = settings.resolved_workspace_db_path()
     journal = TradeJournal(Path(settings.resolved_db_path()).with_name("lns_journal.db"))
     coord = SimulationCoordinator(
         store, default_seed=settings.mc_seed, default_n_samples=settings.n_samples
@@ -187,8 +197,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         evidence_store = EvidenceStore(evidence_db_path)
+        workspace_store = WorkspaceStore(workspace_db_path)
         app.state.store = store
         app.state.evidence_store = evidence_store
+        app.state.workspace_store = workspace_store
         app.state.coord = coord
         app.state.settings = settings
         app.state.openrouter = or_client
@@ -197,6 +209,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         store.close()
         evidence_store.close()
+        workspace_store.close()
         journal.close()
 
     app = FastAPI(title="Living Node Swarm", version="0.1.0", lifespan=lifespan)
@@ -253,6 +266,75 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/graphs")
     def list_graphs() -> dict[str, Any]:
         return {"ids": store.list_graph_ids()}
+
+    def require_project(project_id: str) -> WorkspaceProject:
+        project = app.state.workspace_store.get_project(project_id)
+        if project is None:
+            raise HTTPException(404, "project not found")
+        return project
+
+    @app.get("/projects")
+    def list_projects() -> dict[str, Any]:
+        return {"projects": [project.model_dump(mode="json") for project in app.state.workspace_store.list_projects()]}
+
+    @app.post("/projects")
+    def create_project(project: WorkspaceProject) -> dict[str, Any]:
+        try:
+            return app.state.workspace_store.create_project(project).model_dump(mode="json")
+        except Exception as exc:
+            if "UNIQUE" in str(exc).upper():
+                raise HTTPException(409, "project already exists") from exc
+            raise
+
+    @app.get("/projects/{project_id}")
+    def get_project(project_id: str) -> dict[str, Any]:
+        return require_project(project_id).model_dump(mode="json")
+
+    @app.patch("/projects/{project_id}")
+    def patch_project(project_id: str, patch: WorkspaceProjectPatch) -> dict[str, Any]:
+        require_project(project_id)
+        return app.state.workspace_store.update_project(project_id, patch).model_dump(mode="json")
+
+    @app.post("/projects/{project_id}/drafts")
+    def create_workspace_draft(project_id: str, draft: WorkspaceDraft) -> dict[str, Any]:
+        project = require_project(project_id)
+        if project.active_graph_version is not None and draft.base_graph_version != project.active_graph_version:
+            raise HTTPException(409, "draft base graph version is stale")
+        return app.state.workspace_store.save_draft(project_id, draft).model_dump(mode="json")
+
+    @app.get("/projects/{project_id}/revisions")
+    def list_workspace_revisions(project_id: str) -> dict[str, Any]:
+        require_project(project_id)
+        return {"drafts": [draft.model_dump(mode="json") for draft in app.state.workspace_store.list_drafts(project_id)]}
+
+    @app.post("/projects/{project_id}/scenarios")
+    def create_workspace_scenario(project_id: str, scenario: WorkspaceScenario) -> dict[str, Any]:
+        require_project(project_id)
+        return app.state.workspace_store.save_scenario(project_id, scenario).model_dump(mode="json")
+
+    @app.get("/projects/{project_id}/scenarios")
+    def list_workspace_scenarios(project_id: str) -> dict[str, Any]:
+        require_project(project_id)
+        return {"scenarios": [scenario.model_dump(mode="json") for scenario in app.state.workspace_store.list_scenarios(project_id)]}
+
+    @app.put("/projects/{project_id}/monitoring")
+    def put_workspace_monitoring(project_id: str, config: MonitoringConfig) -> dict[str, Any]:
+        require_project(project_id)
+        return app.state.workspace_store.save_monitoring(project_id, config).model_dump(mode="json")
+
+    @app.get("/projects/{project_id}/monitoring")
+    def get_workspace_monitoring(project_id: str) -> dict[str, Any]:
+        require_project(project_id)
+        config = app.state.workspace_store.get_monitoring(project_id)
+        return {
+            "config": None if config is None else config.model_dump(mode="json"),
+            "events": [event.model_dump(mode="json") for event in app.state.workspace_store.list_monitoring_events(project_id)],
+        }
+
+    @app.post("/projects/{project_id}/monitoring/fixture-events")
+    def create_monitoring_fixture_event(project_id: str, event: MonitoringFixtureEvent) -> dict[str, Any]:
+        require_project(project_id)
+        return app.state.workspace_store.save_monitoring_event(project_id, event).model_dump(mode="json")
 
     @app.get("/catalog/distributions")
     def list_distribution_catalog() -> dict[str, Any]:

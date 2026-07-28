@@ -83,6 +83,9 @@ class Settings(BaseSettings):
         p.parent.mkdir(parents=True, exist_ok=True)
         return p
 
+    def resolved_workspace_db_path(self) -> Path:
+        return self.resolved_db_path().with_name("lns_workspace.db")
+
     def models_catalog(self) -> dict[str, str | None]:
         """Named slots from .env (values are OpenRouter model ids)."""
         return {

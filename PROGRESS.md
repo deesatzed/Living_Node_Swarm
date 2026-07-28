@@ -75,6 +75,7 @@ Prediction Workspace has not been built yet.
 | Gate 3 generalized authoring | Complete | Codex | API supports reviewed, proposed-only, version-bound generalized authoring; fixture-only until live research is consented |
 | Define autonomous hybrid GUI goal | Complete | Codex | `GOAL_GUI.md` specifies Build, Run, Edit, and Monitor workflows plus evidence-gated autonomous completion |
 | Q4-01 shared UI package | Complete | Codex | `@lns/ui-shared` exports typed lifecycle/client boundaries and deterministic fixtures; both apps consume the shared lifecycle; its 8-test Vitest 4 suite/type build, zero-vulnerability package audit, 52-server-test catalog check, and both consumer production builds passed on 2026-07-28 |
+| Workspace project persistence | Complete | Codex | Typed SQLite project, draft, scenario, and fixture-monitoring metadata persists across restart; stale bases return 409 and scenario operations preserve active graph state (3 focused tests; 55 server tests, 2026-07-28) |
 | Gate 4 visual workspace | Pending | Unassigned | Depends on Gate 3 API/contracts |
 | Gate 5 Neodymium acceptance | Pending | Unassigned | Depends on Gates 1–4 |
 | Gate 6 gas adapter | Pending | Unassigned | Depends on shared workspace |
