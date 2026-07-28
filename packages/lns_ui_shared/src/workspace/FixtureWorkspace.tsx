@@ -1,6 +1,7 @@
 import { HopGraph } from "../graph/HopGraph";
 import { TargetIntake } from "../intake/TargetIntake";
 import { DistributionInspector } from "../inspectors/DistributionInspector";
+import { RelationshipInspector } from "../inspectors/RelationshipInspector";
 import { WarningCenter } from "../inspectors/WarningCenter";
 import { createNeodymiumGraphFixture } from "../testing/graphFixture";
 import { WorkspaceShell } from "./WorkspaceShell";
@@ -11,6 +12,7 @@ export function FixtureWorkspace() {
     <TargetIntake onSubmit={() => undefined} />
     <HopGraph factors={fixture.factors} />
     <DistributionInspector family="LogNormal" parameters={{ log_loc: 4.6, log_scale: 0.2 }} support="positive" asOf="2026-07-28" provenance="fixture_unverified" />
+    <RelationshipInspector relationship={{ id: "weather-to-freight", parentLabel: "Weather disruption", childLabel: "Freight capacity", type: "affine", units: "capacity-index / disruption-index", lagSteps: 1, evidence: "fixture_unverified", state: "proposed" }} />
     <WarningCenter warnings={[{ id: "fixture", severity: "warning", message: "Fixture evidence is not live research." }]} />
   </WorkspaceShell>;
 }

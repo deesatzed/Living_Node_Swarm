@@ -9,5 +9,6 @@ describe("FixtureWorkspace", () => {
     expect(screen.getByLabelText("Target-centered dependency graph")).toBeVisible();
     expect(screen.getByLabelText("Warnings and limitations")).toBeVisible();
     expect(screen.getByLabelText("Distribution inspector")).toBeVisible();
+    expect(screen.getByLabelText("Relationship inspector")).toBeVisible();
   });
 });
