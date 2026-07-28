@@ -15,6 +15,7 @@ import {
   type WorkspaceCandidateRevisionInput,
   type WorkspaceDraftInput,
   type WorkspaceScenarioInput,
+  type WeightedEnsembleMemberInput,
   type VisibleNodeState,
 } from "./types";
 
@@ -79,6 +80,7 @@ export interface WorkspaceClient {
   getGraph(graphId: string): Promise<JsonObject>;
   runSimulation(graphId: string): Promise<JsonObject>;
   runLocalSensitivity(graphId: string, body: { target_node_id: string; perturbation_fraction: number }): Promise<JsonObject>;
+  runWeightedEnsemble(members: WeightedEnsembleMemberInput[]): Promise<JsonObject>;
   getSimulationStatus(graphId: string): Promise<JsonObject>;
   getSnapshot(graphId: string): Promise<JsonObject>;
   listSnapshots(graphId: string, limit?: number): Promise<{ snapshots: JsonObject[] }>;
@@ -208,6 +210,8 @@ export function createWorkspaceClient({
       request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/sim/run`, { method: "POST" }),
     runLocalSensitivity: (graphId, body) =>
       request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/analysis/local-sensitivity`, { method: "POST", body: JSON.stringify(body) }),
+    runWeightedEnsemble: (members) =>
+      request<JsonObject>("/analysis/weighted-ensemble", { method: "POST", body: JSON.stringify({ members }) }),
     getSimulationStatus: (graphId) =>
       request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/sim/status`, { method: "GET" }),
     getSnapshot: (graphId) =>

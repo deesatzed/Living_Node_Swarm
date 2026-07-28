@@ -132,3 +132,5 @@ export interface CandidateApprovalInput {
   approved_by: string;
   binding_hash: string;
 }
+
+export interface WeightedEnsembleMemberInput { graph_id: string; graph_version: number; target_node_id: string; weight: number; }

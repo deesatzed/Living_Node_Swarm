@@ -130,6 +130,19 @@ describe("workspace API client", () => {
     await expect(client.runLocalSensitivity("graph/1", { target_node_id: "outcome", perturbation_fraction: 0.1 })).resolves.toEqual({ active_graph_mutated: false });
   });
 
+  it("submits explicit ensemble members through the backend mixture route", async () => {
+    const client = createWorkspaceClient({
+      baseUrl: "http://localhost:8787",
+      fetch: async (input, init) => {
+        expect(input).toBe("http://localhost:8787/analysis/weighted-ensemble");
+        expect(init?.method).toBe("POST");
+        expect(init?.body).toBe(JSON.stringify({ members: [{ graph_id: "g", graph_version: 1, target_node_id: "outcome", weight: 1 }, { graph_id: "g2", graph_version: 2, target_node_id: "outcome", weight: 2 }] }));
+        return new Response(JSON.stringify({ active_graph_mutated: false }));
+      },
+    });
+    await expect(client.runWeightedEnsemble([{ graph_id: "g", graph_version: 1, target_node_id: "outcome", weight: 1 }, { graph_id: "g2", graph_version: 2, target_node_id: "outcome", weight: 2 }])).resolves.toEqual({ active_graph_mutated: false });
+  });
+
   it("retrieves a persisted target contract for Project Home summaries", async () => {
     const client = createWorkspaceClient({
       baseUrl: "http://localhost:8787",
@@ -287,6 +300,7 @@ describe("workspace API client", () => {
       "reviewResearchClaim",
       "runLocalSensitivity",
       "runSimulation",
+      "runWeightedEnsemble",
       "saveMonitoring",
       "shadowSimulate",
       "simulateScenario",

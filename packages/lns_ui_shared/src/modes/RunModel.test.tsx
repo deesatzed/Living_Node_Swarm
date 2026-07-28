@@ -79,4 +79,22 @@ describe("RunModel", () => {
     expect(screen.getByLabelText("Sensitivity limitations")).toHaveTextContent("not causal attribution");
     expect(screen.getByText("Active graph unchanged: yes.")).toBeVisible();
   });
+
+  it("submits explicit model versions and weights to the backend mixture comparison", async () => {
+    const user = userEvent.setup();
+    const runWeightedEnsemble = vi.fn(async () => ({ mixture: { derived_mean: 8, derived_median: 7.5 }, members: [{ member_id: "graph-1@4:outcome", normalized_weight: 0.25 }, { member_id: "graph-2@3:outcome", normalized_weight: 0.75 }], active_graph_mutated: false, limitations: ["This is a weighted distribution mixture, not an arithmetic average of member means."] }));
+    render(<RunModel graphId="graph-1" targetNodeId="outcome" activeGraphVersion={4} client={{ runSimulation: async () => ({ snapshot: {} }), runWeightedEnsemble }} />);
+
+    await user.clear(screen.getByLabelText("Current model weight")); await user.type(screen.getByLabelText("Current model weight"), "1");
+    await user.type(screen.getByLabelText("Alternative graph ID"), "graph-2");
+    await user.type(screen.getByLabelText("Alternative graph version"), "3");
+    await user.type(screen.getByLabelText("Alternative target node ID"), "outcome");
+    await user.clear(screen.getByLabelText("Alternative model weight")); await user.type(screen.getByLabelText("Alternative model weight"), "3");
+    await user.click(screen.getByRole("button", { name: "Compare weighted model mixture" }));
+
+    expect(runWeightedEnsemble).toHaveBeenCalledWith([{ graph_id: "graph-1", graph_version: 4, target_node_id: "outcome", weight: 1 }, { graph_id: "graph-2", graph_version: 3, target_node_id: "outcome", weight: 3 }]);
+    expect(await screen.findByLabelText("Weighted mixture receipt")).toHaveTextContent("Mixture mean: 8 · median: 7.5");
+    expect(screen.getByLabelText("Weighted mixture limitations")).toHaveTextContent("not an arithmetic average");
+    expect(screen.getByText("Active graphs unchanged: yes.")).toBeVisible();
+  });
 });
