@@ -11,6 +11,7 @@ import {
   type ShadowSimulationInput,
   type TargetContractInput,
   type WorkspaceProjectInput,
+  type WorkspaceCandidateRevisionInput,
   type WorkspaceDraftInput,
   type WorkspaceScenarioInput,
   type VisibleNodeState,
@@ -82,6 +83,8 @@ export interface WorkspaceClient {
   createProject(project: WorkspaceProjectInput): Promise<JsonObject>;
   createDraft(projectId: string, draft: WorkspaceDraftInput): Promise<JsonObject>;
   listDrafts(projectId: string): Promise<{ drafts: JsonObject[] }>;
+  createCandidateRevision(projectId: string, revision: WorkspaceCandidateRevisionInput): Promise<JsonObject>;
+  listCandidateRevisions(projectId: string): Promise<{ candidate_revisions: JsonObject[] }>;
   createScenario(projectId: string, scenario: WorkspaceScenarioInput): Promise<JsonObject>;
   listScenarios(projectId: string): Promise<{ scenarios: JsonObject[] }>;
   getProject(projectId: string): Promise<JsonObject>;
@@ -207,6 +210,8 @@ export function createWorkspaceClient({
     createProject: (project) => request<JsonObject>("/projects", { method: "POST", body: JSON.stringify(project) }),
     createDraft: (projectId, draft) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/drafts`, { method: "POST", body: JSON.stringify(draft) }),
     listDrafts: (projectId) => request<{ drafts: JsonObject[] }>(`/projects/${encodeURIComponent(projectId)}/revisions`, { method: "GET" }),
+    createCandidateRevision: (projectId, revision) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/candidate-revisions`, { method: "POST", body: JSON.stringify(revision) }),
+    listCandidateRevisions: (projectId) => request<{ candidate_revisions: JsonObject[] }>(`/projects/${encodeURIComponent(projectId)}/candidate-revisions`, { method: "GET" }),
     createScenario: (projectId, scenario) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/scenarios`, { method: "POST", body: JSON.stringify(scenario) }),
     listScenarios: (projectId) => request<{ scenarios: JsonObject[] }>(`/projects/${encodeURIComponent(projectId)}/scenarios`, { method: "GET" }),
     getProject: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "GET" }),

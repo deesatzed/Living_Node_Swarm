@@ -83,6 +83,7 @@ export type JsonObject = Record<string, unknown>;
 export interface WorkspaceProjectInput { id: string; name: string; stage: string; evidence_classification: "fixture_unverified" | "local_verified" | "live_provider_verified"; }
 export interface MonitoringConfigInput { cadence: string; freshness_threshold_days: number; mode: "fixture" | "local" | "live"; }
 export interface WorkspaceDraftInput { id: string; base_graph_version: number; }
+export interface WorkspaceCandidateRevisionInput { id: string; base_graph_version: number; candidate_parameter_overrides: Record<string, Record<string, number>>; }
 export interface WorkspaceScenarioInput { id: string; name: string; assumptions: Record<string, string>; }
 
 export interface ClaimReviewInput {

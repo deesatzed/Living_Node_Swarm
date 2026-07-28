@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { CandidateApprovalInput, CandidateProposalInput, JsonObject, ShadowSimulationInput } from "../api/types";
+import type { CandidateApprovalInput, CandidateProposalInput, JsonObject, ShadowSimulationInput, WorkspaceCandidateRevisionInput } from "../api/types";
 import { DistributionInspector } from "../inspectors/DistributionInspector";
 
 export interface ShadowComparisonClient {
@@ -8,6 +8,8 @@ export interface ShadowComparisonClient {
   createCandidateProposal?(graphId: string, body: CandidateProposalInput): Promise<JsonObject>;
   approveCandidateProposal?(graphId: string, proposalId: string, body: CandidateApprovalInput): Promise<JsonObject>;
   approveProjectCandidateProposal?(projectId: string, proposalId: string, body: CandidateApprovalInput): Promise<JsonObject>;
+  createCandidateRevision?(projectId: string, revision: WorkspaceCandidateRevisionInput): Promise<JsonObject>;
+  listCandidateRevisions?(projectId: string): Promise<{ candidate_revisions: JsonObject[] }>;
 }
 
 interface GraphNode {
@@ -60,7 +62,7 @@ const SUPPORT: Record<string, string> = {
   NegativeBinomial: "non-negative integers", Gamma: "positive", StudentT: "real", Deterministic: "one value",
 };
 
-export function ShadowComparison({ graphId, projectId, client, onApproved }: { graphId: string; projectId?: string; client: ShadowComparisonClient; onApproved?: (project: JsonObject) => void }) {
+export function ShadowComparison({ graphId, projectId, activeGraphVersion, client, onApproved }: { graphId: string; projectId?: string; activeGraphVersion?: number; client: ShadowComparisonClient; onApproved?: (project: JsonObject) => void }) {
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [selectedTarget, setSelectedTarget] = useState("");
   const [selectedNode, setSelectedNode] = useState("");
@@ -74,6 +76,7 @@ export function ShadowComparison({ graphId, projectId, client, onApproved }: { g
   const [approver, setApprover] = useState("");
   const [reviewed, setReviewed] = useState(false);
   const [approval, setApproval] = useState<JsonObject | null>(null);
+  const [candidateRevisions, setCandidateRevisions] = useState<JsonObject[]>([]);
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
 
@@ -94,6 +97,17 @@ export function ShadowComparison({ graphId, projectId, client, onApproved }: { g
     });
     return () => { active = false; };
   }, [client, graphId]);
+
+  useEffect(() => {
+    let active = true;
+    if (!projectId || !client.listCandidateRevisions) return;
+    void client.listCandidateRevisions(projectId).then((response) => {
+      if (active) setCandidateRevisions(response.candidate_revisions);
+    }).catch((reason: unknown) => {
+      if (active) setError(reason instanceof Error ? reason.message : "Unable to load durable candidate revisions.");
+    });
+    return () => { active = false; };
+  }, [client, projectId]);
 
   const selected = nodes.find((node) => node.id === selectedNode);
   function chooseNode(id: string) {
@@ -159,6 +173,18 @@ export function ShadowComparison({ graphId, projectId, client, onApproved }: { g
       setProposal(saved as JsonObject); setApproval(null); setReviewed(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save candidate for review."); }
   }
+  async function saveCandidateRevision() {
+    if (!projectId || !activeGraphVersion || !client.createCandidateRevision || !comparedOverrides) return;
+    setError("");
+    try {
+      const revision = await client.createCandidateRevision(projectId, {
+        id: typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `candidate-revision-${Date.now()}`,
+        base_graph_version: activeGraphVersion,
+        candidate_parameter_overrides: comparedOverrides,
+      });
+      setCandidateRevisions((current) => [...current, revision]);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save durable candidate revision."); }
+  }
   async function approveCandidate() {
     if ((!projectId || !client.approveProjectCandidateProposal) && !client.approveCandidateProposal) return;
     if (!proposalId || !bindingHash || !approver.trim() || !reviewed) return;
@@ -189,6 +215,8 @@ export function ShadowComparison({ graphId, projectId, client, onApproved }: { g
     {nodes.length === 0 && !error && <p role="alert">This graph has no editable numeric node parameters.</p>}
     {error && <p role="alert">{error}</p>}
     {active && candidate && <section aria-label="Comparison receipt"><h3>Comparison receipt</h3><p>Active median: {numeric(active.p50)}</p><p>Candidate median: {numeric(candidate.p50)}</p><p>Active mean: {numeric(active.mean)} · Candidate mean: {numeric(candidate.mean)}</p>{path.length > 0 ? <p>Affected path: {path.map((node) => node.name).join(" → ")}</p> : <p>No directed path from the selected factor to the selected target was found.</p>}{result?.active_graph_mutated === false && <p>Active graph unchanged.</p>}</section>}
+    {result && projectId && activeGraphVersion && client.createCandidateRevision && <button onClick={saveCandidateRevision}>Save durable candidate revision</button>}
+    {candidateRevisions.length > 0 && <section aria-label="Persisted candidate revisions"><h3>Persisted candidate revisions</h3><ul>{candidateRevisions.map((revision) => { const overrides = revision.candidate_parameter_overrides as Record<string, Record<string, number>> | undefined; const changes = Object.values(overrides ?? {}).reduce((count, parameters) => count + Object.keys(parameters).length, 0); return <li key={numeric(revision.id)}>Revision {numeric(revision.id)} · base graph version {numeric(revision.base_graph_version)} · {changes} parameter change{changes === 1 ? "" : "s"}</li>; })}</ul><p>Candidate revision saved without changing the active graph.</p></section>}
     {result && client.createCandidateProposal && !proposal && <button onClick={saveCandidate}>Save candidate for review</button>}
     {proposal && <section aria-label="Candidate approval"><h3>Candidate approval</h3><p>Proposal {proposalId} · graph version {numeric(proposal.graph_version)}</p><p>Binding hash: {bindingHash || "unavailable"}</p><p>Approval applies this exact proposal to the active graph. Review the binding before continuing.</p><label>Approver identity<input aria-label="Approver identity" value={approver} onChange={(event) => setApprover(event.target.value)} /></label><label><input aria-label="I reviewed this exact binding" type="checkbox" checked={reviewed} onChange={(event) => setReviewed(event.target.checked)} />I reviewed this exact binding</label>{(client.approveCandidateProposal || (projectId && client.approveProjectCandidateProposal)) && <button onClick={approveCandidate} disabled={!approver.trim() || !reviewed || !bindingHash}>Approve candidate version</button>}</section>}
     {approval && <section aria-label="Approval receipt"><h3>Approval receipt: {numeric((approval.approval_receipt as JsonObject | undefined)?.id)}</h3><p>Approved graph version: {numeric((approval.graph as JsonObject | undefined)?.graph_version)}</p>{approvedProject && <p>Project lifecycle: {numeric(approvedProject.stage)} · active graph version {numeric(approvedProject.active_graph_version)}</p>}<p>The server validated the proposal binding before applying this version.</p></section>}

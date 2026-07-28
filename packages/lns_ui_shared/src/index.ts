@@ -29,6 +29,7 @@ export {
   type ShadowSimulationInput,
   type WorkspaceProjectInput,
   type WorkspaceDraftInput,
+  type WorkspaceCandidateRevisionInput,
   type WorkspaceScenarioInput,
   type MonitoringConfigInput,
   type VisibleNodeState,

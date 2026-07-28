@@ -135,6 +135,24 @@ describe("workspace API client", () => {
     await expect(client.approveProjectCandidateProposal("project-1", "proposal-1", { approved_by: "operator", binding_hash: "binding-123" })).resolves.toMatchObject({ project: { stage: "decide" } });
   });
 
+  it("saves and lists non-active candidate revisions through project-scoped endpoints", async () => {
+    const calls: string[] = [];
+    const client = createWorkspaceClient({
+      baseUrl: "http://localhost:8787",
+      fetch: async (input, init) => {
+        calls.push(`${init?.method ?? "GET"} ${input}`);
+        return new Response(JSON.stringify({ candidate_revisions: [] }));
+      },
+    });
+
+    await client.createCandidateRevision("project-1", { id: "revision-1", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 5 } } });
+    await client.listCandidateRevisions("project-1");
+    expect(calls).toEqual([
+      "POST http://localhost:8787/projects/project-1/candidate-revisions",
+      "GET http://localhost:8787/projects/project-1/candidate-revisions",
+    ]);
+  });
+
   it("lists persisted version-bound drafts for the selected project", async () => {
     const client = createWorkspaceClient({
       baseUrl: "http://localhost:8787",
@@ -189,6 +207,7 @@ describe("workspace API client", () => {
       "approveCandidateProposal",
       "approveProjectCandidateProposal",
       "createCandidateProposal",
+      "createCandidateRevision",
       "createDraft",
       "createFixtureCandidateProposal",
       "createProject",
@@ -203,6 +222,7 @@ describe("workspace API client", () => {
       "getSimulationStatus",
       "getSnapshot",
       "getTarget",
+      "listCandidateRevisions",
       "listDrafts",
       "listGraphEvents",
       "listProjects",

@@ -102,4 +102,31 @@ describe("ShadowComparison", () => {
     expect(screen.getByText("Project lifecycle: decide · active graph version 5")).toBeVisible();
     expect(onApproved).toHaveBeenCalledWith({ stage: "decide", active_graph_version: 5 });
   });
+
+  it("persists the compared candidate set as a version-bound non-active revision", async () => {
+    const user = userEvent.setup();
+    const createCandidateRevision = vi.fn(async (_projectId, revision) => ({ ...revision, id: "revision-1" }));
+    render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{
+      getGraph: async () => ({ nodes: {
+        input_signal: { id: "input_signal", name: "Input signal", parameters: { mu: 0 }, depends_on: [] },
+        outcome: { id: "outcome", name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] },
+      }}),
+      shadowSimulate: async () => ({ active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 5, p50: 5 } }),
+      createCandidateRevision,
+      listCandidateRevisions: async () => ({ candidate_revisions: [] }),
+    }} />);
+
+    await screen.findByLabelText("Candidate value");
+    await user.clear(screen.getByLabelText("Candidate value"));
+    await user.type(screen.getByLabelText("Candidate value"), "5");
+    await user.click(screen.getByRole("button", { name: "Run in-memory comparison" }));
+    await user.click(await screen.findByRole("button", { name: "Save durable candidate revision" }));
+
+    expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({
+      base_graph_version: 4,
+      candidate_parameter_overrides: { input_signal: { mu: 5 } },
+    }));
+    expect(await screen.findByText("Revision revision-1 · base graph version 4 · 1 parameter change")).toBeVisible();
+    expect(screen.getByText("Candidate revision saved without changing the active graph.")).toBeVisible();
+  });
 });
