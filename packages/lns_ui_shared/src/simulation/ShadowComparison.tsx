@@ -346,9 +346,9 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
     const evidenceClaimIds = [...new Set(relationshipEvidenceClaimIds.split(",").map((claimId) => claimId.trim()).filter(Boolean))];
     const contract: JsonObject = { id, parent_node_id: parentNodeId, child_node_id: childNodeId, relationship_type: relationshipType, transform: relationshipTransform, source_unit: relationshipSourceUnit.trim(), target_unit: relationshipTargetUnit.trim(), sign: relationshipSign, lag_periods: lagPeriods, coefficient_units: relationshipCoefficientUnits.trim(), coefficient_parameters: [{ id: "coefficient", value: coefficient }], evidence_claim_ids: evidenceClaimIds, state: "proposed" };
     if (lagPeriods > 0) contract.lag_unit = relationshipLagUnit;
-    captureStaging(); setStagedRelationshipContracts((current) => [...current.filter((item) => item.id !== id), contract]); setRelationshipValidation(null); setStructuralProposal(null); setStructuralApproval(null); setStructuralComparison(null); setError("");
+    captureStaging(); setStagedRelationshipContracts((current) => [...current.filter((item) => item.id !== id), contract]); setRelationshipValidation(null); setStructuralProposal(null); setStructuralApproval(null); setStructuralComparison(null); invalidateCandidateReview(); setError("");
   }
-  function removeStagedRelationshipContract(id: string) { captureStaging(); setStagedRelationshipContracts((current) => current.filter((relationship) => relationship.id !== id)); setRelationshipValidation(null); setStructuralProposal(null); setStructuralApproval(null); setStructuralComparison(null); }
+  function removeStagedRelationshipContract(id: string) { captureStaging(); setStagedRelationshipContracts((current) => current.filter((relationship) => relationship.id !== id)); setRelationshipValidation(null); setStructuralProposal(null); setStructuralApproval(null); setStructuralComparison(null); invalidateCandidateReview(); }
   async function validateRelationshipContracts() {
     if (!client.validateRelationships || stagedRelationshipContracts.length === 0) return;
     try { setError(""); setRelationshipValidation(await client.validateRelationships({ relationships: stagedRelationshipContracts })); }
@@ -406,9 +406,9 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   function stageNewNode() {
     const location = Number(newNodeLocation); const scale = Number(newNodeScale); const id = newNodeId.trim(); const name = newNodeName.trim();
     if (!id || !name || !/^[a-z][a-z0-9_]*$/.test(id) || !Number.isFinite(location) || !Number.isFinite(scale) || scale <= 0 || nodes.some((node) => node.id === id) || stagedNewNodes.some((node) => node.id === id)) { setError("Use a unique snake_case factor ID, a name, a finite location, and a positive scale."); return; }
-    captureStaging(); setStagedNewNodes((current) => [...current, { id, name, description: "Operator-staged proposed factor.", distribution_family: "Normal", parameters: { mu: location, sigma: scale }, depends_on: [], transform: "none", status: "proposed", requires_human_approval: true, created_by: "operator_candidate", last_updated_by: "operator_candidate", discovery_rationale: "Added in Edit as a proposed factor." }]); setNewNodeId(""); setNewNodeName(""); setError("");
+    captureStaging(); setStagedNewNodes((current) => [...current, { id, name, description: "Operator-staged proposed factor.", distribution_family: "Normal", parameters: { mu: location, sigma: scale }, depends_on: [], transform: "none", status: "proposed", requires_human_approval: true, created_by: "operator_candidate", last_updated_by: "operator_candidate", discovery_rationale: "Added in Edit as a proposed factor." }]); invalidateCandidateReview(); setNewNodeId(""); setNewNodeName(""); setError("");
   }
-  function removeStagedNewNode(id: string) { captureStaging(); setStagedNewNodes((current) => current.filter((node) => node.id !== id)); }
+  function removeStagedNewNode(id: string) { captureStaging(); setStagedNewNodes((current) => current.filter((node) => node.id !== id)); invalidateCandidateReview(); }
   async function stageElicitedDistribution() {
     if (!selected || !client.elicitDistribution || (selected.family !== "Normal" && selected.family !== "LogNormal")) return;
     const median = Number(elicitationMedian); const p90 = Number(elicitationP90);
