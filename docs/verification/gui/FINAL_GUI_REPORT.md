@@ -38,7 +38,7 @@
 | [P22] URL/provider routing safety | Locally verified | Safe-fetch/server security tests and consent UI tests. | No provider content execution is claimed. |
 | [P23] Proposal cannot mutate early | Locally verified | Kernel/server approval tests and Edit browser receipts. | Applies to tested proposal contracts. |
 | [P24] Screenshots and final report | Partial | Four required screenshots plus this report and receipts. | Screenshots are fixture-only; report records outstanding work. |
-| [P25] Regression surface | Locally verified | Kernel 86, server 89, shared UI 127, canonical Playwright 8, UI/gas builds, and `git diff --check` from this session. | Fresh command output is local, not CI. |
+| [P25] Regression surface | Locally verified | Kernel 86, server 89, shared UI 128, canonical Playwright 8, UI/gas builds, and `git diff --check` from this session. | Fresh command output is local, not CI. |
 
 ## Saved visual artifacts
 
