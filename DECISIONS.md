@@ -149,3 +149,7 @@ This records why the mixture was requested without treating either member as mor
 # 2026-07-28 — Gas nodes reuse shared distribution inspection without inventing missing metadata
 
 The Gas preset supplies its selected node family, canonical parameters, and returned simulation statistics to the shared distribution inspector. It must render unsupported adapter metadata as `Not recorded` rather than manufacture units, source provenance, or an as-of timestamp. Preset-specific editable controls remain separate until they can use the generalized revision/approval workflow.
+
+# 2026-07-28 — Gas dependencies reuse read-only shared relationship inspection
+
+Gas dependency edges now use the shared relationship inspector in read-only form. The adapter can supply parent/child direction and the child transform only; all unavailable relationship-contract fields are explicit rather than inferred. Editing or approving those edges remains unavailable until the Gas adapter persists the generalized relationship contract.

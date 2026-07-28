@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { DistributionInspector, GAS_PRESET, HopGraph, WORKFLOW_STAGES, WorkspaceShell, type CandidateFactor } from "@lns/ui-shared";
+import { DistributionInspector, GAS_PRESET, HopGraph, RelationshipInspector, WORKFLOW_STAGES, WorkspaceShell, type CandidateFactor, type RelationshipReview } from "@lns/ui-shared";
 import { api, type Graph, type Node, type Snapshot } from "./api";
 
 function histogram(samples: number[], bins = 22): number[] {
@@ -46,6 +46,25 @@ export default function App() {
   })), [nodes]);
   const gasRelationships = useMemo(() => nodes.flatMap((node) => node.depends_on.map((parent) => ({ parent_node_id: parent, child_node_id: node.id, state: node.status, evidence_status: node.tags?.includes("ai-dynamic") ? "model_inference" : "fixture_unverified" }))), [nodes]);
   const selected = selectedId && graph ? graph.nodes[selectedId] : null;
+  const selectedRelationships = useMemo<RelationshipReview[]>(() => !selected || !graph ? [] : selected.depends_on.map((parentId) => {
+    const parent = graph.nodes[parentId];
+    return {
+      id: `${parentId}:${selected.id}`,
+      parentLabel: parent?.name ?? parentId,
+      childLabel: selected.name,
+      type: "unknown",
+      units: "Not recorded by the Gas adapter",
+      transform: selected.transform || "Not recorded",
+      coefficientDistribution: "Not recorded by the Gas adapter",
+      sourceUnit: "Not recorded by the Gas adapter",
+      targetUnit: "Not recorded by the Gas adapter",
+      lagUnit: "Not recorded by the Gas adapter",
+      validityRange: "Not recorded by the Gas adapter",
+      evidence: selected.tags?.includes("ai-dynamic") ? "model inference — source receipt not recorded" : "Not recorded by the Gas adapter",
+      warnings: ["Read-only Gas adapter view; relationship review and approval remain in the shared Prediction Workspace."],
+      state: selected.status,
+    };
+  }), [graph, selected]);
   const predictive =
     selectedId && snapshot ? snapshot.node_predictives[selectedId] : null;
   const modelPred = snapshot?.node_predictives["model_price_index"];
@@ -217,6 +236,7 @@ export default function App() {
                     : undefined,
                 } : undefined}
               />
+              {selectedRelationships.length > 0 && <section aria-label="Gas dependency inspection"><h3>Dependencies</h3>{selectedRelationships.map((relationship) => <RelationshipInspector key={relationship.id} relationship={relationship} />)}</section>}
               {Object.keys(paramEdit).map((k) => (
                 <label key={k}>
                   {k}
