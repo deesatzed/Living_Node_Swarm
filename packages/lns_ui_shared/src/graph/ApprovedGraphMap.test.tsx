@@ -15,6 +15,7 @@ describe("ApprovedGraphMap", () => {
     } }} />);
 
     expect(screen.getByLabelText("Approved model dependency graph")).toHaveTextContent("Approved graph — read-only");
+    expect(screen.getByLabelText("Approved dependency details")).toHaveTextContent("Freight capacity depends on Weather disruption · relationship type: Not recorded · units: Not recorded · lag: Not recorded · evidence: unknown");
     expect(screen.getByLabelText("Target-centered dependency graph")).toHaveTextContent("Weather disruption");
     await user.click(screen.getByRole("button", { name: "Weather disruption" }));
     expect(screen.getByRole("status")).toHaveTextContent("Traced path: Weather disruption → Freight capacity → Neodymium price");
