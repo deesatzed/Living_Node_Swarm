@@ -16,15 +16,30 @@ describe("RelationshipInspector", () => {
       type: "affine",
       units: "capacity-index / disruption-index",
       lagSteps: 1,
+      sign: "negative",
+      transform: "affine",
+      coefficientDistribution: "Normal(0, 0.2)",
+      sourceUnit: "disruption-index",
+      targetUnit: "capacity-index",
+      lagUnit: "months",
+      validityRange: "Normal operating regime",
       evidence: "fixture_unverified",
+      evidenceLinks: ["fixture://weather-to-freight"],
+      warnings: ["Coefficient remains uncalibrated."],
       state: "proposed",
     }} onChange={onChange} />);
 
     expect(screen.getByText("Weather disruption → Freight capacity")).toBeVisible();
     expect(screen.getByRole("textbox", { name: "Units" })).toHaveValue("capacity-index / disruption-index");
     expect(screen.getByText("fixture_unverified")).toBeVisible();
+    expect(screen.getByLabelText("Sign")).toHaveValue("negative");
+    expect(screen.getByText("Coefficient remains uncalibrated.")).toBeVisible();
+    expect(screen.getByText("fixture://weather-to-freight")).toBeVisible();
+    expect(screen.getByText(/Draft-only changes/)).toBeVisible();
     await user.selectOptions(screen.getByLabelText("Relationship state"), "excluded");
+    await user.selectOptions(screen.getByLabelText("Sign"), "positive");
 
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ state: "excluded" }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ sign: "positive" }));
   });
 });
