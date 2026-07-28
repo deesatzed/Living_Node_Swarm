@@ -41,10 +41,15 @@ export function createNeodymiumGraphFixture(): CandidateGraphFixture & {
   const factors: CandidateFactor[] = FACTORS.map(([id, label, hop_distance, state], index) => ({
     id,
     label,
+    role: "Fixture scenario factor",
     rank: index + 1,
     hop_distance,
     state,
     evidence_status: "fixture_unverified",
+    distribution_family: "Normal",
+    central_interval: "fixture p05–p95: -1.64 to 1.64 index",
+    warning: "Fixture-unverified",
+    monitorability: "Not assessed in fixture",
   }));
 
   return {

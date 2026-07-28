@@ -51,7 +51,7 @@ export function HopGraph({
       && (hopFilter === "all" || factor.hop_distance === Number(hopFilter))),
     [factors, hopFilter, query, stateFilter],
   );
-  const graphHeight = Math.max(700, ...[1, 2, 3].map((hop) => filtered.filter((factor) => factor.hop_distance === hop).length * 52 + 100));
+  const graphHeight = Math.max(700, ...[1, 2, 3].map((hop) => filtered.filter((factor) => factor.hop_distance === hop).length * 96 + 100));
   const layout = useMemo(() => layoutHopGraph(filtered, { width: 1200, height: graphHeight }), [filtered, graphHeight]);
   const path = useMemo(() => tracedPath(selected, targetId, relationships), [relationships, selected, targetId]);
   const pathEdges = useMemo(() => new Set(path.slice(0, -1).map((node, index) => `${node}:${path[index + 1]}`)), [path]);
@@ -105,13 +105,13 @@ export function HopGraph({
           })}
         </svg>
         <button type="button" aria-pressed={selected === "target"} onClick={() => select("target")} style={{ position: "absolute", left: targetPoint.x, top: targetPoint.y }}>{targetLabel}</button>
-        {filtered.map((factor) => <button key={factor.id} type="button" aria-pressed={selected === factor.id} onClick={() => select(factor.id)} style={{ position: "absolute", left: layout[factor.id]?.x, top: layout[factor.id]?.y, maxWidth: 190 }}>
-          {factor.label}
+        {filtered.map((factor) => <button key={factor.id} type="button" aria-label={factor.label} aria-pressed={selected === factor.id} onClick={() => select(factor.id)} style={{ position: "absolute", left: layout[factor.id]?.x, top: layout[factor.id]?.y, maxWidth: 190 }}>
+          <strong>{factor.label}</strong><br /><small>{factor.role ?? "Role not recorded"} · hop {factor.hop_distance} · {factor.state}</small><br /><small>{factor.distribution_family ?? "Distribution not recorded"} · {factor.central_interval ?? "Central interval not recorded"}</small><br /><small>Warning: {factor.warning ?? "Not recorded"}; monitorability: {factor.monitorability ?? "Not recorded"}</small>
         </button>)}
       </div>
     </div>
     {selected && <p role="status">Selected {selectedLabel}{path.length > 0 && <>. Traced path: {path.map((id) => names.get(id) ?? id).join(" → ")}</>}</p>}
-    <ul>{filtered.map((factor) => <li key={factor.id} data-x={layout[factor.id]?.x} data-y={layout[factor.id]?.y}><strong>{factor.label}</strong> — hop {factor.hop_distance}; <span>{factor.state}</span>; {factor.evidence_status}</li>)}</ul>
+    <ul>{filtered.map((factor) => <li key={factor.id} data-x={layout[factor.id]?.x} data-y={layout[factor.id]?.y}><strong>{factor.label}</strong> — {factor.role ?? "Role not recorded"}; hop {factor.hop_distance}; <span>{factor.state}</span>; {factor.evidence_status}; {factor.distribution_family ?? "Distribution not recorded"}; {factor.central_interval ?? "Central interval not recorded"}; warning: {factor.warning ?? "Not recorded"}; monitorability: {factor.monitorability ?? "Not recorded"}</li>)}</ul>
     <section aria-label="Textual model dependencies"><h2>Textual model dependencies</h2>{relationships.length === 0 ? <p>No model dependencies recorded.</p> : <ul>{relationships.map((relationship, index) => <li key={`${relationship.parent_node_id}-${relationship.child_node_id}-${index}`}>{names.get(relationship.parent_node_id ?? "") ?? "Unknown factor"} → {names.get(relationship.child_node_id ?? "") ?? "Unknown factor"} — {relationship.state ?? "proposed"}; {relationship.evidence_status ?? "fixture_unverified"}</li>)}</ul>}</section>
   </section>;
 }

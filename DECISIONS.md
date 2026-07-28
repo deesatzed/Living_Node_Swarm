@@ -185,3 +185,11 @@ Gas dependency edges now use the shared relationship inspector in read-only form
 **Why:** A target-only review graph is not an approved model. Requiring the exact Map-stage approval avoids pre-populating an active version merely to make the existing project endpoint callable.
 
 **Consequence:** The Map presents the same named operator and review acknowledgment gate as other structural approvals, after its exact binding has an in-memory structural comparison receipt that confirms no active-graph mutation. The exception is deliberately narrow: empty-version projects outside Map still reject, and the fixture’s result remains a scenario analysis rather than evidence-backed forecast quality.
+
+# 2026-07-28 — Fixture node details must be explicit, labeled, and non-inferential
+
+**Decision:** Every deterministic candidate-fixture node exposes a visible fixture role, distribution family, labeled fixture interval, warning, and monitorability alongside hop, state, and evidence classification. Browser-only extensions retain `Not recorded` for unavailable fields.
+
+**Why:** A ranked node label alone does not let an operator distinguish a declared fixture assumption from material evidence or infer whether it can be monitored. Filling missing values with plausible-looking scientific metadata would be misleading.
+
+**Consequence:** The Map graph cards and textual alternative are richer while remaining explicitly fixture-only. These fields do not create provenance, validation, research evidence, or forecast calibration; live and historical graph records still require authoritative metadata.

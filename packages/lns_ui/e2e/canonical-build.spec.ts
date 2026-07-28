@@ -327,7 +327,7 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
     ["sanctions_risk", "Sanctions risk", 2], ["magnet_inventory", "Magnet inventory", 2], ["defense_procurement", "Defense procurement", 2],
     ["robotics_demand", "Industrial robotics demand", 2], ["vehicle_efficiency", "Vehicle efficiency", 2], ["alternative_magnets", "Alternative magnet adoption", 2],
     ["scrap_collection", "End-of-life scrap collection", 2], ["refining_policy", "Refining policy", 2], ["credit_conditions", "Industrial credit conditions", 2],
-  ].map(([id, label, hop_distance], index) => ({ id, label, hop_distance, rank: index + 1, state: "proposed", evidence_status: "fixture_unverified" }));
+  ].map(([id, label, hop_distance], index) => ({ id, label, hop_distance, rank: index + 1, state: "proposed", evidence_status: "fixture_unverified", role: "Fixture scenario factor", distribution_family: "Normal", central_interval: "fixture p05–p95: -1.64 to 1.64 index", warning: "Fixture-unverified", monitorability: "Not assessed in fixture" }));
   await page.route("**/api/projects", async (route) => {
     if (route.request().method() === "GET") return route.fulfill({ json: { projects: [] } });
     return route.fulfill({ json: { id: "fixture-project" } });
@@ -396,6 +396,8 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await expect(page.getByRole("heading", { name: "Warnings and limitations" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Visual target-centered graph" })).toBeVisible();
   await expect(page.getByLabel("Textual model dependencies")).toContainText("Weather disruption → Freight capacity — proposed; fixture_unverified");
+  await expect(page.getByRole("button", { name: "Weather disruption" })).toContainText("Fixture scenario factor");
+  await expect(page.getByRole("button", { name: "Weather disruption" })).toContainText("Normal · fixture p05–p95: -1.64 to 1.64 index");
   await expect(page.getByText(/30 factors shown\. Use arrow keys while this graph is focused/)).toBeVisible();
   const coordinates = await page.getByLabel("Target-centered dependency graph").locator("li[data-x][data-y]").evaluateAll((items) => items.map((item) => `${item.getAttribute("data-x")}:${item.getAttribute("data-y")}`));
   expect(coordinates).toHaveLength(30);

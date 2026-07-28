@@ -42,6 +42,11 @@ def test_fixture_candidate_graph_has_15_ranked_inactive_factors_and_three_hop_pa
     assert len(factors) == 15
     assert len({factor["id"] for factor in factors}) == 15
     assert all(factor["state"] == "proposed" for factor in factors)
+    assert all(factor["role"] == "Fixture scenario factor" for factor in factors)
+    assert all(factor["distribution_family"] == "Normal" for factor in factors)
+    assert all(factor["central_interval"] == "fixture p05–p95: -1.64 to 1.64 index" for factor in factors)
+    assert all(factor["warning"] == "Fixture-unverified" for factor in factors)
+    assert all(factor["monitorability"] == "Not assessed in fixture" for factor in factors)
     assert any(factor["hop_distance"] == 3 for factor in factors)
     assert [factor["rank"] for factor in factors] == list(range(1, 16))
     assert {edge["parent_node_id"] for edge in proposal["relationships"]} >= {

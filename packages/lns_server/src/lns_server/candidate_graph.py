@@ -14,6 +14,7 @@ class CandidateFactor(BaseModel):
 
     id: str
     label: str
+    role: str
     rank: int
     hop_distance: int
     evidence_score: float
@@ -23,6 +24,10 @@ class CandidateFactor(BaseModel):
     nonduplication_score: float
     state: str = "proposed"
     evidence_status: str = "fixture_unverified"
+    distribution_family: str
+    central_interval: str
+    warning: str
+    monitorability: str
 
 
 class CandidateGraphFixture(BaseModel):
@@ -84,6 +89,7 @@ def build_neodymium_fixture(target: TargetContract) -> CandidateGraphFixture:
         CandidateFactor(
             id=factor_id,
             label=label,
+            role="Fixture scenario factor",
             rank=rank,
             hop_distance=hop_distance,
             evidence_score=round(0.96 - rank * 0.03, 2),
@@ -91,6 +97,10 @@ def build_neodymium_fixture(target: TargetContract) -> CandidateGraphFixture:
             observability=round(0.88 - rank * 0.015, 2),
             uncertainty=round(0.2 + rank * 0.025, 2),
             nonduplication_score=round(0.92 - rank * 0.02, 2),
+            distribution_family="Normal",
+            central_interval="fixture p05–p95: -1.64 to 1.64 index",
+            warning="Fixture-unverified",
+            monitorability="Not assessed in fixture",
         )
         for rank, (factor_id, label, hop_distance) in enumerate(_FACTOR_SEED, start=1)
     )

@@ -14,6 +14,9 @@ describe("HopGraph", () => {
     expect(screen.getByRole("button", { name: "Weather disruption" })).toBeVisible();
     expect(screen.getAllByText("proposed")[0]).toBeVisible();
     expect(screen.getByLabelText("Textual model dependencies")).toHaveTextContent("Weather disruption → Freight capacity — proposed; fixture_unverified");
+    expect(screen.getByRole("button", { name: "Weather disruption" })).toHaveTextContent("Fixture scenario factor");
+    expect(screen.getByRole("button", { name: "Weather disruption" })).toHaveTextContent("Normal · fixture p05–p95: -1.64 to 1.64 index");
+    expect(screen.getByRole("button", { name: "Weather disruption" })).toHaveTextContent("Warning: Fixture-unverified; monitorability: Not assessed in fixture");
   });
 
   it("renders a target-centered visual map with keyboard-selectable nodes and state filters", async () => {

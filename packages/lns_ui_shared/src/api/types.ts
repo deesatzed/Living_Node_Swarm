@@ -62,10 +62,15 @@ export interface DistributionStatisticsResult {
 export interface CandidateFactor {
   id: string;
   label: string;
+  role?: string;
   rank: number;
   hop_distance: number;
   state: VisibleNodeState;
   evidence_status: EvidenceClassification;
+  distribution_family?: string;
+  central_interval?: string;
+  warning?: string;
+  monitorability?: string;
 }
 
 export interface CandidateGraphFixture {
