@@ -1,5 +1,6 @@
 import { HopGraph } from "../graph/HopGraph";
 import { TargetIntake } from "../intake/TargetIntake";
+import { DistributionInspector } from "../inspectors/DistributionInspector";
 import { WarningCenter } from "../inspectors/WarningCenter";
 import { createNeodymiumGraphFixture } from "../testing/graphFixture";
 import { WorkspaceShell } from "./WorkspaceShell";
@@ -9,6 +10,7 @@ export function FixtureWorkspace() {
   return <WorkspaceShell projectName="Neodymium fixture" target="Private-investor retail neodymium price" horizon="1 year" graphVersion={1} freshness="stale" evidenceClassification="fixture_unverified">
     <TargetIntake onSubmit={() => undefined} />
     <HopGraph factors={fixture.factors} />
+    <DistributionInspector family="LogNormal" parameters={{ log_loc: 4.6, log_scale: 0.2 }} support="positive" asOf="2026-07-28" provenance="fixture_unverified" />
     <WarningCenter warnings={[{ id: "fixture", severity: "warning", message: "Fixture evidence is not live research." }]} />
   </WorkspaceShell>;
 }
