@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { CandidateApprovalInput, CandidateProposalInput, DistributionStatisticsResult, JsonObject, ShadowSimulationInput, WorkspaceCandidateRevisionInput } from "../api/types";
+import type { CandidateApprovalInput, CandidateProposalInput, DistributionStatisticsResult, JsonObject, ShadowSimulationInput, StructuralProposalInput, WorkspaceCandidateRevisionInput } from "../api/types";
 import { DistributionInspector } from "../inspectors/DistributionInspector";
 
 export interface ShadowComparisonClient {
@@ -8,7 +8,7 @@ export interface ShadowComparisonClient {
   createCandidateProposal?(graphId: string, body: CandidateProposalInput): Promise<JsonObject>;
   approveCandidateProposal?(graphId: string, proposalId: string, body: CandidateApprovalInput): Promise<JsonObject>;
   approveProjectCandidateProposal?(projectId: string, proposalId: string, body: CandidateApprovalInput): Promise<JsonObject>;
-  createStructuralProposal?(graphId: string, body: JsonObject): Promise<JsonObject>;
+  createStructuralProposal?(graphId: string, body: StructuralProposalInput): Promise<JsonObject>;
   approveStructuralProposal?(graphId: string, proposalId: string, body: CandidateApprovalInput): Promise<JsonObject>;
   createCandidateRevision?(projectId: string, revision: WorkspaceCandidateRevisionInput): Promise<JsonObject>;
   listCandidateRevisions?(projectId: string): Promise<{ candidate_revisions: JsonObject[] }>;
