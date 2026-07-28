@@ -127,3 +127,11 @@ This file records product and architecture decisions that future agents must pre
 **Why:** The server already persists project revisions, while no project-scoped candidate command/revision model exists. History gives operators a durable, honest revision surface and avoids presenting browser-local edits as scientific state.
 
 **Consequence:** The Edit workspace remains explicitly incomplete: it does not yet offer undo/redo, structural candidate commands, validation, shadow comparison, or approval.
+
+# 2026-07-28 — Gas preset mappings live in the shared workspace package
+
+**Decision:** Define the Gas demonstration's workspace target, input mappings, and execution-safety invariant as `GAS_PRESET` in `@lns/ui-shared`; the Gas app consumes that contract for its shared workspace shell.
+
+**Why:** The adapter must show how `threshold_usd`, ticker, and fallback mid map to generalized target, monitoring-source, and scenario-assumption concepts without duplicating those semantics in its UI.
+
+**Consequence:** `liveTradingEnabled` and bulk activation remain typed false in the shared preset. Domain-specific Gas graph controls remain a limited adapter until they are migrated to generalized graph/inspector components.

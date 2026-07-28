@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { WORKFLOW_STAGES, WorkspaceShell } from "@lns/ui-shared";
+import { GAS_PRESET, WORKFLOW_STAGES, WorkspaceShell } from "@lns/ui-shared";
 import { api, type Graph, type Node, type Snapshot } from "./api";
 
 function histogram(samples: number[], bins = 22): number[] {
@@ -18,7 +18,7 @@ function histogram(samples: number[], bins = 22): number[] {
 }
 
 export default function App() {
-  const liveTradingEnabled = false;
+  const liveTradingEnabled = GAS_PRESET.safety.liveTradingEnabled;
   const [graph, setGraph] = useState<Graph | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -98,7 +98,7 @@ export default function App() {
   }
 
   return (
-    <WorkspaceShell projectName="LNS Gas preset" target="US retail gas versus Kalshi threshold" horizon="Current contract horizon" graphVersion={graph?.graph_version ?? 0} freshness={freshness === "fresh" ? "active" : "stale"} evidenceClassification="fixture_unverified" currentStage="simulate">
+    <WorkspaceShell projectName={GAS_PRESET.workspace.projectName} target={GAS_PRESET.workspace.target} horizon={GAS_PRESET.workspace.horizon} graphVersion={graph?.graph_version ?? 0} freshness={freshness === "fresh" ? "active" : "stale"} evidenceClassification={GAS_PRESET.workspace.evidenceClassification} currentStage={GAS_PRESET.workspace.currentStage}>
     <div className="app">
       <header className="hero">
         <div>

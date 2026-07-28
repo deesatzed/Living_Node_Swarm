@@ -46,6 +46,7 @@ export { MonitoringSetup, type MonitoringClient } from "./monitoring/MonitoringS
 export { ScenarioEditor, type ScenarioClient } from "./simulation/ScenarioEditor";
 export { ShadowComparison, type ShadowComparisonClient } from "./simulation/ShadowComparison";
 export { WorkspaceShell } from "./workspace/WorkspaceShell";
+export { GAS_PRESET, type WorkspacePreset } from "./presets/gas";
 export { FixtureWorkspace } from "./workspace/FixtureWorkspace";
 export { canMoveToStage, type StageTransitionContext } from "./workflow/guards";
 export { TargetIntake } from "./intake/TargetIntake";
