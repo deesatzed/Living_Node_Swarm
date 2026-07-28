@@ -9,6 +9,7 @@ describe("ExistingProjectWorkspace", () => {
     render(<ExistingProjectWorkspace mode="run" projectId="project-1" client={{
       getProject: async () => ({ id: "project-1", name: "Neodymium model", target_id: "target-1", active_graph_version: 4, evidence_classification: "local_verified" }),
       getTarget: async () => ({ question: "What will neodymium cost?", forecast_origin: "2026-07-28T00:00:00Z", resolution_at: "2027-07-28T00:00:00Z" }),
+      runSimulation: async () => ({}),
     }} onBack={() => undefined} />);
 
     expect(await screen.findByRole("heading", { name: "Run approved model" })).toBeVisible();
