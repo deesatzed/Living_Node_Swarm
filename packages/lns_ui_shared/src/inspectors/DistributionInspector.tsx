@@ -71,12 +71,14 @@ export interface DistributionDerivedValues {
   interval?: string;
 }
 
-export function DistributionInspector({ family, parameters, support, asOf, provenance, derived = {} }: {
+export function DistributionInspector({ family, parameters, support, units, asOf, provenance, classification, derived = {} }: {
   family: string;
   parameters: Record<string, number>;
   support: string;
+  units?: string;
   asOf: string;
   provenance: string;
+  classification?: string;
   derived?: DistributionDerivedValues;
 }) {
   const explanation = FAMILY_EXPLANATIONS[family] ?? "An unrecognized distribution family; inspect the canonical parameters before relying on it.";
@@ -90,11 +92,18 @@ export function DistributionInspector({ family, parameters, support, asOf, prove
     <h2>{family}</h2>
     <p>Plain-language fit: {explanation}</p>
     <svg role="img" aria-label={`${family} distribution curve`} viewBox="0 0 160 100" width="240" height="120"><path d={curve} fill="none" stroke="currentColor" strokeWidth="3" /></svg>
-    <p>Support: {support}</p><p>As of: {asOf}</p><p>Provenance: <span>{provenance}</span></p>
+    <section aria-label="Material-number context">
+      <p>Support: {support || "Not recorded"}</p>
+      <p>Units: {units || "Not recorded"}</p>
+      <p>As of: {asOf || "Not recorded"}</p>
+      <p>Classification: {classification || "Not recorded"}</p>
+      <p>Provenance: <span>{provenance || "Not recorded"}</span></p>
+    </section>
     <section aria-label="Distribution tail behavior"><h3>Dispersion and tail behavior</h3><p>{review.tails}</p></section>
     <section aria-label="Distribution alternatives"><h3>Alternatives to review</h3><p>{review.alternatives}</p></section>
     <section aria-label="Distribution limitations"><h3>Limitations</h3><p>{review.limitations}</p></section>
     {(derived.mean !== undefined || derived.median !== undefined || derived.mode !== undefined || derived.standardDeviation !== undefined || derived.interval !== undefined) && <section aria-label="Derived distribution values">
+      <p>Value status: derived from the server-owned distribution specification</p>
       {derived.mean !== undefined && <p>Mean: {derived.mean}</p>}
       {derived.median !== undefined && <p>Median: {derived.median}</p>}
       {derived.mode !== undefined && <p>Mode: {derived.mode}</p>}

@@ -135,3 +135,7 @@ This file records product and architecture decisions that future agents must pre
 **Why:** The adapter must show how `threshold_usd`, ticker, and fallback mid map to generalized target, monitoring-source, and scenario-assumption concepts without duplicating those semantics in its UI.
 
 **Consequence:** `liveTradingEnabled` and bulk activation remain typed false in the shared preset. Domain-specific Gas graph controls remain a limited adapter until they are migrated to generalized graph/inspector components.
+
+# 2026-07-28 — Distribution material context is independently labeled
+
+The shared distribution inspector now receives units and evidence classification as typed, independently rendered fields rather than appending units to provenance prose. Support, units, as-of time, classification, and provenance each render `Not recorded` when the persisted record lacks that information. Server-returned statistics are explicitly labeled as derived from the server-owned distribution specification. This preserves legacy compatibility without inventing provenance or presenting a derived statistic as an elicited input.

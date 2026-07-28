@@ -5,13 +5,25 @@ import { DistributionInspector } from "./DistributionInspector";
 afterEach(cleanup);
 
 describe("DistributionInspector", () => {
-  it("shows support, canonical parameters, as-of state, and provenance", () => {
-    render(<DistributionInspector family="LogNormal" parameters={{ log_loc: 4.6, log_scale: 0.2 }} support="positive" asOf="2026-07-28" provenance="fixture_unverified" derived={{ mean: 102, median: 99, interval: "82–125 USD/kg" }} />);
+  it("shows independently labeled material-number context", () => {
+    render(<DistributionInspector family="LogNormal" parameters={{ log_loc: 4.6, log_scale: 0.2 }} support="positive" units="USD/kg" asOf="2026-07-28" provenance="fixture receipt" classification="model-inferred" derived={{ mean: 102, median: 99, interval: "82–125 USD/kg" }} />);
     expect(screen.getByText("LogNormal")).toBeVisible();
     expect(screen.getByText("Support: positive")).toBeVisible();
-    expect(screen.getByText("fixture_unverified")).toBeVisible();
+    expect(screen.getByText("Units: USD/kg")).toBeVisible();
+    expect(screen.getByText("Classification: model-inferred")).toBeVisible();
+    expect(screen.getByText("fixture receipt")).toBeVisible();
     expect(screen.getByLabelText("LogNormal distribution curve")).toBeVisible();
     expect(screen.getByText("Mean: 102")).toBeVisible();
+    expect(screen.getByText("Value status: derived from the server-owned distribution specification")).toBeVisible();
+  });
+
+  it("makes missing material-number context explicit instead of inferring it", () => {
+    render(<DistributionInspector family="Normal" parameters={{ loc: 1, scale: 2 }} support="real" asOf="" provenance="" />);
+
+    expect(screen.getByText("Units: Not recorded")).toBeVisible();
+    expect(screen.getByText("As of: Not recorded")).toBeVisible();
+    expect(screen.getByText("Classification: Not recorded")).toBeVisible();
+    expect(screen.getByText("Not recorded", { selector: "span" })).toBeVisible();
   });
 
   it.each(["Normal", "LogNormal", "Beta", "Poisson", "NegativeBinomial", "Gamma", "StudentT", "Deterministic"])("explains and previews the %s family", (family) => {
