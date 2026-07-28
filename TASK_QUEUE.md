@@ -68,7 +68,7 @@
 | Q4-01 | Scaffold private `lns_ui_shared` package | Q0-07 | both apps consume shared types/client | Complete (shared lifecycle/client boundary, deterministic fixtures, kernel-backed catalog API, and both consumer production builds passed, 2026-07-28) |
 | Q4-02 | Build target-intake and research-consent flow | Q3-01–02, Q4-01 | accessible forms and error states tested | Pending |
 | Q4-03 | Build target-centered hop graph | Q3-03, Q4-01 | 30-node deterministic layout has no default overlap | In progress — canonical 15-factor fixture supports no-default-overlap hop layers, pan/zoom/fit, filtering, keyboard selection, three-hop tracing, and textual alternative; richer relationship/evidence integration remains (2026-07-28) |
-| Q4-04 | Build node distribution inspector | Q1-01–04, Q4-01 | eight family forms/curves/derived values tested | Pending |
+| Q4-04 | Build node distribution inspector | Q1-01–04, Q4-01 | eight family forms/curves/derived values tested | In progress — reusable eight-family curve/derived-value inspector tested; factor-bound persisted quantitative review remains (2026-07-28) |
 | Q4-05 | Build relationship inspector | Q3-05, Q4-01 | type, units, lag, evidence, state editable/reviewable | Pending |
 | Q4-06 | Build evidence drawer and warning center | Q2-03, Q4-01 | claims/conflicts/unknowns trace to nodes | Pending |
 | Q4-07 | Build active-vs-candidate and model/ensemble comparison | Q3-06, Q4-01 | paths and distribution changes visible; explicit two-model weighted ensemble is backend-owned and no false improvement label appears | Pending |
