@@ -33,6 +33,7 @@ describe("ShadowComparison", () => {
     });
     expect(await screen.findByText("Active median: 0")).toBeVisible();
     expect(screen.getByText("Candidate median: 5")).toBeVisible();
+    expect(screen.getByText("Affected path: Input signal → Outcome")).toBeVisible();
     expect(screen.getByText(/not evidence of improved forecast accuracy/i)).toBeVisible();
   });
 

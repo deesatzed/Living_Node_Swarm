@@ -30,6 +30,23 @@ function targetId(nodes: GraphNode[]): string {
   return nodes.find((node) => !parents.has(node.id))?.id ?? nodes.at(-1)?.id ?? "";
 }
 
+function affectedPath(nodes: GraphNode[], startId: string, endId: string): GraphNode[] {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const children = new Map<string, string[]>();
+  for (const node of nodes) for (const parent of node.dependsOn) children.set(parent, [...(children.get(parent) ?? []), node.id]);
+  const queue: string[][] = [[startId]];
+  const visited = new Set<string>();
+  while (queue.length > 0) {
+    const path = queue.shift()!;
+    const current = path.at(-1)!;
+    if (current === endId) return path.flatMap((id) => byId.get(id) ?? []);
+    if (visited.has(current)) continue;
+    visited.add(current);
+    for (const child of children.get(current) ?? []) queue.push([...path, child]);
+  }
+  return [];
+}
+
 function numeric(value: unknown): string {
   return typeof value === "number" || typeof value === "string" ? String(value) : "unknown";
 }
@@ -42,6 +59,7 @@ export function ShadowComparison({ graphId, client }: { graphId: string; client:
   const [candidateValue, setCandidateValue] = useState("");
   const [result, setResult] = useState<JsonObject | null>(null);
   const [comparedOverrides, setComparedOverrides] = useState<Record<string, Record<string, number>> | null>(null);
+  const [comparedTarget, setComparedTarget] = useState("");
   const [proposal, setProposal] = useState<JsonObject | null>(null);
   const [approver, setApprover] = useState("");
   const [reviewed, setReviewed] = useState(false);
@@ -89,13 +107,15 @@ export function ShadowComparison({ graphId, client }: { graphId: string; client:
     try {
       const overrides = { [selectedNode]: { [selectedParameter]: value } };
       setResult(await client.shadowSimulate(graphId, { target_node_id: selectedTarget, candidate_parameter_overrides: overrides }));
-      setComparedOverrides(overrides); setProposal(null); setApproval(null); setReviewed(false);
+      setComparedOverrides(overrides); setComparedTarget(selectedTarget); setProposal(null); setApproval(null); setReviewed(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to run in-memory comparison."); }
     finally { setRunning(false); }
   }
   const active = result?.active_summary as JsonObject | undefined;
   const candidate = result?.candidate_summary as JsonObject | undefined;
   const limitations = Array.isArray(result?.limitations) ? result.limitations.filter((item): item is string => typeof item === "string") : [];
+  const comparedNode = comparedOverrides ? Object.keys(comparedOverrides)[0] ?? "" : "";
+  const path = comparedNode && comparedTarget ? affectedPath(nodes, comparedNode, comparedTarget) : [];
   const proposalId = typeof proposal?.id === "string" ? proposal.id : "";
   const bindingHash = typeof proposal?.binding_hash === "string" ? proposal.binding_hash : "";
   async function saveCandidate() {
@@ -126,7 +146,7 @@ export function ShadowComparison({ graphId, client }: { graphId: string; client:
     </>}
     {nodes.length === 0 && !error && <p role="alert">This graph has no editable numeric node parameters.</p>}
     {error && <p role="alert">{error}</p>}
-    {active && candidate && <section aria-label="Comparison receipt"><h3>Comparison receipt</h3><p>Active median: {numeric(active.p50)}</p><p>Candidate median: {numeric(candidate.p50)}</p><p>Active mean: {numeric(active.mean)} · Candidate mean: {numeric(candidate.mean)}</p>{result?.active_graph_mutated === false && <p>Active graph unchanged.</p>}</section>}
+    {active && candidate && <section aria-label="Comparison receipt"><h3>Comparison receipt</h3><p>Active median: {numeric(active.p50)}</p><p>Candidate median: {numeric(candidate.p50)}</p><p>Active mean: {numeric(active.mean)} · Candidate mean: {numeric(candidate.mean)}</p>{path.length > 0 ? <p>Affected path: {path.map((node) => node.name).join(" → ")}</p> : <p>No directed path from the selected factor to the selected target was found.</p>}{result?.active_graph_mutated === false && <p>Active graph unchanged.</p>}</section>}
     {result && client.createCandidateProposal && !proposal && <button onClick={saveCandidate}>Save candidate for review</button>}
     {proposal && <section aria-label="Candidate approval"><h3>Candidate approval</h3><p>Proposal {proposalId} · graph version {numeric(proposal.graph_version)}</p><p>Binding hash: {bindingHash || "unavailable"}</p><p>Approval applies this exact proposal to the active graph. Review the binding before continuing.</p><label>Approver identity<input aria-label="Approver identity" value={approver} onChange={(event) => setApprover(event.target.value)} /></label><label><input aria-label="I reviewed this exact binding" type="checkbox" checked={reviewed} onChange={(event) => setReviewed(event.target.checked)} />I reviewed this exact binding</label>{client.approveCandidateProposal && <button onClick={approveCandidate} disabled={!approver.trim() || !reviewed || !bindingHash}>Approve candidate version</button>}</section>}
     {approval && <section aria-label="Approval receipt"><h3>Approval receipt: {numeric((approval.approval_receipt as JsonObject | undefined)?.id)}</h3><p>Approved graph version: {numeric((approval.graph as JsonObject | undefined)?.graph_version)}</p><p>The server validated the proposal binding before applying this version.</p></section>}
