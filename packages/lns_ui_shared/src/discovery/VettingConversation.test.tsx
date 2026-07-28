@@ -26,4 +26,19 @@ describe("VettingConversation", () => {
     expect(onProceed).toHaveBeenCalledOnce();
     expect(screen.getByText(/requires explicit confirmation/i)).toBeVisible();
   });
+
+  it("persists a typed discovery action and allows a paused exchange to resume", async () => {
+    const user = userEvent.setup();
+    const onRecord = vi.fn(async () => undefined);
+    render(<VettingConversation provider="No provider selected" model="No model selected" dataScope="No content leaves this Mac." onRecord={onRecord} />);
+
+    await user.click(screen.getByRole("button", { name: "Add direction" }));
+    await user.type(screen.getByLabelText("Proposed direction"), "Freight capacity may constrain refinery output.");
+    await user.click(screen.getByRole("button", { name: "Save discovery action" }));
+    expect(onRecord).toHaveBeenCalledWith({ classification: "inference", text: "Freight capacity may constrain refinery output." });
+    expect(await screen.findByRole("status")).toHaveTextContent("Add direction saved");
+    await user.click(screen.getByRole("button", { name: "Pause" }));
+    expect(screen.getByRole("button", { name: "Resume" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Proceed now" })).toBeDisabled();
+  });
 });

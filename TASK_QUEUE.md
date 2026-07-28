@@ -66,7 +66,7 @@
 |---|---|---|---|---|
 | Q4-00 | Freeze hybrid workflow and autonomous GUI completion contract | Gate 3 | `GOAL_GUI.md` covers Build, Run, Edit, Monitor, proof gates, safe defaults, and no intermediate user approval | Complete (2026-07-28) |
 | Q4-01 | Scaffold private `lns_ui_shared` package | Q0-07 | both apps consume shared types/client | Complete (shared lifecycle/client boundary, deterministic fixtures, kernel-backed catalog API, and both consumer production builds passed, 2026-07-28) |
-| Q4-02 | Build target-intake and research-consent flow | Q3-01–02, Q4-01 | accessible forms and error states tested | Pending |
+| Q4-02 | Build target-intake and research-consent flow | Q3-01–02, Q4-01 | accessible forms and error states tested | In progress — target intake and typed, persisted Vet actions plus Pause/Resume are tested; durable provider-consent receipt, research categories, and review are still missing (2026-07-28) |
 | Q4-03 | Build target-centered hop graph | Q3-03, Q4-01 | 30-node deterministic layout has no default overlap | In progress — canonical 15-factor fixture supports no-default-overlap hop layers, pan/zoom/fit, filtering, keyboard selection, three-hop tracing, and textual alternative; richer relationship/evidence integration remains (2026-07-28) |
 | Q4-04 | Build node distribution inspector | Q1-01–04, Q4-01 | eight family forms/curves/derived values tested | In progress — reusable eight-family curve/derived-value inspector tested; factor-bound persisted quantitative review remains (2026-07-28) |
 | Q4-05 | Build relationship inspector | Q3-05, Q4-01 | type, units, lag, evidence, state editable/reviewable | Pending |

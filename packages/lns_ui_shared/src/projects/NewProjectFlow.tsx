@@ -3,8 +3,7 @@ import type { JsonObject, WorkspaceProjectInput } from "../api/types";
 import { PersistedTargetIntake } from "../intake/PersistedTargetIntake";
 import type { TargetPersistenceClient } from "../intake/submitTarget";
 import { CandidateMap, type CandidateMapClient } from "../discovery/CandidateMap";
-import { DecisionLedger } from "../discovery/DecisionLedger";
-import { VettingConversation } from "../discovery/VettingConversation";
+import { VettingConversation, type VettingEntry } from "../discovery/VettingConversation";
 
 export interface NewProjectClient extends TargetPersistenceClient, CandidateMapClient {
   createProject(project: WorkspaceProjectInput): Promise<JsonObject>;
@@ -21,6 +20,7 @@ export function NewProjectFlow({ client, onCreated }: { client: NewProjectClient
   const [projectId, setProjectId] = useState<string | null>(null);
   const [targetId, setTargetId] = useState<string | null>(null);
   const [buildStage, setBuildStage] = useState<"vet" | "map">("vet");
+  const [vetEntries, setVetEntries] = useState<VettingEntry[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -40,7 +40,13 @@ export function NewProjectFlow({ client, onCreated }: { client: NewProjectClient
   }
 
   if (projectId && targetId && buildStage === "map") return <section aria-label="Build candidate map"><h1>Map proposed factors</h1><p>Target contract saved. Continue through the explicitly labeled candidate map before any approval.</p><CandidateMap targetId={targetId} client={client} /></section>;
-  if (projectId && targetId) return <section aria-label="Build vet stage"><VettingConversation provider="No provider selected" model="No model selected" dataScope="No content will leave this Mac until an explicit provider-routing confirmation is recorded." onProceed={() => setBuildStage("map")} /><DecisionLedger projectId={projectId} client={client} /></section>;
+  async function recordVetEntry(entry: VettingEntry) {
+    if (!projectId) return;
+    const next = [...vetEntries, entry];
+    await client.patchProject(projectId, { discovery_ledger: next });
+    setVetEntries(next);
+  }
+  if (projectId && targetId) return <section aria-label="Build vet stage"><VettingConversation provider="No provider selected" model="No model selected" dataScope="No content will leave this Mac until an explicit provider-routing confirmation is recorded." onRecord={recordVetEntry} onProceed={() => setBuildStage("map")} /></section>;
   if (projectId) return <PersistedTargetIntake client={client} projectId={projectId} onSaved={setTargetId} />;
   return <section aria-labelledby="new-project-title">
     <h1 id="new-project-title">New prediction project</h1>
