@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ShadowComparison } from "./ShadowComparison";
@@ -213,6 +213,29 @@ describe("ShadowComparison", () => {
     expect(screen.queryByRole("button", { name: "Save candidate for review" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Save durable candidate revision" }));
     expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({ candidate_distribution_specs: { demand: expect.objectContaining({ family_id: "Gamma" }) } }));
+  });
+
+  it.each([
+    ["Beta", { alpha: 2, beta: 3 }, ["Beta mean", "Beta concentration"]],
+    ["Poisson", { rate: 2 }, ["Poisson expected count"]],
+    ["NegativeBinomial", { mean: 2, dispersion: 3 }, ["NegativeBinomial expected count", "NegativeBinomial dispersion"]],
+    ["Gamma", { shape: 2, scale: 1 }, ["Gamma mean", "Gamma standard deviation"]],
+    ["StudentT", { loc: 0, scale: 1, df: 4 }, ["StudentT location", "StudentT scale", "StudentT degrees of freedom"]],
+    ["Deterministic", { value: 3 }, ["Deterministic value"]],
+  ])("renders only the intended human-facing intuitive inputs for %s", async (family, parameters, labels) => {
+    render(<ShadowComparison graphId="graph-1" client={{
+      getGraph: async () => ({ nodes: {
+        factor: { name: "Factor", distribution_family: family, parameters, depends_on: [] },
+        outcome: { name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: ["factor"] },
+      }}),
+      shadowSimulate: async () => ({}),
+      deriveDistribution: async () => ({}),
+    } as never} />);
+
+    await screen.findByLabelText(labels[0]);
+    const derivation = screen.getByLabelText("Distribution intuitive derivation");
+    for (const label of labels) expect(within(derivation).getByLabelText(label)).toBeVisible();
+    expect(within(derivation).getAllByRole("spinbutton")).toHaveLength(labels.length);
   });
 
   it("compares two durable same-base revisions without simulating or activating either one", async () => {
