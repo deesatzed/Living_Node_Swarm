@@ -179,6 +179,17 @@ describe("ShadowComparison", () => {
     expect(screen.queryByRole("button", { name: "Approve candidate version" })).not.toBeInTheDocument();
   });
 
+  it("renders server relationship-validation warnings before saving a revision", async () => {
+    const user = userEvent.setup();
+    const validateRelationships = vi.fn(async () => ({ dependence_warnings: [{ code: "unresolved_proxy_correlation", message: "Shared cause remains unresolved." }], active_graph_mutated: false }));
+    render(<ShadowComparison graphId="graph-1" client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] } } }), shadowSimulate: async () => ({}), validateRelationships } as never} />);
+    await screen.findByLabelText("Proposed relationship type");
+    await user.click(screen.getByRole("button", { name: "Stage proposed relationship contract" }));
+    await user.click(screen.getByRole("button", { name: "Validate proposed relationships" }));
+    expect(validateRelationships).toHaveBeenCalledWith(expect.objectContaining({ relationships: [expect.objectContaining({ state: "proposed" })] }));
+    expect(await screen.findByLabelText("Relationship validation warnings")).toHaveTextContent("Shared cause remains unresolved.");
+  });
+
   it("loads a matching-base persisted revision back into local staging without activation", async () => {
     const user = userEvent.setup();
     render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] } } }), shadowSimulate: async () => ({}), listCandidateRevisions: async () => ({ candidate_revisions: [{ id: "saved-1", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 5 } }, candidate_node_state_overrides: { input_signal: "excluded" }, candidate_relationship_state_overrides: { "input_signal:outcome": "excluded" } }] }) }} />);
