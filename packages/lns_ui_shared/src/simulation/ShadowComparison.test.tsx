@@ -157,6 +157,23 @@ describe("ShadowComparison", () => {
     expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({ candidate_relationship_state_overrides: { "input_signal:outcome": "excluded" } }));
   });
 
+  it("stages an explicit proposed relationship contract without simulating or approving it", async () => {
+    const user = userEvent.setup();
+    const createCandidateRevision = vi.fn(async (_projectId, revision) => ({ ...revision, id: "relationship-revision" }));
+    const shadowSimulate = vi.fn(async () => ({}));
+    render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] } } }), shadowSimulate, createCandidateRevision }} />);
+    await screen.findByLabelText("Proposed relationship type");
+    await user.selectOptions(screen.getByLabelText("Proposed relationship type"), "scenario_assumption");
+    await user.clear(screen.getByLabelText("Proposed relationship lag periods"));
+    await user.type(screen.getByLabelText("Proposed relationship lag periods"), "1");
+    await user.click(screen.getByRole("button", { name: "Stage proposed relationship contract" }));
+    expect(screen.getByLabelText("Proposed relationship contracts")).toHaveTextContent("input_signal → outcome · scenario_assumption · proposed");
+    await user.click(screen.getByRole("button", { name: "Save durable candidate revision" }));
+    expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({ candidate_relationship_contracts: [expect.objectContaining({ parent_node_id: "input_signal", child_node_id: "outcome", relationship_type: "scenario_assumption", lag_periods: 1, lag_unit: "month", state: "proposed" })] }));
+    expect(shadowSimulate).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Approve candidate version" })).not.toBeInTheDocument();
+  });
+
   it("loads a matching-base persisted revision back into local staging without activation", async () => {
     const user = userEvent.setup();
     render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] } } }), shadowSimulate: async () => ({}), listCandidateRevisions: async () => ({ candidate_revisions: [{ id: "saved-1", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 5 } }, candidate_node_state_overrides: { input_signal: "excluded" }, candidate_relationship_state_overrides: { "input_signal:outcome": "excluded" } }] }) }} />);
