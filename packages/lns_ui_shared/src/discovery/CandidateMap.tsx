@@ -6,6 +6,7 @@ import { WarningCenter } from "../inspectors/WarningCenter";
 export interface CandidateMapClient {
   createFixtureCandidateProposal(targetId: string): Promise<CandidateGraphFixture>;
   materializeFixtureCandidateProposal?(targetId: string): Promise<{ graph?: { id?: string }; active_graph_mutated?: boolean }>;
+  createStructuralProposal?(graphId: string, body: { relationships: Record<string, unknown>[]; activated_node_ids: string[] }): Promise<{ proposal?: { id?: string; binding_hash?: string; graph_version?: number }; active_graph_mutated?: boolean }>;
 }
 
 type FixtureCandidateRevision = Pick<CandidateGraphFixture, "factors" | "relationships">;
@@ -22,6 +23,7 @@ export function CandidateMap({ targetId, client, onMaterialized }: { targetId: s
   const [revisionStatus, setRevisionStatus] = useState("");
   const [error, setError] = useState("");
   const [materializedGraphId, setMaterializedGraphId] = useState("");
+  const [structuralReview, setStructuralReview] = useState<{ id?: string; binding_hash?: string; graph_version?: number } | null>(null);
   const [loading, setLoading] = useState(false);
   async function load() {
     setLoading(true); setError("");
@@ -99,6 +101,16 @@ export function CandidateMap({ targetId, client, onMaterialized }: { targetId: s
     }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to materialize fixture candidate graph."); }
   }
+  async function createStructuralReview() {
+    if (!fixture || !materializedGraphId || !client.createStructuralProposal) return;
+    const targetNodeId = typeof fixture.graph_proposal.target_node_id === "string" ? fixture.graph_proposal.target_node_id : "";
+    const relationship = fixture.relationships.find((candidate) => candidate.parent_node_id === selectedFactorId && candidate.child_node_id === targetNodeId);
+    if (!relationship) { setError("The selected fixture factor has no direct target relationship. Review its complete multi-hop path before creating a structural proposal."); return; }
+    try {
+      const result = await client.createStructuralProposal(materializedGraphId, { relationships: [relationship], activated_node_ids: [selectedFactorId] });
+      setStructuralReview(result.proposal ?? null);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to create structural review."); }
+  }
 
   return <section aria-label="Candidate map">
     <p>Candidate breadth is proposal-only. It never activates factors or declares live research.</p>
@@ -111,6 +123,8 @@ export function CandidateMap({ targetId, client, onMaterialized }: { targetId: s
         <button onClick={removeSelectedFactor} disabled={!selectedFactor}>Remove selected fixture factor</button><button onClick={extendSelectedBranch} disabled={!selectedFactor}>Extend selected fixture branch</button><button onClick={saveFixtureRevision} disabled={!revision}>Request fixture branch revision</button><button onClick={replayFixtureRevision} disabled={!savedRevision}>Replay fixture branch revision</button>
         {client.materializeFixtureCandidateProposal && <button onClick={() => void materialize()}>Materialize fixture proposal for review</button>}
         {materializedGraphId && <p role="status">Fixture candidate graph {materializedGraphId} persisted for separate review; no factor is active.</p>}
+        {materializedGraphId && client.createStructuralProposal && <button onClick={() => void createStructuralReview()}>Create structural review for selected fixture factor</button>}
+        {structuralReview && <section aria-label="Fixture structural review"><h3>Fixture structural review</h3><p>Proposal {structuralReview.id ?? "Not recorded"} · graph version {structuralReview.graph_version ?? "Not recorded"}</p><p>Binding hash: {structuralReview.binding_hash ?? "Not recorded"}</p><p>Fixture scenario assumptions only. No factor is active until exact named approval.</p></section>}
         {revisionStatus && <p role="status">{revisionStatus}</p>}
         <section aria-label="Fixture revision delta"><h3>Fixture revision delta</h3>{removedFactors.length === 0 && addedFactors.length === 0 ? <p>No fixture candidate changes staged.</p> : <>{removedFactors.map((factor) => <p key={`removed-${factor.id}`}>Removed factor: {factor.label}.</p>)}{addedFactors.map((factor) => <p key={`added-${factor.id}`}>Added factor: {factor.label}.</p>)}{addedEdges.map((edge) => <p key={`edge-${String(edge.parent_node_id)}-${String(edge.child_node_id)}`}>Added model dependency: {String(edge.parent_node_id)} → {String(edge.child_node_id)}.</p>)}</>}<p>Active graph unchanged: yes.</p></section>
       </section>

@@ -169,3 +169,11 @@ Gas dependency edges now use the shared relationship inspector in read-only form
 **Why:** Structural edges alone do not identify which candidate factors were reviewed for inclusion. Including the exact node set in the immutable proposal payload makes the approval receipt, trial graph, and atomic store update agree on the intended scope.
 
 **Consequence:** The server can now activate reviewed existing proposed nodes together with a structural delta. It still cannot infer missing transforms, coefficients, or dependencies from a fixture, and the Build UI must create those explicitly before this capability is exposed as a workflow.
+
+# 2026-07-28 — Fixture coefficients are visible scenario assumptions, never evidence
+
+**Decision:** The deterministic Neodymium fixture uses explicit signed `0.2` affine coefficients only to make a structural-review path executable. They are tagged and described as fixture scenario assumptions, not retrieved evidence, calibration, or forecast guidance.
+
+**Why:** A reviewable structural proposal must contain executable transforms and coefficients. Leaving them implicit would block validation; presenting them as learned or sourced would be false.
+
+**Consequence:** Map may create a non-active binding for a selected direct factor and show its hash. It refuses incomplete multi-hop paths, has no approval control, and cannot support any accuracy claim from the fixture.

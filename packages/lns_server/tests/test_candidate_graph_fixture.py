@@ -63,3 +63,23 @@ def test_fixture_candidate_graph_can_be_materialized_as_a_non_active_persisted_g
     assert len(graph["nodes"]) == 16
     assert all(node["status"] == "proposed" for node_id, node in graph["nodes"].items() if node_id != "nd_price")
     assert response.json()["active_graph_mutated"] is False
+
+
+def test_materialized_fixture_can_create_a_non_active_exact_structural_review_for_one_factor(tmp_path: Path):
+    app = create_app(Settings(db_path=str(tmp_path / "graph.db")))
+    with TestClient(app) as client:
+        assert client.post("/targets", json=target_body()).status_code == 200
+        graph = client.post("/authoring/targets/nd-retail-2027/candidate-proposals/fixture/materialize").json()["graph"]
+        fixture = client.post("/authoring/targets/nd-retail-2027/candidate-proposals/fixture").json()
+        relationship = next(item for item in fixture["relationships"] if item["id"] == "china_export_controls_to_target")
+        proposal = client.post(
+            f"/authoring/graphs/{graph['id']}/structural-proposals",
+            json={"relationships": [relationship], "activated_node_ids": ["china_export_controls"]},
+        )
+        unchanged = client.get(f"/graphs/{graph['id']}").json()
+
+    assert proposal.status_code == 200, proposal.text
+    assert proposal.json()["active_graph_mutated"] is False
+    assert proposal.json()["proposal"]["activated_node_ids"] == ["china_export_controls"]
+    assert unchanged["nodes"]["china_export_controls"]["status"] == "proposed"
+    assert unchanged["relationships"] == {}

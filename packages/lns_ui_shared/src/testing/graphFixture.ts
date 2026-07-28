@@ -65,6 +65,7 @@ export function createNeodymiumGraphFixture(): CandidateGraphFixture & {
       { parent_node_id: "weather_disruption", child_node_id: "freight_capacity" },
       { parent_node_id: "freight_capacity", child_node_id: "refining_throughput" },
       { parent_node_id: "refining_throughput", child_node_id: target.target_node_id },
+      { parent_node_id: "china_export_controls", child_node_id: target.target_node_id, id: "china_export_controls_to_target", transform: "affine", coefficient_parameters: [{ id: "coefficient", value: 0.2 }], state: "proposed" },
     ],
   };
 }

@@ -72,6 +72,7 @@ def _edge(
         sign=sign,
         lag_periods=0,
         coefficient_units="USD/(kg*index)" if child_is_target else "1",
+        coefficient_parameters=({"id": "coefficient", "value": -0.2 if sign == "negative" else 0.2},),
         state="proposed",
     )
 

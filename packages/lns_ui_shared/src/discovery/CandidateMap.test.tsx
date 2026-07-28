@@ -78,4 +78,23 @@ describe("CandidateMap", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Fixture candidate graph fixture-graph-3 persisted for separate review");
     expect(screen.getByRole("alert")).toHaveTextContent("persisted, but this Build workspace could not retain its graph ID");
   });
+
+  it("creates an exact proposed-only structural review for a materialized direct fixture factor", async () => {
+    const user = userEvent.setup();
+    const createStructuralProposal = vi.fn(async () => ({ proposal: { id: "fixture-review-1", binding_hash: "fixture-hash", graph_version: 1 }, active_graph_mutated: false }));
+    render(<CandidateMap targetId="fixture-nd-retail-2027" client={{
+      createFixtureCandidateProposal: async () => createNeodymiumGraphFixture(),
+      materializeFixtureCandidateProposal: async () => ({ graph: { id: "fixture-graph-4" }, active_graph_mutated: false }),
+      createStructuralProposal,
+    }} />);
+
+    await user.click(screen.getByRole("button", { name: "Load labeled fixture candidate map" }));
+    await user.click(await screen.findByRole("button", { name: "Materialize fixture proposal for review" }));
+    await user.selectOptions(screen.getByLabelText("Candidate factor for fixture refinement"), "china_export_controls");
+    await user.click(screen.getByRole("button", { name: "Create structural review for selected fixture factor" }));
+
+    expect(createStructuralProposal).toHaveBeenCalledWith("fixture-graph-4", expect.objectContaining({ activated_node_ids: ["china_export_controls"] }));
+    expect(await screen.findByLabelText("Fixture structural review")).toHaveTextContent("Binding hash: fixture-hash");
+    expect(screen.getByLabelText("Fixture structural review")).toHaveTextContent("No factor is active until exact named approval");
+  });
 });

@@ -647,9 +647,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         fixture = build_neodymium_fixture(target)
         import uuid
         graph_id = f"fixture-candidate:{uuid.uuid4()}"
+        fixture_children = {relationship.child_node_id for relationship in fixture.relationships}
         nodes = {
-            target.target_node_id: Node(id=target.target_node_id, name=target.question, distribution_family="Deterministic", parameters={"value": 0.0}, units=target.unit, status=NodeStatus.ACTIVE, created_by="fixture_materializer", last_updated_by="fixture_materializer"),
-            **{factor.id: Node(id=factor.id, name=factor.label, distribution_family="Normal", parameters={"mu": 0.0, "sigma": 1.0}, status=NodeStatus.PROPOSED, requires_human_approval=True, created_by="fixture_materializer", last_updated_by="fixture_materializer", tags=["fixture_unverified"]) for factor in fixture.factors},
+            target.target_node_id: Node(id=target.target_node_id, name=target.question, distribution_family="Deterministic", parameters={"value": 0.0}, units=target.unit, transform=TransformKind.AFFINE, transform_params={"a0": 0.0}, status=NodeStatus.ACTIVE, created_by="fixture_materializer", last_updated_by="fixture_materializer"),
+            **{factor.id: Node(id=factor.id, name=factor.label, distribution_family="Normal", parameters={"mu": 0.0, "sigma": 1.0}, transform=TransformKind.AFFINE if factor.id in fixture_children else TransformKind.NONE, transform_params={"a0": 0.0} if factor.id in fixture_children else {}, status=NodeStatus.PROPOSED, requires_human_approval=True, created_by="fixture_materializer", last_updated_by="fixture_materializer", tags=["fixture_unverified", "fixture_scenario_assumption"]) for factor in fixture.factors},
         }
         graph = Graph(id=graph_id, name=f"Fixture candidate: {target.question}", nodes=nodes, target_contract_id=target.id)
         store.create_graph(graph)
