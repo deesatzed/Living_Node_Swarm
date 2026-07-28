@@ -35,6 +35,7 @@ from lns_server.gas_ai import expand_gas_factors, layout_for_new_nodes
 from lns_server.candidate_graph import build_neodymium_fixture
 from lns_server.distribution_elicitation import ElicitDistributionBody, elicit_from_median_p90
 from lns_server.relationship_authoring import RelationshipValidationBody, validate_proposed_relationships
+from lns_server.structural_proposals import StructuralProposalBody, make_structural_proposal
 from lns_server.shadow_simulation import ShadowSimulationBody, ShadowSimulationError, run_local_sensitivity, run_shadow_simulation
 from lns_server.candidate_approval import (
     ApproveCandidateBody,
@@ -613,6 +614,29 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/authoring/relationships/validate")
     def validate_relationships(body: RelationshipValidationBody) -> dict[str, Any]:
         return validate_proposed_relationships(body)
+
+    @app.post("/authoring/graphs/{graph_id}/structural-proposals")
+    def create_structural_proposal(graph_id: str, body: StructuralProposalBody) -> dict[str, Any]:
+        graph = store.get_graph(graph_id)
+        if graph is None:
+            raise HTTPException(404, "graph not found")
+        unknown_evidence_claims = sorted({
+            claim_id
+            for relationship in body.relationships
+            for claim_id in relationship.evidence_claim_ids
+            if app.state.evidence_store.get_evidence_claim(claim_id) is None
+        })
+        if unknown_evidence_claims:
+            raise HTTPException(
+                422,
+                f"structural proposal references unknown evidence claims: {', '.join(unknown_evidence_claims)}",
+            )
+        try:
+            proposal = make_structural_proposal(graph, body)
+        except ValidationError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        app.state.evidence_store.save_structural_graph_proposal(proposal)
+        return {"proposal": proposal.response_payload(), "active_graph_mutated": False}
 
     @app.post("/authoring/graphs/{graph_id}/shadow-simulate")
     def shadow_simulate(graph_id: str, body: ShadowSimulationBody) -> dict[str, Any]:

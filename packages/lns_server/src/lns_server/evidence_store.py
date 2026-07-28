@@ -10,6 +10,7 @@ from lns_server.research_routing import ProviderRoutingReceipt
 from lns_server.research_plan import ResearchCompletenessReport
 from lns_server.research_review import ClaimReview
 from lns_server.candidate_approval import CandidateApprovalProposal
+from lns_server.structural_proposals import StructuralGraphProposal
 
 
 class EvidenceStore:
@@ -53,6 +54,10 @@ class EvidenceStore:
                 PRIMARY KEY(target_contract_id, claim_id)
             );
             CREATE TABLE IF NOT EXISTS candidate_approval_proposals (
+                id TEXT PRIMARY KEY,
+                payload_json TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS structural_graph_proposals (
                 id TEXT PRIMARY KEY,
                 payload_json TEXT NOT NULL
             );
@@ -189,3 +194,16 @@ class EvidenceStore:
             "SELECT payload_json FROM candidate_approval_proposals WHERE id=?", (proposal_id,)
         ).fetchone()
         return None if row is None else CandidateApprovalProposal.model_validate_json(row["payload_json"])
+
+    def save_structural_graph_proposal(self, proposal: StructuralGraphProposal) -> None:
+        self._connection.execute(
+            "INSERT INTO structural_graph_proposals(id, payload_json) VALUES (?, ?)",
+            (proposal.id, proposal.model_dump_json()),
+        )
+        self._connection.commit()
+
+    def get_structural_graph_proposal(self, proposal_id: str) -> StructuralGraphProposal | None:
+        row = self._connection.execute(
+            "SELECT payload_json FROM structural_graph_proposals WHERE id=?", (proposal_id,)
+        ).fetchone()
+        return None if row is None else StructuralGraphProposal.model_validate_json(row["payload_json"])
