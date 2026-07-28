@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-**15% complete – Gates 0–1 complete; Gate 2 safe research/provenance next**
+**20% complete – Gates 0–2 complete; Gate 3 generalized authoring next**
 
 The new domain-general goal has a hardened control surface and the first typed kernel contracts. The existing v0.1/v0.2 shell remains the verified baseline; no generalized research, authoring API, or workspace has been built yet.
 
@@ -11,12 +11,12 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Surface | Verified state |
 |---|---|
 | Kernel tests | 72 passed on 2026-07-27 after persisted multi-seed/multi-sample stability diagnostics |
-| Server tests | 34 passed on 2026-07-27 after provider routing preview/receipt; one upstream deprecation warning |
+| Server tests | 38 passed on 2026-07-27 after Gate 2 security/provenance fixture journey; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-27 |
 | Gas UI | Production build passed on 2026-07-27 |
 | Current families | Eight canonical registry families; legacy node payloads remain readable through explicit parameter normalization |
 | Current graph | Static DAG with affine/sum/mean transforms |
-| Current research/provenance | Not implemented |
+| Current research/provenance | Local security, provenance, consent, and completeness primitives implemented; no live research/API journey yet |
 | Current generalized authoring UX | Not implemented |
 
 ## Current Assumptions
@@ -58,7 +58,9 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Q2-03 evidence persistence | Complete | Codex | Local SQLite stores typed source receipts/claims, hashes, conflicts, and source references across restart; 30 server tests passed |
 | Q2-04 untrusted extraction | Complete | Codex | Fixed trusted extraction task, bounded visible text, script/style exclusion, content hash; 32 server tests passed |
 | Q2-05 routing receipt | Complete | Codex | Preview exposes provider/model/scope/hashes without source text; confirmed receipt persists; 34 server tests passed |
-| Gate 2 safe research/provenance | Pending | Unassigned | Depends on Gate 0 |
+| Q2-06 research completeness | Complete | Codex | Bounded source/byte/time plan records diversity, contradiction search, saturation, and gaps; 36 server tests passed |
+| Q2-07 security/provenance suite | Complete | Codex | Fixture-only end-to-end security/receipt journey, including unsafe redirect rejection; 38 server tests passed |
+| Gate 2 safe research/provenance | Complete | Codex | Local safe retrieval, untrusted isolation, consent receipts, persistence, and completeness reporting verified; no live research claimed |
 | Gate 3 generalized authoring | Pending | Unassigned | Depends on Gates 1–2 |
 | Gate 4 visual workspace | Pending | Unassigned | Depends on Gate 3 API/contracts |
 | Gate 5 Neodymium acceptance | Pending | Unassigned | Depends on Gates 1–4 |
@@ -74,15 +76,15 @@ The new domain-general goal has a hardened control surface and the first typed k
 
 ## Current Milestone
 
-**Gate 2 — Safe Research and Provenance**
+**Gate 3 — Generalized Authoring**
 
-Gate 1 exited on 2026-07-27: all eight registry families, explicit compatibility, units, time-expanded lag validation, dependence warnings, stability receipts, and continuous scoring are verified. The next exit is permissioned, safe, provenance-preserving research.
+Gate 2 exited on 2026-07-27: fixture-tested local URL safety, bounded retrieval, untrusted extraction, provenance persistence, explicit provider routing consent, and completeness reporting are verified. No live research has been performed. The next exit is an approval-gated generalized authoring workflow.
 
 ## Next Actions
 
-1. Complete Q2-06: implement bounded research plan and completeness report.
-2. Complete Q2-07: combine security/provenance cases into a gate suite.
-3. Run focused security tests after each atomic change and update this file with exact results.
+1. Complete Q3-01: add target-intake API backed by `TargetContract`.
+2. Complete Q3-02: add research-review API backed by persisted claims/receipts.
+3. Keep proposals inactive until version-bound human approval.
 
 ## Blockers
 

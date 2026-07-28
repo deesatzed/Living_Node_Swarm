@@ -7,6 +7,7 @@ from pathlib import Path
 
 from lns_kernel.contracts import EvidenceClaim, EvidenceClass, SourceReceipt
 from lns_server.research_routing import ProviderRoutingReceipt
+from lns_server.research_plan import ResearchCompletenessReport
 
 
 class EvidenceStore:
@@ -31,6 +32,10 @@ class EvidenceStore:
             CREATE INDEX IF NOT EXISTS idx_evidence_claims_source
                 ON evidence_claims(source_receipt_id);
             CREATE TABLE IF NOT EXISTS provider_routing_receipts (
+                id TEXT PRIMARY KEY,
+                payload_json TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS research_completeness_reports (
                 id TEXT PRIMARY KEY,
                 payload_json TEXT NOT NULL
             );
@@ -105,3 +110,19 @@ class EvidenceStore:
             "SELECT payload_json FROM provider_routing_receipts WHERE id=?", (receipt_id,)
         ).fetchone()
         return None if row is None else ProviderRoutingReceipt.model_validate_json(row["payload_json"])
+
+    def save_research_completeness_report(self, report: ResearchCompletenessReport) -> None:
+        self._connection.execute(
+            """
+            INSERT INTO research_completeness_reports(id, payload_json) VALUES (?, ?)
+            ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json
+            """,
+            (report.id, report.model_dump_json()),
+        )
+        self._connection.commit()
+
+    def get_research_completeness_report(self, report_id: str) -> ResearchCompletenessReport | None:
+        row = self._connection.execute(
+            "SELECT payload_json FROM research_completeness_reports WHERE id=?", (report_id,)
+        ).fetchone()
+        return None if row is None else ResearchCompletenessReport.model_validate_json(row["payload_json"])
