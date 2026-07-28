@@ -40,6 +40,19 @@ describe("CandidateMap", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Replayed fixture branch revision without changing an active graph.");
   });
 
+  it("stages reversible fixture candidate exclusion without activating a factor", async () => {
+    const user = userEvent.setup();
+    render(<CandidateMap targetId="fixture-nd-retail-2027" client={{ createFixtureCandidateProposal: async () => createNeodymiumGraphFixture() }} />);
+
+    await user.click(screen.getByRole("button", { name: "Load labeled fixture candidate map" }));
+    await user.selectOptions(screen.getByLabelText("Candidate factor for fixture refinement"), "freight_capacity");
+    await user.click(screen.getByRole("button", { name: "Exclude selected fixture factor" }));
+    expect(screen.getByLabelText("Fixture revision delta")).toHaveTextContent("Excluded factor: Freight capacity.");
+    expect(screen.getByLabelText("Fixture revision delta")).toHaveTextContent("Active graph unchanged: yes.");
+    await user.click(screen.getByRole("button", { name: "Include selected fixture factor" }));
+    expect(screen.getByLabelText("Fixture revision delta")).toHaveTextContent("No fixture candidate changes staged.");
+  });
+
   it("materializes a fixture proposal for separate review without claiming activation", async () => {
     const user = userEvent.setup();
     const materializeFixtureCandidateProposal = vi.fn(async () => ({ graph: { id: "fixture-graph-1" }, active_graph_mutated: false }));

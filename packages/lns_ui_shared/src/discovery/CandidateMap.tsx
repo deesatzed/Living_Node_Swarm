@@ -67,6 +67,10 @@ export function CandidateMap({ targetId, projectId, client, onMaterialized }: { 
   const baselineFactors = fixture?.factors ?? [];
   const removedFactors = baselineFactors.filter((factor) => !factors.some((candidate) => candidate.id === factor.id));
   const addedFactors = factors.filter((factor) => !baselineFactors.some((baseline) => baseline.id === factor.id));
+  const stateChangedFactors = factors.filter((factor) => {
+    const baseline = baselineFactors.find((candidate) => candidate.id === factor.id);
+    return baseline && baseline.state !== factor.state;
+  });
   const baselineEdges = new Set((fixture?.relationships ?? []).map((relationship) => `${String(relationship.parent_node_id)}:${String(relationship.child_node_id)}`));
   const addedEdges = relationships.filter((relationship) => !baselineEdges.has(`${String(relationship.parent_node_id)}:${String(relationship.child_node_id)}`));
   const targetNodeId = typeof fixture?.graph_proposal.target_node_id === "string" ? fixture.graph_proposal.target_node_id : "";
@@ -98,6 +102,17 @@ export function CandidateMap({ targetId, projectId, client, onMaterialized }: { 
       return { factors: [...current.factors, extension], relationships: [...current.relationships, { parent_node_id: extensionId, child_node_id: selectedFactor.id }] };
     });
     setRevisionStatus(`Extended ${selectedFactor.label} with a fixture-only proposed branch.`);
+  }
+
+  function setSelectedCandidateState(state: "proposed" | "excluded") {
+    if (!selectedFactor) return;
+    setRevision((current) => current ? {
+      ...current,
+      factors: current.factors.map((factor) => factor.id === selectedFactor.id ? { ...factor, state } : factor),
+    } : current);
+    setRevisionStatus(state === "excluded"
+      ? `Excluded ${selectedFactor.label} from this fixture candidate revision; it remains inactive.`
+      : `Included ${selectedFactor.label} as a proposed fixture candidate; it remains inactive.`);
   }
 
   function saveFixtureRevision() {
@@ -164,7 +179,7 @@ export function CandidateMap({ targetId, projectId, client, onMaterialized }: { 
       <section aria-label="Fixture branch refinement">
         <h2>Fixture branch refinement</h2><p>These controls change only the displayed fixture candidate in this browser session. They do not persist, approve, or alter an active graph.</p>
         <label>Candidate factor for fixture refinement<select aria-label="Candidate factor for fixture refinement" value={selectedFactorId} onChange={(event) => setSelectedFactorId(event.target.value)}>{factors.map((factor) => <option key={factor.id} value={factor.id}>{factor.label}</option>)}</select></label>
-        <button onClick={removeSelectedFactor} disabled={!selectedFactor}>Remove selected fixture factor</button><button onClick={extendSelectedBranch} disabled={!selectedFactor}>Extend selected fixture branch</button><button onClick={saveFixtureRevision} disabled={!revision}>Request fixture branch revision</button><button onClick={replayFixtureRevision} disabled={!savedRevision}>Replay fixture branch revision</button>
+        <button onClick={removeSelectedFactor} disabled={!selectedFactor}>Remove selected fixture factor</button><button onClick={() => setSelectedCandidateState("excluded")} disabled={!selectedFactor || selectedFactor.state === "excluded"}>Exclude selected fixture factor</button><button onClick={() => setSelectedCandidateState("proposed")} disabled={!selectedFactor || selectedFactor.state === "proposed"}>Include selected fixture factor</button><button onClick={extendSelectedBranch} disabled={!selectedFactor}>Extend selected fixture branch</button><button onClick={saveFixtureRevision} disabled={!revision}>Request fixture branch revision</button><button onClick={replayFixtureRevision} disabled={!savedRevision}>Replay fixture branch revision</button>
         {client.materializeFixtureCandidateProposal && <button onClick={() => void materialize()}>Materialize fixture proposal for review</button>}
         {materializedGraphId && <p role="status">Fixture candidate graph {materializedGraphId} persisted for separate review; no factor is active.</p>}
         {materializedGraphId && client.createStructuralProposal && <button onClick={() => void createStructuralReview("direct")}>Create structural review for selected fixture factor</button>}
@@ -172,7 +187,7 @@ export function CandidateMap({ targetId, projectId, client, onMaterialized }: { 
         {structuralReview && <section aria-label="Fixture structural review"><h3>Fixture structural review</h3><p>Proposal {structuralReview.id ?? "Not recorded"} · graph version {structuralReview.graph_version ?? "Not recorded"}</p><p>Binding hash: {structuralReview.binding_hash ?? "Not recorded"}</p><p>Fixture scenario assumptions only. No factor is active until exact named approval.</p>{projectId && client.approveProjectStructuralProposal && <>{client.shadowStructuralProposal ? <><button onClick={() => void runStructuralComparison()}>Run fixture structural in-memory comparison</button>{structuralComparison && <section aria-label="Fixture structural comparison receipt"><h4>Fixture structural comparison receipt</h4><p>Active mean: {structuralComparison.active_summary?.mean ?? "Not recorded"} · p50: {structuralComparison.active_summary?.p50 ?? "Not recorded"}</p><p>Candidate mean: {structuralComparison.candidate_summary?.mean ?? "Not recorded"} · p50: {structuralComparison.candidate_summary?.p50 ?? "Not recorded"}</p><p>Active graph unchanged: {structuralComparison.active_graph_mutated === false ? "yes" : "not confirmed"}.</p><p>A distribution shift is structural impact, not forecast accuracy.</p>{structuralComparison.limitations && <ul>{structuralComparison.limitations.map((limitation, index) => <li key={`${limitation}-${index}`}>{limitation}</li>)}</ul>}</section>}</> : <p>Structural comparison is unavailable; approval is not enabled.</p>}<label>Fixture structural approver identity<input aria-label="Fixture structural approver identity" value={structuralApprover} onChange={(event) => setStructuralApprover(event.target.value)} /></label><label><input aria-label="I reviewed this fixture structural binding" type="checkbox" checked={structuralReviewed} onChange={(event) => setStructuralReviewed(event.target.checked)} />I reviewed this fixture structural binding</label>{client.shadowStructuralProposal && <button onClick={() => void approveStructuralReview()} disabled={!structuralApprover.trim() || !structuralReviewed || structuralComparison?.active_graph_mutated !== false}>Approve fixture structural binding</button>}</>}</section>}
         {structuralApproval && <section aria-label="Fixture structural approval receipt"><h3>Fixture structural approval receipt</h3><p>Approval receipt: {structuralApproval.approval_receipt?.id ?? "Not recorded"}</p><p>Approved graph version: {structuralApproval.graph?.graph_version ?? "Not recorded"}</p><p>Project stage: {structuralApproval.project?.stage ?? "Not recorded"}</p></section>}
         {revisionStatus && <p role="status">{revisionStatus}</p>}
-        <section aria-label="Fixture revision delta"><h3>Fixture revision delta</h3>{removedFactors.length === 0 && addedFactors.length === 0 ? <p>No fixture candidate changes staged.</p> : <>{removedFactors.map((factor) => <p key={`removed-${factor.id}`}>Removed factor: {factor.label}.</p>)}{addedFactors.map((factor) => <p key={`added-${factor.id}`}>Added factor: {factor.label}.</p>)}{addedEdges.map((edge) => <p key={`edge-${String(edge.parent_node_id)}-${String(edge.child_node_id)}`}>Added model dependency: {String(edge.parent_node_id)} → {String(edge.child_node_id)}.</p>)}</>}<p>Active graph unchanged: yes.</p></section>
+        <section aria-label="Fixture revision delta"><h3>Fixture revision delta</h3>{removedFactors.length === 0 && addedFactors.length === 0 && stateChangedFactors.length === 0 ? <p>No fixture candidate changes staged.</p> : <>{removedFactors.map((factor) => <p key={`removed-${factor.id}`}>Removed factor: {factor.label}.</p>)}{addedFactors.map((factor) => <p key={`added-${factor.id}`}>Added factor: {factor.label}.</p>)}{stateChangedFactors.map((factor) => <p key={`state-${factor.id}`}>{factor.state === "excluded" ? "Excluded" : "Restored proposed"} factor: {factor.label}.</p>)}{addedEdges.map((edge) => <p key={`edge-${String(edge.parent_node_id)}-${String(edge.child_node_id)}`}>Added model dependency: {String(edge.parent_node_id)} → {String(edge.child_node_id)}.</p>)}</>}<p>Active graph unchanged: yes.</p></section>
       </section>
       <HopGraph factors={factors} relationships={relationships} targetId={typeof fixture.graph_proposal.target_node_id === "string" ? fixture.graph_proposal.target_node_id : "target"} targetLabel="Private-investor retail neodymium price" />
     </>}

@@ -407,6 +407,10 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await page.getByLabel("Candidate factor for fixture refinement").selectOption("substitution_pressure");
   await page.getByRole("button", { name: "Remove selected fixture factor" }).click();
   await page.getByLabel("Candidate factor for fixture refinement").selectOption("freight_capacity");
+  await page.getByRole("button", { name: "Exclude selected fixture factor" }).click();
+  await expect(page.getByLabel("Fixture revision delta")).toContainText("Excluded factor: Freight capacity.");
+  await expect(page.getByLabel("Fixture revision delta")).toContainText("Active graph unchanged: yes.");
+  await page.getByRole("button", { name: "Include selected fixture factor" }).click();
   await page.getByRole("button", { name: "Extend selected fixture branch" }).click();
   await page.getByRole("button", { name: "Request fixture branch revision" }).click();
   await expect(page.getByLabel("Fixture revision delta")).toContainText("Removed factor: Substitution pressure.");

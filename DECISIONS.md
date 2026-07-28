@@ -193,3 +193,11 @@ Gas dependency edges now use the shared relationship inspector in read-only form
 **Why:** A ranked node label alone does not let an operator distinguish a declared fixture assumption from material evidence or infer whether it can be monitored. Filling missing values with plausible-looking scientific metadata would be misleading.
 
 **Consequence:** The Map graph cards and textual alternative are richer while remaining explicitly fixture-only. These fields do not create provenance, validation, research evidence, or forecast calibration; live and historical graph records still require authoritative metadata.
+
+# 2026-07-28 — Fixture inclusion is proposed-state selection, never browser activation
+
+**Decision:** In the fixture Map, “include” restores a candidate to `proposed` and “exclude” marks it `excluded`; neither control may set a node active or call an activation endpoint.
+
+**Why:** Candidate refinement needs a visible reversible choice, but reusing `active` for a browser-only selection would falsely imply approved model structure.
+
+**Consequence:** The revision delta shows candidate inclusion/exclusion and the active-graph-unchanged receipt remains mandatory. Persistence, full revision review, and approval are still separate server-backed work.
