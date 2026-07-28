@@ -285,6 +285,35 @@ def test_candidate_revision_persists_relationship_state_delta_without_mutating_a
     assert active.json()["nodes"]["process_stage"]["depends_on"] == graph["nodes"]["process_stage"]["depends_on"]
 
 
+def test_candidate_revision_persists_proposed_relationship_contract_without_mutating_active_graph(tmp_path: Path):
+    settings = _settings(tmp_path)
+    relationship = {
+        "id": "input-to-process-proposal", "parent_node_id": "input_signal", "child_node_id": "process_stage",
+        "relationship_type": "scenario_assumption", "transform": "affine", "source_unit": "index", "target_unit": "index",
+        "sign": "positive", "lag_periods": 1, "lag_unit": "month", "coefficient_units": "1", "state": "proposed",
+    }
+    with TestClient(create_app(settings)) as client:
+        graph = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        client.post("/projects", json={**_project_payload(), "graph_id": graph["id"], "active_graph_version": graph["graph_version"], "stage": "refine"})
+        saved = client.post("/projects/nd-project/candidate-revisions", json={
+            "id": "relationship-contract", "base_graph_version": graph["graph_version"],
+            "candidate_relationship_contracts": [relationship],
+        })
+        active = client.get(f"/graphs/{graph['id']}")
+
+    with TestClient(create_app(settings)) as restarted:
+        listed = restarted.get("/projects/nd-project/candidate-revisions")
+
+    assert saved.status_code == 200, saved.text
+    saved_relationship = saved.json()["candidate_relationship_contracts"][0]
+    assert saved_relationship["id"] == relationship["id"]
+    assert saved_relationship["parent_node_id"] == relationship["parent_node_id"]
+    assert saved_relationship["child_node_id"] == relationship["child_node_id"]
+    assert saved_relationship["state"] == "proposed"
+    assert listed.json()["candidate_revisions"][0]["candidate_relationship_contracts"] == [saved_relationship]
+    assert active.json()["nodes"]["process_stage"]["depends_on"] == graph["nodes"]["process_stage"]["depends_on"]
+
+
 def test_candidate_revision_persists_proposed_new_node_without_mutating_active_graph(tmp_path: Path):
     settings = _settings(tmp_path)
     with TestClient(create_app(settings)) as client:

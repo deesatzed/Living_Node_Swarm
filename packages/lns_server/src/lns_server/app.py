@@ -350,7 +350,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         project = require_project(project_id)
         if project.active_graph_version is None or revision.base_graph_version != project.active_graph_version:
             raise HTTPException(409, "candidate revision base graph version is stale")
-        if revision.candidate_node_state_overrides or revision.candidate_relationship_state_overrides or revision.candidate_new_nodes:
+        if revision.candidate_node_state_overrides or revision.candidate_relationship_state_overrides or revision.candidate_relationship_contracts or revision.candidate_new_nodes:
             if not project.graph_id:
                 raise HTTPException(409, "candidate revision project has no active graph")
             graph = app.state.store.get_graph(project.graph_id)
@@ -363,6 +363,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             unknown_relationships = sorted(set(revision.candidate_relationship_state_overrides) - known_relationships)
             if unknown_relationships:
                 raise HTTPException(422, f"candidate revision references unknown graph relationships: {', '.join(unknown_relationships)}")
+            relationship_contract_nodes = {
+                node_id
+                for relationship in revision.candidate_relationship_contracts
+                for node_id in (relationship.parent_node_id, relationship.child_node_id)
+            }
+            unknown_contract_nodes = sorted(relationship_contract_nodes - set(graph.nodes))
+            if unknown_contract_nodes:
+                raise HTTPException(422, f"candidate relationship contract references unknown graph nodes: {', '.join(unknown_contract_nodes)}")
             duplicate_nodes = sorted({node.id for node in revision.candidate_new_nodes} & set(graph.nodes))
             if duplicate_nodes:
                 raise HTTPException(422, f"candidate revision new nodes already exist in active graph: {', '.join(duplicate_nodes)}")
