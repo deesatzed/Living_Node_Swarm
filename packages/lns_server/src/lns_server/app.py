@@ -52,6 +52,7 @@ from lns_server.settings import Settings
 from lns_server.workspace_models import (
     MonitoringConfig,
     MonitoringFixtureEvent,
+    WorkspaceCandidateRevision,
     WorkspaceDraft,
     WorkspaceProject,
     WorkspaceProjectPatch,
@@ -307,6 +308,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def list_workspace_revisions(project_id: str) -> dict[str, Any]:
         require_project(project_id)
         return {"drafts": [draft.model_dump(mode="json") for draft in app.state.workspace_store.list_drafts(project_id)]}
+
+    @app.post("/projects/{project_id}/candidate-revisions")
+    def create_workspace_candidate_revision(
+        project_id: str, revision: WorkspaceCandidateRevision
+    ) -> dict[str, Any]:
+        project = require_project(project_id)
+        if project.active_graph_version is None or revision.base_graph_version != project.active_graph_version:
+            raise HTTPException(409, "candidate revision base graph version is stale")
+        return app.state.workspace_store.save_candidate_revision(project_id, revision).model_dump(mode="json")
+
+    @app.get("/projects/{project_id}/candidate-revisions")
+    def list_workspace_candidate_revisions(project_id: str) -> dict[str, Any]:
+        require_project(project_id)
+        return {
+            "candidate_revisions": [
+                revision.model_dump(mode="json")
+                for revision in app.state.workspace_store.list_candidate_revisions(project_id)
+            ]
+        }
 
     @app.post("/projects/{project_id}/scenarios")
     def create_workspace_scenario(project_id: str, scenario: WorkspaceScenario) -> dict[str, Any]:

@@ -143,3 +143,35 @@ def test_project_bound_approval_syncs_the_persisted_project_lifecycle(tmp_path: 
     assert approved.json()["project"]["active_graph_version"] == graph["graph_version"] + 1
     assert restored.json()["stage"] == "decide"
     assert restored.json()["active_graph_version"] == graph["graph_version"] + 1
+
+
+def test_candidate_revisions_persist_without_mutating_the_active_graph(tmp_path: Path):
+    settings = _settings(tmp_path)
+    with TestClient(create_app(settings)) as client:
+        graph = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        client.post(
+            "/projects",
+            json={
+                **_project_payload(),
+                "graph_id": graph["id"],
+                "active_graph_version": graph["graph_version"],
+                "stage": "refine",
+            },
+        )
+        saved = client.post(
+            "/projects/nd-project/candidate-revisions",
+            json={
+                "id": "revision-1",
+                "base_graph_version": graph["graph_version"],
+                "candidate_parameter_overrides": {"input_signal": {"mu": 5.0, "sigma": 2.0}},
+            },
+        )
+        active = client.get(f"/graphs/{graph['id']}")
+
+    with TestClient(create_app(settings)) as restarted:
+        revisions = restarted.get("/projects/nd-project/candidate-revisions")
+
+    assert saved.status_code == 200, saved.text
+    assert active.json()["nodes"]["input_signal"]["parameters"] == graph["nodes"]["input_signal"]["parameters"]
+    assert revisions.json()["candidate_revisions"][0]["id"] == "revision-1"
+    assert revisions.json()["candidate_revisions"][0]["candidate_parameter_overrides"]["input_signal"]["sigma"] == 2.0

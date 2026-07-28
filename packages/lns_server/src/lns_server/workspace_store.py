@@ -9,6 +9,7 @@ from pathlib import Path
 from lns_server.workspace_models import (
     MonitoringConfig,
     MonitoringFixtureEvent,
+    WorkspaceCandidateRevision,
     WorkspaceDraft,
     WorkspaceProject,
     WorkspaceProjectPatch,
@@ -26,6 +27,7 @@ class WorkspaceStore:
             """
             CREATE TABLE IF NOT EXISTS workspace_projects (id TEXT PRIMARY KEY, payload_json TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS workspace_drafts (project_id TEXT NOT NULL, id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(project_id, id));
+            CREATE TABLE IF NOT EXISTS workspace_candidate_revisions (project_id TEXT NOT NULL, id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(project_id, id));
             CREATE TABLE IF NOT EXISTS workspace_scenarios (project_id TEXT NOT NULL, id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(project_id, id));
             CREATE TABLE IF NOT EXISTS workspace_monitoring (project_id TEXT PRIMARY KEY, payload_json TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS workspace_monitoring_events (project_id TEXT NOT NULL, id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(project_id, id));
@@ -84,6 +86,21 @@ class WorkspaceStore:
     def list_drafts(self, project_id: str) -> list[WorkspaceDraft]:
         rows = self._connection.execute("SELECT payload_json FROM workspace_drafts WHERE project_id=? ORDER BY id", (project_id,)).fetchall()
         return [WorkspaceDraft.model_validate_json(row["payload_json"]) for row in rows]
+
+    def save_candidate_revision(self, project_id: str, revision: WorkspaceCandidateRevision) -> WorkspaceCandidateRevision:
+        self._connection.execute(
+            "INSERT INTO workspace_candidate_revisions VALUES (?, ?, ?)",
+            (project_id, revision.id, revision.model_dump_json()),
+        )
+        self._connection.commit()
+        return revision
+
+    def list_candidate_revisions(self, project_id: str) -> list[WorkspaceCandidateRevision]:
+        rows = self._connection.execute(
+            "SELECT payload_json FROM workspace_candidate_revisions WHERE project_id=? ORDER BY id",
+            (project_id,),
+        ).fetchall()
+        return [WorkspaceCandidateRevision.model_validate_json(row["payload_json"]) for row in rows]
 
     def save_scenario(self, project_id: str, scenario: WorkspaceScenario) -> WorkspaceScenario:
         self._connection.execute("INSERT INTO workspace_scenarios VALUES (?, ?, ?)", (project_id, scenario.id, scenario.model_dump_json()))

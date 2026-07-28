@@ -55,6 +55,15 @@ class WorkspaceDraft(BaseModel):
     created_at: datetime = Field(default_factory=utcnow)
 
 
+class WorkspaceCandidateRevision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    base_graph_version: int = Field(ge=1)
+    candidate_parameter_overrides: dict[str, dict[str, float]] = Field(min_length=1)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
 class WorkspaceScenario(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
