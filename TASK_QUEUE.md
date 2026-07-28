@@ -65,7 +65,7 @@
 | ID | Task | Depends on | Acceptance | Status |
 |---|---|---|---|---|
 | Q4-00 | Freeze hybrid workflow and autonomous GUI completion contract | Gate 3 | `GOAL_GUI.md` covers Build, Run, Edit, Monitor, proof gates, safe defaults, and no intermediate user approval | Complete (2026-07-28) |
-| Q4-01 | Scaffold private `lns_ui_shared` package | Q0-07 | both apps consume shared types/client | Complete (Vitest lifecycle smoke test, shared type build, and both consumer production builds passed, 2026-07-28) |
+| Q4-01 | Scaffold private `lns_ui_shared` package | Q0-07 | both apps consume shared types/client | Complete (shared lifecycle/client boundary, deterministic fixtures, kernel-backed catalog API, and both consumer production builds passed, 2026-07-28) |
 | Q4-02 | Build target-intake and research-consent flow | Q3-01–02, Q4-01 | accessible forms and error states tested | Pending |
 | Q4-03 | Build target-centered hop graph | Q3-03, Q4-01 | 30-node deterministic layout has no default overlap | Pending |
 | Q4-04 | Build node distribution inspector | Q1-01–04, Q4-01 | eight family forms/curves/derived values tested | Pending |

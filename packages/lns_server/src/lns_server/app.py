@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 
 from lns_kernel.ensemble import compare_transforms
 from lns_kernel.contracts import TargetContract
+from lns_kernel.distributions import REGISTRY
 from lns_kernel.models import (
     Node,
     NodeLayout,
@@ -252,6 +253,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/graphs")
     def list_graphs() -> dict[str, Any]:
         return {"ids": store.list_graph_ids()}
+
+    @app.get("/catalog/distributions")
+    def list_distribution_catalog() -> dict[str, Any]:
+        """Expose the frozen kernel registry for UI labels and field guidance."""
+        return {
+            "families": [
+                {
+                    "id": family.id,
+                    "label": family.label,
+                    "plain_language": family.plain_language,
+                    "parameters": [
+                        {
+                            "id": parameter.id,
+                            "label": parameter.label,
+                            "description": parameter.description,
+                            "lower": parameter.lower,
+                            "lower_open": parameter.lower_open,
+                        }
+                        for parameter in family.parameter_definitions
+                    ],
+                    "support": {
+                        "lower": family.support.lower,
+                        "upper": family.support.upper,
+                        "lower_open": family.support.lower_open,
+                        "upper_open": family.support.upper_open,
+                    },
+                }
+                for family in REGISTRY.values()
+            ]
+        }
 
     @app.post("/targets")
     def create_target(target: TargetContract) -> dict[str, Any]:

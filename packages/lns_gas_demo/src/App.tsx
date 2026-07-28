@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { WORKFLOW_STAGES } from "@lns/ui-shared";
 import { api, type Graph, type Node, type Snapshot } from "./api";
 
 function histogram(samples: number[], bins = 22): number[] {
@@ -31,6 +32,7 @@ export default function App() {
   const [log, setLog] = useState("");
   const [freshness, setFreshness] = useState("stale");
   const [paramEdit, setParamEdit] = useState<Record<string, string>>({});
+  const sharedLifecycle = WORKFLOW_STAGES.map((stage) => stage.label).join(" → ");
 
   const nodes = useMemo(() => (graph ? Object.values(graph.nodes) : []), [graph]);
   const selected = selectedId && graph ? graph.nodes[selectedId] : null;
@@ -102,6 +104,7 @@ export default function App() {
           <div className="sub">
             Living Node Swarm · US retail gas vs Kalshi threshold · AI dynamic factors · 20% mid exit
           </div>
+          <div className="sub">Shared workspace lifecycle: {sharedLifecycle}</div>
           <div className="pill-row">
             <span className="pill">Project Kalshi ~$10</span>
             <span className="pill">Exit: |Δmid|/entry ≥ 20%</span>

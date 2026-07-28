@@ -20,7 +20,7 @@ Prediction Workspace has not been built yet.
 | Current families | Eight canonical registry families; legacy node payloads remain readable through explicit parameter normalization |
 | Current graph | Static DAG with affine/sum/mean transforms |
 | Current research/provenance | Local security, provenance, consent, and completeness primitives implemented; no live research/API journey yet |
-| Current generalized authoring UX | Shared package foundation exists; workspace journeys are not yet implemented |
+| Current generalized authoring UX | Both apps consume the shared lifecycle package; typed client/catalog and deterministic fixture groundwork exist, but workspace journeys are not yet implemented |
 
 ## Current Assumptions
 
@@ -74,7 +74,7 @@ Prediction Workspace has not been built yet.
 | Q3-08 authoring journey | Complete | Codex | Fixture-only target→review→15-factor→elicitation→shadow→approval API journey; 51 server tests and 72 kernel tests passed |
 | Gate 3 generalized authoring | Complete | Codex | API supports reviewed, proposed-only, version-bound generalized authoring; fixture-only until live research is consented |
 | Define autonomous hybrid GUI goal | Complete | Codex | `GOAL_GUI.md` specifies Build, Run, Edit, and Monitor workflows plus evidence-gated autonomous completion |
-| Q4-01 shared UI package | Complete | Codex | `@lns/ui-shared` exports the typed lifecycle; its Vitest 4 smoke test/type build, zero-vulnerability package audit, and both consumer production builds passed on 2026-07-28 |
+| Q4-01 shared UI package | Complete | Codex | `@lns/ui-shared` exports typed lifecycle/client boundaries and deterministic fixtures; both apps consume the shared lifecycle; its 8-test Vitest 4 suite/type build, zero-vulnerability package audit, 52-server-test catalog check, and both consumer production builds passed on 2026-07-28 |
 | Gate 4 visual workspace | Pending | Unassigned | Depends on Gate 3 API/contracts |
 | Gate 5 Neodymium acceptance | Pending | Unassigned | Depends on Gates 1–4 |
 | Gate 6 gas adapter | Pending | Unassigned | Depends on shared workspace |

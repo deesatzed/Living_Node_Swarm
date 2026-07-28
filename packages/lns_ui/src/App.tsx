@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { WORKFLOW_STAGES } from "@lns/ui-shared";
 import { api, type Graph, type Snapshot, type SimStatus } from "./api/client";
 import { DistributionPanel } from "./components/DistributionPanel";
 import { FreshnessBadge } from "./components/FreshnessBadge";
@@ -21,6 +22,7 @@ export default function App() {
   const [gasThreshold, setGasThreshold] = useState("4.12");
   const [gasMid, setGasMid] = useState("0.51");
   const [journalLog, setJournalLog] = useState<string>("");
+  const lifecycleSummary = WORKFLOW_STAGES.map((stage) => stage.label).join(" → ");
 
   const loadNew = useCallback(async () => {
     setBusy(true);
@@ -201,6 +203,7 @@ export default function App() {
         <div>
           <h1>Living Node Swarm</h1>
           <div className="meta">{health || "Connecting…"}</div>
+          <div className="meta">Shared workspace lifecycle: {lifecycleSummary}</div>
         </div>
         <div className="row">
           {status && <FreshnessBadge freshness={status.freshness} />}
