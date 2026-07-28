@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from lns_kernel.contracts import RelationshipContract
+from lns_kernel.contracts import DistributionSpec, RelationshipContract
 from lns_kernel.dependencies import assert_acyclic
 from lns_kernel.models import (
     Freshness,
@@ -201,6 +201,9 @@ class GraphStore:
             "last_updated_by": actor,
             "updated_at": utcnow(),
         }
+        if parameters:
+            updates["distribution_spec_id"] = None
+            updates["distribution_spec"] = None
         if transform is not None:
             updates["transform"] = transform
         if transform_params is not None:
@@ -226,7 +229,12 @@ class GraphStore:
             new_version=new_node.version,
             reason=reason,
             actor=actor,
-            diff_summary={"parameters_before": old_params, "parameters_after": new_params},
+            diff_summary={
+                "parameters_before": old_params,
+                "parameters_after": new_params,
+                "distribution_spec_before": node.distribution_spec.model_dump(mode="json") if node.distribution_spec else None,
+                "distribution_spec_after": None,
+            },
         )
         c = self._conn.cursor()
         c.execute(
@@ -250,6 +258,7 @@ class GraphStore:
         *,
         expected_graph_version: int,
         overrides: dict[str, dict[str, float]],
+        distribution_specs: dict[str, DistributionSpec] | None = None,
         actor: str,
         reason: str,
     ) -> tuple[Graph, list[UpdateEvent]]:
@@ -260,16 +269,21 @@ class GraphStore:
             raise ValidationError(f"Graph {graph_id} not found")
         if graph.graph_version != expected_graph_version:
             raise ValidationError("candidate proposal invalidated by graph version change")
+        distribution_specs = distribution_specs or {}
         trial = dict(graph.nodes)
         events: list[UpdateEvent] = []
-        for node_id, patch in overrides.items():
+        for node_id in set(overrides) | set(distribution_specs):
+            patch = overrides.get(node_id, {})
             old_node = trial.get(node_id)
             if old_node is None:
                 raise ValidationError(f"Candidate override references missing node {node_id}")
             parameters = {**old_node.parameters, **patch}
+            spec = distribution_specs.get(node_id)
             new_node = old_node.model_copy(
                 update={
                     "parameters": parameters,
+                    "distribution_spec_id": spec.id if spec else None,
+                    "distribution_spec": spec,
                     "version": old_node.version + 1,
                     "last_updated_by": actor,
                     "updated_at": utcnow(),
@@ -286,7 +300,12 @@ class GraphStore:
                     new_version=new_node.version,
                     reason=reason,
                     actor=actor,
-                    diff_summary={"parameters_before": old_node.parameters, "parameters_after": parameters},
+                    diff_summary={
+                        "parameters_before": old_node.parameters,
+                        "parameters_after": parameters,
+                        "distribution_spec_before": old_node.distribution_spec.model_dump(mode="json") if old_node.distribution_spec else None,
+                        "distribution_spec_after": spec.model_dump(mode="json") if spec else None,
+                    },
                 )
             )
         assert_acyclic(trial)
@@ -298,7 +317,7 @@ class GraphStore:
         try:
             cursor.execute("BEGIN IMMEDIATE")
             for node_id, node in trial.items():
-                if node_id in overrides:
+                if node_id in overrides or node_id in distribution_specs:
                     cursor.execute(
                         "UPDATE nodes SET payload_json=? WHERE graph_id=? AND node_id=?",
                         (node.model_dump_json(), graph_id, node_id),

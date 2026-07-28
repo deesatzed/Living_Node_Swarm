@@ -780,6 +780,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         graph = store.get_graph(graph_id)
         if graph is None:
             raise HTTPException(404, "graph not found")
+        unknown_distribution_nodes = sorted(set(body.candidate_distribution_specs) - set(graph.nodes))
+        if unknown_distribution_nodes:
+            raise HTTPException(422, f"candidate distribution references unknown graph nodes: {', '.join(unknown_distribution_nodes)}")
+        unknown_override_nodes = sorted(set(body.candidate_parameter_overrides) - set(graph.nodes))
+        if unknown_override_nodes:
+            raise HTTPException(422, f"candidate override references unknown graph nodes: {', '.join(unknown_override_nodes)}")
+        try:
+            for node_id, spec in body.candidate_distribution_specs.items():
+                node = graph.nodes[node_id]
+                if spec.family_id != node.distribution_family.value:
+                    raise ValueError(f"candidate distribution family does not match active node: {node_id}")
+                validate_family_parameters(spec.family_id, spec.parameter_map)
+                patched_parameters = {**node.parameters, **body.candidate_parameter_overrides.get(node_id, {})}
+                if normalize_parameters(node.distribution_family.value, patched_parameters) != spec.parameter_map:
+                    raise ValueError(f"candidate numeric overrides do not match distribution parameters: {node_id}")
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        unknown_distribution_evidence = sorted({
+            claim_id
+            for spec in body.candidate_distribution_specs.values()
+            for claim_id in spec.evidence_claim_ids
+            if app.state.evidence_store.get_evidence_claim(claim_id) is None
+        })
+        if unknown_distribution_evidence:
+            raise HTTPException(422, f"candidate distribution references unknown evidence claims: {', '.join(unknown_distribution_evidence)}")
         try:
             proposal = make_candidate_proposal(
                 graph_id=graph_id, graph_version=graph.graph_version, body=body
@@ -799,6 +824,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 graph_id,
                 expected_graph_version=proposal.graph_version,
                 overrides=proposal.candidate_parameter_overrides,
+                distribution_specs=proposal.candidate_distribution_specs,
                 actor=body.approved_by,
                 reason=f"approved candidate proposal {proposal.id}",
             )

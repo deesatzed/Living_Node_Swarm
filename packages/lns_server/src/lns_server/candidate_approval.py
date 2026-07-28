@@ -9,13 +9,14 @@ from datetime import datetime, timezone
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from lns_kernel.contracts import ApprovalReceipt
+from lns_kernel.contracts import ApprovalReceipt, DistributionSpec
 
 
 class CandidateProposalBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    candidate_parameter_overrides: dict[str, dict[str, float]]
+    candidate_parameter_overrides: dict[str, dict[str, float]] = Field(default_factory=dict)
+    candidate_distribution_specs: dict[str, DistributionSpec] = Field(default_factory=dict)
 
 
 class CandidateApprovalProposal(BaseModel):
@@ -25,6 +26,7 @@ class CandidateApprovalProposal(BaseModel):
     graph_id: str
     graph_version: int = Field(ge=1)
     candidate_parameter_overrides: dict[str, dict[str, float]]
+    candidate_distribution_specs: dict[str, DistributionSpec] = Field(default_factory=dict)
     created_at: datetime
     version: int = 1
 
@@ -47,13 +49,14 @@ class ApproveCandidateBody(BaseModel):
 def make_candidate_proposal(
     *, graph_id: str, graph_version: int, body: CandidateProposalBody
 ) -> CandidateApprovalProposal:
-    if not body.candidate_parameter_overrides:
-        raise ValueError("candidate proposal must include at least one parameter override")
+    if not body.candidate_parameter_overrides and not body.candidate_distribution_specs:
+        raise ValueError("candidate proposal must include at least one parameter override or distribution specification")
     return CandidateApprovalProposal(
         id=str(uuid.uuid4()),
         graph_id=graph_id,
         graph_version=graph_version,
         candidate_parameter_overrides=body.candidate_parameter_overrides,
+        candidate_distribution_specs=body.candidate_distribution_specs,
         created_at=datetime.now(timezone.utc),
     )
 

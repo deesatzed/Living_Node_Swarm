@@ -6,9 +6,9 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
-from lns_kernel.contracts import RelationshipContract
+from lns_kernel.contracts import DistributionSpec, RelationshipContract
 
 
 def utcnow() -> datetime:
@@ -73,6 +73,7 @@ class Node(BaseModel):
     tags: list[str] = Field(default_factory=list)
     # General-workspace metadata. Defaults deliberately preserve v0 graph semantics.
     distribution_spec_id: str | None = None
+    distribution_spec: DistributionSpec | None = None
     evidence_claim_ids: list[str] = Field(default_factory=list)
     relationship_ids: list[str] = Field(default_factory=list)
     schema_version: int = Field(default=1, ge=1)
@@ -83,6 +84,18 @@ class Node(BaseModel):
         if not v or not v.strip():
             raise ValueError("id must be non-empty")
         return v.strip()
+
+    @model_validator(mode="after")
+    def require_distribution_spec_identity_and_family_match(self) -> "Node":
+        if self.distribution_spec is None:
+            if self.distribution_spec_id is not None:
+                raise ValueError("distribution_spec_id requires a distribution_spec")
+            return self
+        if self.distribution_spec_id != self.distribution_spec.id:
+            raise ValueError("distribution_spec_id must match distribution_spec.id")
+        if self.distribution_spec.family_id != self.distribution_family.value:
+            raise ValueError("distribution_spec family must match node distribution_family")
+        return self
 
 
 class NodeLayout(BaseModel):

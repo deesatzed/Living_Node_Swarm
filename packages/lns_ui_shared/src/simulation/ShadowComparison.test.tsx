@@ -194,10 +194,11 @@ describe("ShadowComparison", () => {
       receipt: { method: "intuitive_family_derivation", limitations: ["Initial parametric assumption."] },
     }));
     const createCandidateRevision = vi.fn(async (_projectId, revision) => ({ ...revision, id: "gamma-input" }));
+    const createCandidateProposal = vi.fn(async () => ({ proposal: { id: "gamma-proposal", graph_version: 4, binding_hash: "gamma-binding" } }));
     const shadowSimulate = vi.fn(async () => ({ active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 8, p50: 8 } }));
     render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{
       getGraph: async () => ({ nodes: { demand: { name: "Demand", distribution_family: "Gamma", parameters: { shape: 2, scale: 1 }, depends_on: [] }, outcome: { name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: ["demand"] } } }),
-      shadowSimulate, deriveDistribution, createCandidateRevision,
+      shadowSimulate, deriveDistribution, createCandidateRevision, createCandidateProposal,
     } as never} />);
 
     await screen.findByLabelText("Gamma mean");
@@ -210,7 +211,12 @@ describe("ShadowComparison", () => {
     expect(deriveDistribution).toHaveBeenCalledWith(expect.objectContaining({ family_id: "Gamma", values: { mean: 8, standard_deviation: 4 } }));
     await user.click(screen.getByRole("button", { name: "Run in-memory comparison" }));
     expect(shadowSimulate).toHaveBeenCalledWith("graph-1", { target_node_id: "outcome", candidate_parameter_overrides: { demand: { shape: 4, scale: 2 } } });
-    expect(screen.queryByRole("button", { name: "Save candidate for review" })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Save candidate for review" }));
+    expect(createCandidateProposal).toHaveBeenCalledWith("graph-1", {
+      candidate_parameter_overrides: { demand: { shape: 4, scale: 2 } },
+      candidate_distribution_specs: { demand: expect.objectContaining({ family_id: "Gamma", elicitation_method: "intuitive_family_derivation" }) },
+    });
+    expect(await screen.findByLabelText("Candidate approval")).toHaveTextContent("gamma-binding");
     await user.click(screen.getByRole("button", { name: "Save durable candidate revision" }));
     expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({ candidate_distribution_specs: { demand: expect.objectContaining({ family_id: "Gamma" }) } }));
   });

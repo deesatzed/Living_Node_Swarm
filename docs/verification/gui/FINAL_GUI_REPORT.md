@@ -20,12 +20,12 @@
 | [P04] Browser is non-authoritative | Locally verified | Server/kernel proposal, simulation, and ensemble tests; UI receipts state server ownership. | Does not prove remote deployment boundaries. |
 | [P05] New Neodymium target and 15 factors | Fixture-only | Canonical fixture Build tests and screenshots at both viewports. | No live Neodymium research. |
 | [P06] Branch revision/refinement delta | Partial | Durable revision comparison and structural Edit component/browser tests. | Branch extension/replay is not a complete end-to-end new-model journey. |
-| [P07] Distribution intuitive edit | Partial | Canonical fixture Monitor → Edit stages a Normal median/P90 candidate and Gamma mean/standard-deviation candidate, preserves server-issued receipts, runs non-active numeric equivalents, saves the provenance-bearing Normal revision, and withholds numeric approval; server tests cover all eight derivation mappings and invalid ranges, while components verify every non-quantile form's human-facing numeric inputs. | Fixture-only examples; browser coverage across the other non-quantile forms, fitting, and distribution-spec activation remain. |
+| [P07] Distribution intuitive edit | Partial | Canonical fixture Monitor → Edit stages Normal median/P90 and Gamma mean/standard-deviation candidates, preserves server-issued receipts, runs non-active numeric equivalents, and saves each provenance-bearing candidate for exact review; server approval tests prove the binding atomically activates matching parameters and the full node provenance. Server tests cover all eight derivation mappings and invalid ranges, while components verify every non-quantile form's human-facing numeric inputs. | Fixture-only Normal/Gamma examples; browser coverage across the other non-quantile forms and fitting remain. |
 | [P08] Two named assumption variants | Partial | `ScenarioEditor` component tests and Run comparison surfaces. | Browser proof does not yet compare two named shadow variants side-by-side. |
 | [P09] Model decision and ensemble | Partial | `RunModel` tests and canonical Run fixture ensemble receipt. | Not a complete new-model decision journey. |
 | [P10] Monitoring configuration | Fixture-only | `MonitoringSetup` tests and canonical Monitor journey. | No live polling or observation feed. |
 | [P11] Existing-model run immutable | Fixture-only | Canonical Run test and server simulation tests. | Browser response is intercepted fixture data. |
-| [P12] Existing-model branch/edit/approve | Fixture-only | Canonical Monitor → Edit structural comparison/approval journey, including a separate non-active elicited-distribution candidate that withholds numeric approval. | Does not yet prove distribution-spec activation or every stale-approval branch in Playwright. |
+| [P12] Existing-model branch/edit/approve | Fixture-only | Canonical Monitor → Edit structural comparison/approval journey plus Normal/Gamma provenance-bearing distribution proposals saved for exact review. | Distribution-spec final activation is server-tested; the fixture does not yet click its final approval or cover every stale-approval branch. |
 | [P13] Monitor inspect/re-run/branch | Partial | Monitor component and browser proof cover inspect/branch. | Re-run action remains limited. |
 | [P14] 30-node no-overlap graph | Fixture-only verified | Canonical Build fixture renders 30 factors, asserts 30 unique `data-x:data-y` coordinates, and saves both required viewport screenshots. | Deterministic fixture layout only; not a live researched graph. |
 | [P15] Graph navigation and text alternative | Locally verified | `HopGraph`/layout component tests and canonical graph path interaction. | Coverage is fixture-based. |
@@ -38,7 +38,7 @@
 | [P22] URL/provider routing safety | Locally verified | Safe-fetch/server security tests and consent UI tests. | No provider content execution is claimed. |
 | [P23] Proposal cannot mutate early | Locally verified | Kernel/server approval tests and Edit browser receipts. | Applies to tested proposal contracts. |
 | [P24] Screenshots and final report | Partial | Four required screenshots plus this report and receipts. | Screenshots are fixture-only; report records outstanding work. |
-| [P25] Regression surface | Locally verified | Kernel 78, server 88, shared UI 112, canonical Playwright 8, UI/gas builds, and `git diff --check` from this session. | Fresh command output is local, not CI. |
+| [P25] Regression surface | Locally verified | Kernel 78, server 89, shared UI 112, canonical Playwright 8, UI/gas builds, and `git diff --check` from this session. | Fresh command output is local, not CI. |
 
 ## Saved visual artifacts
 

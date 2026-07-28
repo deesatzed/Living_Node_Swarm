@@ -49,7 +49,14 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.route("**/api/projects/approved-1/structural-proposals/structural-1/approve", (route) => route.fulfill({ json: { approval_receipt: { id: "structural-receipt", binding_hash: "structural-hash" }, graph: { graph_version: 5 }, project: { ...project, stage: "decide", active_graph_version: 5 } } }));
   await page.route("**/api/authoring/graphs/graph-1/structural-proposals/remove-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, candidate_relationship_ids: [], removed_relationship_ids: ["process-to-outcome"], active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: -0.25, p50: -0.25 }, limitations: ["Candidate structural relationships are simulated only in memory and are not persisted or activated."] } }));
   await page.route("**/api/authoring/graphs/graph-1/structural-proposals/structural-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, candidate_relationship_ids: ["proposal-input_signal-to-outcome"], active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 0.25, p50: 0.25 }, limitations: ["Candidate structural relationships are simulated only in memory and are not persisted or activated."] } }));
-  await page.route("**/api/authoring/graphs/graph-1/candidate-proposals", (route) => route.fulfill({ json: { proposal: { id: "proposal-1", graph_version: 4, binding_hash: "binding-123" } } }));
+  await page.route("**/api/authoring/graphs/graph-1/candidate-proposals", (route) => {
+    const body = route.request().postDataJSON() as { candidate_distribution_specs?: Record<string, { family_id?: string }> };
+    const hasDistributionSpec = Boolean(body.candidate_distribution_specs && Object.keys(body.candidate_distribution_specs).length > 0);
+    if (hasDistributionSpec) {
+      return route.fulfill({ json: { proposal: { id: "distribution-proposal", graph_version: 5, binding_hash: "distribution-binding" } } });
+    }
+    return route.fulfill({ json: { proposal: { id: "proposal-1", graph_version: 4, binding_hash: "binding-123" } } });
+  });
   await page.route("**/api/projects/approved-1/candidate-revisions", (route) => route.request().method() === "GET"
     ? route.fulfill({ json: { candidate_revisions: [
       { id: "revision-base", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 1 } } },
@@ -132,7 +139,8 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.getByRole("button", { name: "Stage elicited distribution candidate" }).click();
   await expect(page.getByLabel("Elicited distribution candidate")).toContainText("Fixture initial prior only.");
   await page.getByRole("button", { name: "Run in-memory comparison" }).click();
-  await expect(page.getByRole("button", { name: "Save candidate for review" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Save candidate for review" }).click();
+  await expect(page.getByLabel("Candidate approval")).toContainText("distribution-binding");
   await page.getByRole("button", { name: "Save durable candidate revision" }).click();
   await expect(page.getByText(/Revision revision-elicited .*1 elicited distribution candidate/)).toBeVisible();
   await page.getByLabel("Candidate factor").selectOption("process_stage");
@@ -141,7 +149,8 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.getByRole("button", { name: "Stage derived distribution candidate" }).click();
   await expect(page.getByLabel("Derived distribution candidate")).toContainText("Fixture gamma prior only.");
   await page.getByRole("button", { name: "Run in-memory comparison" }).click();
-  await expect(page.getByRole("button", { name: "Save candidate for review" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Save candidate for review" }).click();
+  await expect(page.getByLabel("Candidate approval")).toContainText("distribution-binding");
 });
 
 test("canonical Edit retires an isolated non-target factor through a reviewed structural proposal", async ({ page }) => {

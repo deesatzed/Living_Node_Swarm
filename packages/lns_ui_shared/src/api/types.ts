@@ -135,6 +135,7 @@ export interface ShadowSimulationInput {
 
 export interface CandidateProposalInput {
   candidate_parameter_overrides: Record<string, Record<string, number>>;
+  candidate_distribution_specs?: Record<string, JsonObject>;
 }
 
 export interface CandidateApprovalInput {
