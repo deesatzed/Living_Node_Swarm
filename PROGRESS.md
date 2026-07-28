@@ -11,7 +11,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Surface | Verified state |
 |---|---|
 | Kernel tests | 72 passed on 2026-07-27 after persisted multi-seed/multi-sample stability diagnostics |
-| Server tests | 16 passed on 2026-07-27; one upstream deprecation warning |
+| Server tests | 24 passed on 2026-07-27 after safe-URL validation; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-27 |
 | Gas UI | Production build passed on 2026-07-27 |
 | Current families | Eight canonical registry families; legacy node payloads remain readable through explicit parameter normalization |
@@ -53,6 +53,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Q1-09 continuous scoring | Complete | Codex | Empirical CRPS and interval coverage with reference/invalid-input tests; 71 kernel tests passed |
 | Q1-08 stability diagnostics | Complete | Codex | Every successful snapshot persists a bounded multi-seed/multi-sample metric-range receipt and limitation; 72 kernel tests passed |
 | Gate 1 scientific kernel | Complete | Codex | Registry, compatibility, units, temporal DAG, dependence warnings, stability receipts, and scoring verified |
+| Q2-01 URL safety | Complete | Codex | HTTP(S)-only, credential-free, public-DNS destination validation; 24 server tests passed |
 | Gate 2 safe research/provenance | Pending | Unassigned | Depends on Gate 0 |
 | Gate 3 generalized authoring | Pending | Unassigned | Depends on Gates 1–2 |
 | Gate 4 visual workspace | Pending | Unassigned | Depends on Gate 3 API/contracts |
@@ -75,8 +76,8 @@ Gate 1 exited on 2026-07-27: all eight registry families, explicit compatibility
 
 ## Next Actions
 
-1. Complete Q2-01: implement URL safety validation for public HTTP(S) destinations.
-2. Complete Q2-02: implement a bounded fetcher with redirect, timeout, size, and content-type controls.
+1. Complete Q2-02: implement a bounded fetcher with redirect, timeout, size, and content-type controls.
+2. Complete Q2-03: persist evidence/source receipts with hashes.
 3. Run focused security tests after each atomic change and update this file with exact results.
 
 ## Blockers
