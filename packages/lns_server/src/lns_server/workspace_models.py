@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
+import json
 import math
 from typing import Literal
 
@@ -135,6 +137,29 @@ class WorkspaceEnsemble(BaseModel):
             raise ValueError("ensemble members must have unique graph/version/target bindings")
         if sum(member.weight for member in self.members) <= 0:
             raise ValueError("ensemble member weights must sum to a positive value")
+        return self
+
+    @property
+    def binding_hash(self) -> str:
+        payload = json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":")).encode()
+        return hashlib.sha256(payload).hexdigest()
+
+
+class WorkspaceEnsembleApproval(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    ensemble_id: str
+    binding_hash: str
+    approved_by: str
+    approved_at: datetime = Field(default_factory=utcnow)
+
+    @model_validator(mode="after")
+    def require_valid_approval_fields(self) -> "WorkspaceEnsembleApproval":
+        if not self.ensemble_id.strip() or not self.approved_by.strip():
+            raise ValueError("ensemble_id and approved_by are required")
+        if len(self.binding_hash) != 64 or any(character not in "0123456789abcdef" for character in self.binding_hash.lower()):
+            raise ValueError("ensemble binding_hash must be a SHA-256 hexadecimal digest")
         return self
 
 

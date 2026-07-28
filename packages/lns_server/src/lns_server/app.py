@@ -55,6 +55,7 @@ from lns_server.workspace_models import (
     WorkspaceCandidateRevision,
     WorkspaceDraft,
     WorkspaceEnsemble,
+    WorkspaceEnsembleApproval,
     WorkspaceProject,
     WorkspaceProjectPatch,
     WorkspaceScenario,
@@ -201,6 +202,11 @@ class WeightedEnsembleBody(BaseModel):
     members: list[WeightedEnsembleMemberBody] = Field(min_length=2, max_length=8)
     seed: int = Field(default=42, ge=0)
     n_samples: int = Field(default=2_000, gt=0, le=10_000)
+
+
+class ApproveEnsembleBody(BaseModel):
+    approved_by: str
+    binding_hash: str
 
 
 class WireBody(BaseModel):
@@ -402,6 +408,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def list_workspace_ensembles(project_id: str) -> dict[str, Any]:
         require_project(project_id)
         return {"ensembles": [ensemble.model_dump(mode="json") for ensemble in app.state.workspace_store.list_ensembles(project_id)]}
+
+    @app.post("/projects/{project_id}/ensembles/{ensemble_id}/approve")
+    def approve_workspace_ensemble(project_id: str, ensemble_id: str, body: ApproveEnsembleBody) -> dict[str, Any]:
+        require_project(project_id)
+        ensemble = next((item for item in app.state.workspace_store.list_ensembles(project_id) if item.id == ensemble_id), None)
+        if ensemble is None:
+            raise HTTPException(404, "ensemble configuration not found")
+        if ensemble.binding_hash != body.binding_hash:
+            raise HTTPException(409, "ensemble binding hash does not match the saved configuration")
+        for member in ensemble.members:
+            graph = app.state.store.get_graph(member.graph_id)
+            if graph is None or graph.graph_version != member.graph_version:
+                raise HTTPException(409, "ensemble member version is stale")
+        approval = WorkspaceEnsembleApproval(
+            id=f"ensemble-approval-{ensemble.id}", ensemble_id=ensemble.id,
+            binding_hash=ensemble.binding_hash, approved_by=body.approved_by,
+        )
+        saved = app.state.workspace_store.save_ensemble_approval(project_id, approval)
+        return {"approval_receipt": saved.model_dump(mode="json"), "ensemble": ensemble.model_dump(mode="json"), "active_graph_mutated": False}
 
     @app.post("/projects/{project_id}/scenarios/{scenario_id}/simulate")
     def simulate_workspace_scenario(project_id: str, scenario_id: str) -> dict[str, Any]:

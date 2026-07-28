@@ -1,3 +1,5 @@
+import hashlib
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -151,6 +153,27 @@ def test_project_ensemble_persists_exact_member_versions_without_activation(tmp_
     assert saved.status_code == 200, saved.text
     assert listed.json()["ensembles"][0]["members"][1]["graph_version"] == second["graph_version"]
     assert project.json()["active_graph_version"] == first["graph_version"]
+
+
+def test_ensemble_approval_binds_saved_configuration_and_rejects_wrong_hash(tmp_path: Path):
+    settings = _settings(tmp_path)
+    with TestClient(create_app(settings)) as client:
+        graph = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        other = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        client.post("/projects", json={**_project_payload(), "graph_id": graph["id"], "active_graph_version": graph["graph_version"]})
+        ensemble = client.post("/projects/nd-project/ensembles", json={"id": "blend", "name": "Blend", "members": [
+            {"graph_id": graph["id"], "graph_version": graph["graph_version"], "target_node_id": "outcome", "weight": 1},
+            {"graph_id": other["id"], "graph_version": other["graph_version"], "target_node_id": "outcome", "weight": 1},
+        ]}).json()
+        rejected = client.post("/projects/nd-project/ensembles/blend/approve", json={"approved_by": "operator", "binding_hash": "0" * 64})
+        approved = client.post("/projects/nd-project/ensembles/blend/approve", json={"approved_by": "operator", "binding_hash": hashlib.sha256(json.dumps(ensemble, sort_keys=True, separators=(",", ":")).encode()).hexdigest()})
+        active = client.get(f"/graphs/{graph['id']}")
+
+    assert rejected.status_code == 409
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["approval_receipt"]["approved_by"] == "operator"
+    assert approved.json()["active_graph_mutated"] is False
+    assert active.json()["graph_version"] == graph["graph_version"]
 
 
 def test_project_bound_approval_syncs_the_persisted_project_lifecycle(tmp_path: Path):
