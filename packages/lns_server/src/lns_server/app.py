@@ -316,7 +316,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         project = require_project(project_id)
         if project.active_graph_version is None or revision.base_graph_version != project.active_graph_version:
             raise HTTPException(409, "candidate revision base graph version is stale")
-        if revision.candidate_node_state_overrides or revision.candidate_relationship_state_overrides:
+        if revision.candidate_node_state_overrides or revision.candidate_relationship_state_overrides or revision.candidate_new_nodes:
             if not project.graph_id:
                 raise HTTPException(409, "candidate revision project has no active graph")
             graph = app.state.store.get_graph(project.graph_id)
@@ -329,6 +329,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             unknown_relationships = sorted(set(revision.candidate_relationship_state_overrides) - known_relationships)
             if unknown_relationships:
                 raise HTTPException(422, f"candidate revision references unknown graph relationships: {', '.join(unknown_relationships)}")
+            duplicate_nodes = sorted({node.id for node in revision.candidate_new_nodes} & set(graph.nodes))
+            if duplicate_nodes:
+                raise HTTPException(422, f"candidate revision new nodes already exist in active graph: {', '.join(duplicate_nodes)}")
+            invalid_dependencies = sorted({dependency for node in revision.candidate_new_nodes for dependency in node.depends_on if dependency not in graph.nodes})
+            if invalid_dependencies:
+                raise HTTPException(422, f"candidate revision new nodes reference unknown active nodes: {', '.join(invalid_dependencies)}")
         return app.state.workspace_store.save_candidate_revision(project_id, revision).model_dump(mode="json")
 
     @app.get("/projects/{project_id}/candidate-revisions")

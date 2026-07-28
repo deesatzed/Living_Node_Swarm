@@ -217,3 +217,21 @@ def test_candidate_revision_persists_relationship_state_delta_without_mutating_a
     assert saved.json()["candidate_relationship_state_overrides"] == {"input_signal:process_stage": "excluded"}
     assert invalid.status_code == 422
     assert active.json()["nodes"]["process_stage"]["depends_on"] == graph["nodes"]["process_stage"]["depends_on"]
+
+
+def test_candidate_revision_persists_proposed_new_node_without_mutating_active_graph(tmp_path: Path):
+    settings = _settings(tmp_path)
+    with TestClient(create_app(settings)) as client:
+        graph = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        client.post("/projects", json={**_project_payload(), "graph_id": graph["id"], "active_graph_version": graph["graph_version"], "stage": "refine"})
+        saved = client.post("/projects/nd-project/candidate-revisions", json={
+            "id": "new-factor", "base_graph_version": graph["graph_version"], "candidate_new_nodes": [{"id": "candidate_signal", "name": "Candidate signal", "distribution_family": "Normal", "parameters": {"mu": 0.0, "sigma": 1.0}, "depends_on": [], "transform": "none", "status": "proposed", "requires_human_approval": True}],
+        })
+        duplicate = client.post("/projects/nd-project/candidate-revisions", json={
+            "id": "duplicate-factor", "base_graph_version": graph["graph_version"], "candidate_new_nodes": [{"id": "input_signal", "name": "Duplicate", "distribution_family": "Normal", "parameters": {"mu": 0.0, "sigma": 1.0}, "depends_on": [], "transform": "none", "status": "proposed", "requires_human_approval": True}],
+        })
+        active = client.get(f"/graphs/{graph['id']}")
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["candidate_new_nodes"][0]["id"] == "candidate_signal"
+    assert duplicate.status_code == 422
+    assert "candidate_signal" not in active.json()["nodes"]

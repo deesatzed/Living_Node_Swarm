@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from lns_kernel.models import Node, NodeStatus
+from lns_kernel.validation import validate_node
 
 
 WorkflowStage = Literal["idea", "vet", "map", "refine", "quantify", "simulate", "decide", "monitor"]
@@ -63,12 +65,19 @@ class WorkspaceCandidateRevision(BaseModel):
     candidate_parameter_overrides: dict[str, dict[str, float]] = Field(default_factory=dict)
     candidate_node_state_overrides: dict[str, Literal["active", "excluded"]] = Field(default_factory=dict)
     candidate_relationship_state_overrides: dict[str, Literal["active", "excluded"]] = Field(default_factory=dict)
+    candidate_new_nodes: list[Node] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=utcnow)
 
     @model_validator(mode="after")
     def require_a_candidate_delta(self) -> "WorkspaceCandidateRevision":
-        if not self.candidate_parameter_overrides and not self.candidate_node_state_overrides and not self.candidate_relationship_state_overrides:
-            raise ValueError("candidate revision requires a parameter, node-state, or relationship-state override")
+        if not self.candidate_parameter_overrides and not self.candidate_node_state_overrides and not self.candidate_relationship_state_overrides and not self.candidate_new_nodes:
+            raise ValueError("candidate revision requires a parameter, node-state, relationship-state, or new-node override")
+        if any(node.status != NodeStatus.PROPOSED or not node.requires_human_approval for node in self.candidate_new_nodes):
+            raise ValueError("candidate new nodes must be proposed and require human approval")
+        if len({node.id for node in self.candidate_new_nodes}) != len(self.candidate_new_nodes):
+            raise ValueError("candidate new node ids must be unique")
+        for node in self.candidate_new_nodes:
+            validate_node(node)
         return self
 
 
