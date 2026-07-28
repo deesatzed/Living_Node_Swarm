@@ -280,7 +280,7 @@ test("canonical Run renders an authoritative successful simulation receipt witho
   await page.route("**/api/projects/run-1/monitoring", (route) => route.fulfill({ json: { config: null, events: [] } }));
   await page.route("**/api/graphs/graph-1/snapshots?limit=10", (route) => route.fulfill({ json: { snapshots: [] } }));
   await page.route("**/api/projects/run-1/ensembles", (route) => route.request().method() === "GET"
-    ? route.fulfill({ json: { ensembles: [{ id: "fixture-blend", name: "Fixture blend", combination_method: "weighted_distribution_mixture", binding_hash: "a".repeat(64), members: [{ graph_id: "graph-1", graph_version: 4, target_node_id: "outcome", weight: 1 }, { graph_id: "graph-2", graph_version: 3, target_node_id: "outcome", weight: 3 }] }] } })
+    ? route.fulfill({ json: { ensembles: [{ id: "fixture-blend", name: "Fixture blend", rationale: "Fixture operator preserved two exact model versions for a transparent mixture review.", combination_method: "weighted_distribution_mixture", binding_hash: "a".repeat(64), members: [{ graph_id: "graph-1", graph_version: 4, target_node_id: "outcome", weight: 1 }, { graph_id: "graph-2", graph_version: 3, target_node_id: "outcome", weight: 3 }] }] } })
     : route.fulfill({ json: {} }));
   await page.route("**/api/projects/run-1/ensemble-approvals", (route) => route.fulfill({ json: { approval_receipts: [] } }));
   await page.route("**/api/projects/run-1/ensembles/fixture-blend/approve", (route) => route.fulfill({ json: { approval_receipt: { id: "fixture-ensemble-receipt", approved_by: "fixture-operator" }, active_graph_mutated: false } }));
@@ -300,6 +300,7 @@ test("canonical Run renders an authoritative successful simulation receipt witho
   await expect(page.getByLabel("Named scenario comparison")).toContainText("Demand downside");
   await expect(page.getByLabel("Named scenario comparison")).toContainText("43–62");
   await expect(page.getByLabel("Named scenario comparison")).toContainText("input_signal → outcome");
+  await expect(page.getByLabel("Saved ensemble configurations")).toContainText("Decision rationale: Fixture operator preserved two exact model versions for a transparent mixture review.");
   await page.getByLabel("Ensemble approver identity").fill("fixture-operator");
   await page.getByLabel("I reviewed this exact ensemble binding").check();
   await page.getByRole("button", { name: "Approve ensemble Fixture blend" }).click();
