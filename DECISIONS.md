@@ -33,6 +33,7 @@ This file records product and architecture decisions that future agents must pre
 | D-023 | 2026-07-28 | `GOAL_GUI.md` is autonomous for implementation: Codex chooses routine UX/engineering details and continues without intermediate user approval, while runtime operator approval remains mandatory before proposed structure becomes active. | Accepted | Development autonomy and in-product human control solve different problems and must not be conflated. |
 | D-024 | 2026-07-28 | Model decision support includes an authoritative, explicit weighted output ensemble with exact member versions, validated weights, reproducible mixture sampling, approval, and receipt. | Accepted | The approved workflow requires joint assessment and selection of a model or ensemble; a disabled placeholder would not satisfy it. |
 | D-025 | 2026-07-28 | The private shared UI package uses React peer dependencies plus test-only Vitest 4, Testing Library, user-event, and jsdom. | Accepted | These MIT-licensed tools provide the required component and accessibility harness; `npm audit` returned zero vulnerabilities after upgrading to Vitest 4.1.10. |
+| D-026 | 2026-07-28 | Canonical browser-flow verification uses Playwright with localhost API interception and fixed desktop viewports. | Accepted | The GUI goal requires browser/viewport evidence. Playwright is Apache-2.0; tests use fixture API responses only and make no live research/provider requests. |
 
 ## Initial Default Decisions
 
