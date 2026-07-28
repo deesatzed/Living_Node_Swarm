@@ -33,6 +33,7 @@ from lns_kernel.validation import ValidationError
 from lns_server.gas_ai import expand_gas_factors, layout_for_new_nodes
 from lns_server.candidate_graph import build_neodymium_fixture
 from lns_server.distribution_elicitation import ElicitDistributionBody, elicit_from_median_p90
+from lns_server.relationship_authoring import RelationshipValidationBody, validate_proposed_relationships
 from lns_server.evidence_store import EvidenceStore
 from lns_server.journal import TradeJournal
 from lns_server.kalshi_client import KalshiClient, KalshiError
@@ -298,6 +299,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/authoring/distributions/elicit")
     def elicit_distribution(body: ElicitDistributionBody) -> dict[str, Any]:
         return json.loads(elicit_from_median_p90(body).model_dump_json())
+
+    @app.post("/authoring/relationships/validate")
+    def validate_relationships(body: RelationshipValidationBody) -> dict[str, Any]:
+        return validate_proposed_relationships(body)
 
     @app.post("/graphs")
     def create_graph(body: CreateGraphBody) -> dict[str, Any]:
