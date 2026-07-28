@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from lns_kernel.ensemble import compare_transforms, run_ensemble, weighted_outcome_mixture
 from lns_kernel.contracts import TargetContract
-from lns_kernel.distributions import REGISTRY, distribution_statistics, get_family, normalize_parameters
+from lns_kernel.distributions import REGISTRY, distribution_statistics, get_family, normalize_parameters, validate_family_parameters
 from lns_kernel.models import (
     Node,
     NodeLayout,
@@ -356,7 +356,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         project = require_project(project_id)
         if project.active_graph_version is None or revision.base_graph_version != project.active_graph_version:
             raise HTTPException(409, "candidate revision base graph version is stale")
-        if revision.candidate_node_state_overrides or revision.candidate_relationship_state_overrides or revision.candidate_relationship_contracts or revision.candidate_new_nodes:
+        if revision.candidate_distribution_specs or revision.candidate_node_state_overrides or revision.candidate_relationship_state_overrides or revision.candidate_relationship_contracts or revision.candidate_new_nodes:
             if not project.graph_id:
                 raise HTTPException(409, "candidate revision project has no active graph")
             graph = app.state.store.get_graph(project.graph_id)
@@ -365,6 +365,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             unknown = sorted(set(revision.candidate_node_state_overrides) - set(graph.nodes))
             if unknown:
                 raise HTTPException(422, f"candidate revision references unknown graph nodes: {', '.join(unknown)}")
+            unknown_distribution_nodes = sorted(set(revision.candidate_distribution_specs) - set(graph.nodes))
+            if unknown_distribution_nodes:
+                raise HTTPException(422, f"candidate revision references unknown graph nodes: {', '.join(unknown_distribution_nodes)}")
+            for node_id, spec in revision.candidate_distribution_specs.items():
+                node = graph.nodes[node_id]
+                if spec.family_id != node.distribution_family.value:
+                    raise HTTPException(422, f"candidate distribution family does not match active node: {node_id}")
+                try:
+                    validate_family_parameters(spec.family_id, spec.parameter_map)
+                    patched_parameters = {**node.parameters, **revision.candidate_parameter_overrides.get(node_id, {})}
+                    if normalize_parameters(node.distribution_family.value, patched_parameters) != spec.parameter_map:
+                        raise ValueError("candidate numeric overrides do not match elicited distribution parameters")
+                except ValueError as exc:
+                    raise HTTPException(422, f"invalid candidate distribution for {node_id}: {exc}") from exc
+            unknown_distribution_evidence = sorted({
+                claim_id
+                for spec in revision.candidate_distribution_specs.values()
+                for claim_id in spec.evidence_claim_ids
+                if app.state.evidence_store.get_evidence_claim(claim_id) is None
+            })
+            if unknown_distribution_evidence:
+                raise HTTPException(422, f"candidate distribution references unknown evidence claims: {', '.join(unknown_distribution_evidence)}")
             known_relationships = {f"{parent}:{node_id}" for node_id, node in graph.nodes.items() for parent in node.depends_on}
             unknown_relationships = sorted(set(revision.candidate_relationship_state_overrides) - known_relationships)
             if unknown_relationships:

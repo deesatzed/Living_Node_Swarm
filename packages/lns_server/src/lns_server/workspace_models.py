@@ -9,7 +9,7 @@ import math
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from lns_kernel.contracts import RelationshipContract
+from lns_kernel.contracts import DistributionSpec, RelationshipContract
 from lns_kernel.models import Node, NodeStatus
 from lns_kernel.validation import validate_node
 
@@ -67,6 +67,7 @@ class WorkspaceCandidateRevision(BaseModel):
     id: str
     base_graph_version: int = Field(ge=1)
     candidate_parameter_overrides: dict[str, dict[str, float]] = Field(default_factory=dict)
+    candidate_distribution_specs: dict[str, DistributionSpec] = Field(default_factory=dict)
     candidate_node_state_overrides: dict[str, Literal["active", "excluded"]] = Field(default_factory=dict)
     candidate_relationship_state_overrides: dict[str, Literal["active", "excluded"]] = Field(default_factory=dict)
     candidate_relationship_contracts: list[RelationshipContract] = Field(default_factory=list)
@@ -75,8 +76,8 @@ class WorkspaceCandidateRevision(BaseModel):
 
     @model_validator(mode="after")
     def require_a_candidate_delta(self) -> "WorkspaceCandidateRevision":
-        if not self.candidate_parameter_overrides and not self.candidate_node_state_overrides and not self.candidate_relationship_state_overrides and not self.candidate_relationship_contracts and not self.candidate_new_nodes:
-            raise ValueError("candidate revision requires a parameter, node-state, relationship-state, relationship contract, or new-node override")
+        if not self.candidate_parameter_overrides and not self.candidate_distribution_specs and not self.candidate_node_state_overrides and not self.candidate_relationship_state_overrides and not self.candidate_relationship_contracts and not self.candidate_new_nodes:
+            raise ValueError("candidate revision requires a parameter, distribution, node-state, relationship-state, relationship contract, or new-node override")
         if any(relationship.state != "proposed" for relationship in self.candidate_relationship_contracts):
             raise ValueError("candidate relationship contracts must be proposed")
         if len({relationship.id for relationship in self.candidate_relationship_contracts}) != len(self.candidate_relationship_contracts):

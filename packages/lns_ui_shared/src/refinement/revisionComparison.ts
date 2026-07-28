@@ -4,7 +4,7 @@ export type RevisionDifferenceKind = "added" | "removed" | "changed";
 
 export interface RevisionDifference {
   kind: RevisionDifferenceKind;
-  category: "parameter" | "node state" | "relationship state" | "relationship contract" | "proposed factor";
+  category: "parameter" | "distribution" | "node state" | "relationship state" | "relationship contract" | "proposed factor";
   label: string;
   before?: string;
   after?: string;
@@ -33,6 +33,14 @@ function parameters(revision: JsonObject): Map<string, ComparableValue> {
     }
   }
   return result;
+}
+
+function distributions(revision: JsonObject): Map<string, ComparableValue> {
+  return new Map(Object.entries(record(revision.candidate_distribution_specs)).map(([nodeId, spec]) => {
+    const distribution = record(spec);
+    const family = typeof distribution.family_id === "string" ? distribution.family_id : "unknown family";
+    return [nodeId, { display: family, signature: stable(distribution) }];
+  }));
 }
 
 function states(revision: JsonObject, key: "candidate_node_state_overrides" | "candidate_relationship_state_overrides"): Map<string, ComparableValue> {
@@ -74,6 +82,7 @@ function differences(category: RevisionDifference["category"], before: Map<strin
 export function compareCandidateRevisions(before: JsonObject, after: JsonObject): RevisionDifference[] {
   return [
     ...differences("parameter", parameters(before), parameters(after)),
+    ...differences("distribution", distributions(before), distributions(after)),
     ...differences("node state", states(before, "candidate_node_state_overrides"), states(after, "candidate_node_state_overrides")),
     ...differences("relationship state", states(before, "candidate_relationship_state_overrides"), states(after, "candidate_relationship_state_overrides")),
     ...differences("relationship contract", contracts(before), contracts(after)),

@@ -134,6 +134,58 @@ describe("ShadowComparison", () => {
     expect(screen.getByText("Candidate revision saved without changing the active graph.")).toBeVisible();
   });
 
+  it("elicits a same-family median/P90 candidate with its provenance and withholds numeric approval", async () => {
+    const user = userEvent.setup();
+    const elicitDistribution = vi.fn(async () => ({
+      distribution_spec: { id: "input-signal-median-p90", family_id: "Normal", parameters: [{ id: "loc", value: 5 }, { id: "scale", value: 2 }], elicitation_method: "median_p90_quantile_match", evidence_claim_ids: [], as_of: "2026-07-28T00:00:00Z", confidence_rationale: "Initial range." },
+      derived_statistics: { mean: 5, median: 5, mode: 5, variance: 4 },
+      receipt: { method: "median_p90_quantile_match", limitations: ["Initial parametric prior."] },
+    }));
+    const createCandidateRevision = vi.fn(async (_projectId, revision) => ({ ...revision, id: "elicited-input" }));
+    const shadowSimulate = vi.fn(async () => ({ active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 5, p50: 5 } }));
+    render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{
+      getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: [] }, outcome: { name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: ["input_signal"] } } }),
+      shadowSimulate, elicitDistribution, createCandidateRevision,
+    } as never} />);
+
+    await screen.findByLabelText("Elicitation median");
+    await user.clear(screen.getByLabelText("Elicitation median"));
+    await user.type(screen.getByLabelText("Elicitation median"), "5");
+    await user.clear(screen.getByLabelText("Elicitation P90"));
+    await user.type(screen.getByLabelText("Elicitation P90"), "7.56");
+    await user.click(screen.getByRole("button", { name: "Stage elicited distribution candidate" }));
+
+    expect(elicitDistribution).toHaveBeenCalledWith(expect.objectContaining({ family_id: "Normal", median: 5, p90: 7.56 }));
+    expect(await screen.findByLabelText("Elicited distribution candidate")).toHaveTextContent("Initial parametric prior.");
+    await user.click(screen.getByRole("button", { name: "Run in-memory comparison" }));
+    expect(shadowSimulate).toHaveBeenCalledWith("graph-1", { target_node_id: "outcome", candidate_parameter_overrides: { input_signal: { mu: 5, sigma: 2 } } });
+    expect(screen.queryByRole("button", { name: "Save candidate for review" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save durable candidate revision" }));
+    expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({
+      candidate_distribution_specs: { input_signal: expect.objectContaining({ family_id: "Normal", elicitation_method: "median_p90_quantile_match" }) },
+      candidate_parameter_overrides: { input_signal: { mu: 5, sigma: 2 } },
+    }));
+  });
+
+  it("rejects an invalid elicitation range before it leaves the browser", async () => {
+    const user = userEvent.setup();
+    const elicitDistribution = vi.fn();
+    render(<ShadowComparison graphId="graph-1" client={{
+      getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: [] } } }),
+      shadowSimulate: async () => ({}), elicitDistribution,
+    } as never} />);
+
+    await screen.findByLabelText("Elicitation median");
+    await user.clear(screen.getByLabelText("Elicitation median"));
+    await user.type(screen.getByLabelText("Elicitation median"), "5");
+    await user.clear(screen.getByLabelText("Elicitation P90"));
+    await user.type(screen.getByLabelText("Elicitation P90"), "5");
+    await user.click(screen.getByRole("button", { name: "Stage elicited distribution candidate" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Provide a positive median, a larger P90");
+    expect(elicitDistribution).not.toHaveBeenCalled();
+  });
+
   it("compares two durable same-base revisions without simulating or activating either one", async () => {
     const user = userEvent.setup();
     const shadowSimulate = vi.fn(async () => ({}));

@@ -342,6 +342,39 @@ def test_candidate_revisions_persist_without_mutating_the_active_graph(tmp_path:
     assert revisions.json()["candidate_revisions"][0]["candidate_parameter_overrides"]["input_signal"]["sigma"] == 2.0
 
 
+def test_candidate_revision_persists_an_elicited_distribution_with_provenance_without_mutating_active_graph(tmp_path: Path):
+    settings = _settings(tmp_path)
+    distribution_spec = {
+        "id": "input-signal-median-p90", "family_id": "Normal",
+        "parameters": [{"id": "loc", "value": 5.0}, {"id": "scale", "value": 2.0}],
+        "elicitation_method": "median_p90_quantile_match", "evidence_claim_ids": [],
+        "as_of": "2026-07-28T00:00:00Z", "confidence_rationale": "Operator supplied an initial range.",
+    }
+    with TestClient(create_app(settings)) as client:
+        graph = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        client.post("/projects", json={**_project_payload(), "graph_id": graph["id"], "active_graph_version": graph["graph_version"], "stage": "quantify"})
+        saved = client.post("/projects/nd-project/candidate-revisions", json={
+            "id": "elicited-input", "base_graph_version": graph["graph_version"],
+            "candidate_parameter_overrides": {"input_signal": {"mu": 5.0, "sigma": 2.0}},
+            "candidate_distribution_specs": {"input_signal": distribution_spec},
+        })
+        unknown_node = client.post("/projects/nd-project/candidate-revisions", json={
+            "id": "unknown-elicited-input", "base_graph_version": graph["graph_version"],
+            "candidate_distribution_specs": {"missing": distribution_spec},
+        })
+        active = client.get(f"/graphs/{graph['id']}")
+
+    with TestClient(create_app(settings)) as restarted:
+        revisions = restarted.get("/projects/nd-project/candidate-revisions")
+
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["candidate_distribution_specs"]["input_signal"].items() >= distribution_spec.items()
+    assert revisions.json()["candidate_revisions"][0]["candidate_distribution_specs"]["input_signal"].items() >= distribution_spec.items()
+    assert unknown_node.status_code == 422
+    assert "unknown graph nodes" in unknown_node.text
+    assert active.json()["nodes"]["input_signal"]["parameters"] == graph["nodes"]["input_signal"]["parameters"]
+
+
 def test_candidate_revision_persists_node_state_delta_without_mutating_active_graph(tmp_path: Path):
     settings = _settings(tmp_path)
     with TestClient(create_app(settings)) as client:
