@@ -1,7 +1,7 @@
 # Prediction Workspace GUI Design
 
-**Date:** 2026-07-28  
-**Status:** Approved  
+**Date:** 2026-07-28
+**Status:** Approved
 **Source of truth:** `GOAL_GUI.md`, `GOAL.md`, `STANDARDS.md`,
 `DECISIONS.md` D-021 through D-023
 
