@@ -86,7 +86,7 @@ describe("ShadowComparison", () => {
         },
       }}),
       shadowSimulate: async () => ({}),
-      getDistributionStatistics: async () => ({ family_id: "Gamma", parameters: { shape: 4, scale: 2 }, statistics: { mean: 8, median: null, mode: 6, variance: 16, support_lower: 0, support_upper: 20 } }),
+      getDistributionStatistics: async () => ({ family_id: "Gamma", parameters: { shape: 4, scale: 2 }, statistics: { mean: 8, median: null, mode: 6, variance: 16, support_lower: 0, support_upper: 20 }, display_quantiles: { p05: 2, p50: 8, p95: 16 }, display_quantile_method: "seeded_monte_carlo_registry_sampler" }),
     }} />);
 
     const inspector = await screen.findByLabelText("Distribution inspector");
@@ -95,6 +95,7 @@ describe("ShadowComparison", () => {
     expect(inspector).toHaveTextContent("intuitive_family_derivation");
     expect(inspector).toHaveTextContent("Reviewed operator range.");
     expect(inspector).toHaveTextContent("claim-1");
+    expect(await screen.findByText("Central interval: P05 2 · P50 8 · P95 16 (seeded Monte Carlo display)")).toBeVisible();
   });
 
   it("requires an exact saved proposal and operator identity before approval", async () => {

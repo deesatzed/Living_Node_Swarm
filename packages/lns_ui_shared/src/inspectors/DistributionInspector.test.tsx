@@ -20,4 +20,12 @@ describe("DistributionInspector", () => {
     expect(screen.getByText(/Plain-language fit:/)).toBeVisible();
     expect(screen.getByLabelText(`${family} distribution curve`)).toBeVisible();
   });
+
+  it.each(["Normal", "LogNormal", "Beta", "Poisson", "NegativeBinomial", "Gamma", "StudentT", "Deterministic"])("makes tail behavior, alternatives, and limitations explicit for %s", (family) => {
+    render(<DistributionInspector family={family} parameters={{ location: 1 }} support="fixture support" asOf="2026-07-28" provenance="fixture_unverified" />);
+
+    expect(screen.getByLabelText("Distribution tail behavior")).not.toHaveTextContent("Not recorded");
+    expect(screen.getByLabelText("Distribution alternatives")).not.toHaveTextContent("Not recorded");
+    expect(screen.getByLabelText("Distribution limitations")).not.toHaveTextContent("Not recorded");
+  });
 });

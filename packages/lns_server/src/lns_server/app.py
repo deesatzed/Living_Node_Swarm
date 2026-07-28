@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from lns_kernel.ensemble import compare_transforms, run_ensemble, weighted_outcome_mixture
 from lns_kernel.contracts import TargetContract
-from lns_kernel.distributions import REGISTRY, distribution_statistics, get_family, normalize_parameters, validate_family_parameters
+from lns_kernel.distributions import REGISTRY, distribution_display_quantiles, distribution_statistics, get_family, normalize_parameters, validate_family_parameters
 from lns_kernel.models import (
     Node,
     NodeLayout,
@@ -580,6 +580,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "family_id": family.id,
                 "parameters": parameters,
                 "statistics": distribution_statistics(family.id, parameters),
+                "display_quantiles": distribution_display_quantiles(family.id, parameters),
+                "display_quantile_method": "seeded_monte_carlo_registry_sampler",
             }
         except (KeyError, ValueError) as exc:
             raise HTTPException(400, str(exc)) from exc

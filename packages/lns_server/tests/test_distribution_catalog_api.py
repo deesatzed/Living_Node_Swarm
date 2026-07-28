@@ -53,4 +53,6 @@ def test_distribution_statistics_are_kernel_derived_and_accept_legacy_node_param
     assert response.status_code == 200, response.text
     assert response.json()["parameters"] == {"loc": 4.0, "scale": 2.0}
     assert response.json()["statistics"] == {"mean": 4.0, "median": 4.0, "mode": 4.0, "variance": 4.0, "support_lower": None, "support_upper": None}
+    assert response.json()["display_quantile_method"] == "seeded_monte_carlo_registry_sampler"
+    assert response.json()["display_quantiles"]["p05"] < 4.0 < response.json()["display_quantiles"]["p95"]
     assert invalid.status_code == 400

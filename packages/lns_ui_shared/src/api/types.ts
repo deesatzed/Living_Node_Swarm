@@ -55,6 +55,8 @@ export interface DistributionStatisticsResult {
   family_id: string;
   parameters: Record<string, number>;
   statistics: DistributionStatistics;
+  display_quantiles?: { p05: number; p50: number; p95: number };
+  display_quantile_method?: string;
 }
 
 export interface CandidateFactor {

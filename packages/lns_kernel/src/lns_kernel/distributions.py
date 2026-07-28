@@ -262,3 +262,24 @@ def sample_distribution(
     if family.id == "Deterministic":
         return np.full(size, parameters["value"], dtype=float)
     raise AssertionError(f"registry family {family.id} has no sampler")
+
+
+def distribution_display_quantiles(
+    identifier: str,
+    parameters: Mapping[str, float],
+    *,
+    seed: int = 20_260_728,
+    n_samples: int = 20_000,
+) -> dict[str, float]:
+    """Return a reproducible read-only display interval from the canonical sampler.
+
+    The result is deliberately a seeded Monte Carlo summary, not an analytic
+    confidence interval, fitted distribution, or forecast-quality claim.
+    """
+
+    samples = sample_distribution(identifier, parameters, size=n_samples, seed=seed)
+    return {
+        "p05": float(np.quantile(samples, 0.05)),
+        "p50": float(np.quantile(samples, 0.50)),
+        "p95": float(np.quantile(samples, 0.95)),
+    }
