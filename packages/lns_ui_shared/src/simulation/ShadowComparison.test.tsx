@@ -168,6 +168,9 @@ describe("ShadowComparison", () => {
     await user.type(screen.getByLabelText("Proposed relationship lag periods"), "1");
     await user.click(screen.getByRole("button", { name: "Stage proposed relationship contract" }));
     expect(screen.getByLabelText("Proposed relationship contracts")).toHaveTextContent("input_signal → outcome · scenario_assumption · proposed");
+    await user.click(screen.getByRole("button", { name: "Remove proposed relationship input_signal to outcome" }));
+    expect(screen.getByLabelText("Proposed relationship contracts")).toHaveTextContent("No proposed relationship contracts staged.");
+    await user.click(screen.getByRole("button", { name: "Stage proposed relationship contract" }));
     await user.click(screen.getByRole("button", { name: "Save durable candidate revision" }));
     expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({ candidate_relationship_contracts: [expect.objectContaining({ parent_node_id: "input_signal", child_node_id: "outcome", relationship_type: "scenario_assumption", lag_periods: 1, lag_unit: "month", state: "proposed" })] }));
     expect(await screen.findByText("Revision relationship-revision · base graph version 4 · 0 parameter changes · 0 node-state changes · 0 relationship-state changes · 1 proposed relationship contract · 0 proposed new factors")).toBeVisible();
