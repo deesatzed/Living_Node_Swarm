@@ -31,6 +31,7 @@ from lns_kernel.simulation import SimulationCoordinator
 from lns_kernel.store import GraphStore
 from lns_kernel.validation import ValidationError
 from lns_server.gas_ai import expand_gas_factors, layout_for_new_nodes
+from lns_server.candidate_graph import build_neodymium_fixture
 from lns_server.evidence_store import EvidenceStore
 from lns_server.journal import TradeJournal
 from lns_server.kalshi_client import KalshiClient, KalshiError
@@ -285,6 +286,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         review = make_claim_review(target_contract_id=target_id, claim_id=claim_id, body=body)
         app.state.evidence_store.save_claim_review(review)
         return {"review": json.loads(review.model_dump_json())}
+
+    @app.post("/authoring/targets/{target_id}/candidate-proposals/fixture")
+    def create_fixture_candidate_proposal(target_id: str) -> dict[str, Any]:
+        target = app.state.evidence_store.get_target_contract(target_id)
+        if target is None:
+            raise HTTPException(404, "target not found")
+        return json.loads(build_neodymium_fixture(target).model_dump_json())
 
     @app.post("/graphs")
     def create_graph(body: CreateGraphBody) -> dict[str, Any]:
