@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from lns_kernel.ensemble import compare_transforms
+from lns_kernel.contracts import TargetContract
 from lns_kernel.models import (
     Node,
     NodeLayout,
@@ -30,6 +31,7 @@ from lns_kernel.simulation import SimulationCoordinator
 from lns_kernel.store import GraphStore
 from lns_kernel.validation import ValidationError
 from lns_server.gas_ai import expand_gas_factors, layout_for_new_nodes
+from lns_server.evidence_store import EvidenceStore
 from lns_server.journal import TradeJournal
 from lns_server.kalshi_client import KalshiClient, KalshiError
 from lns_server.openrouter import OpenRouterClient, OpenRouterError
@@ -162,6 +164,7 @@ class WireBody(BaseModel):
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     store = GraphStore(settings.resolved_db_path())
+    evidence_db_path = Path(settings.resolved_db_path()).with_name("lns_evidence.db")
     journal = TradeJournal(Path(settings.resolved_db_path()).with_name("lns_journal.db"))
     coord = SimulationCoordinator(
         store, default_seed=settings.mc_seed, default_n_samples=settings.n_samples
@@ -171,7 +174,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        evidence_store = EvidenceStore(evidence_db_path)
         app.state.store = store
+        app.state.evidence_store = evidence_store
         app.state.coord = coord
         app.state.settings = settings
         app.state.openrouter = or_client
@@ -179,6 +184,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.kalshi = kalshi
         yield
         store.close()
+        evidence_store.close()
         journal.close()
 
     app = FastAPI(title="Living Node Swarm", version="0.1.0", lifespan=lifespan)
@@ -235,6 +241,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/graphs")
     def list_graphs() -> dict[str, Any]:
         return {"ids": store.list_graph_ids()}
+
+    @app.post("/targets")
+    def create_target(target: TargetContract) -> dict[str, Any]:
+        app.state.evidence_store.save_target_contract(target)
+        return {"target": json.loads(target.model_dump_json())}
+
+    @app.get("/targets/{target_id}")
+    def get_target(target_id: str) -> dict[str, Any]:
+        target = app.state.evidence_store.get_target_contract(target_id)
+        if target is None:
+            raise HTTPException(404, "target not found")
+        return json.loads(target.model_dump_json())
 
     @app.post("/graphs")
     def create_graph(body: CreateGraphBody) -> dict[str, Any]:

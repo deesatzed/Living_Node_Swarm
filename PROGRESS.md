@@ -11,7 +11,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Surface | Verified state |
 |---|---|
 | Kernel tests | 72 passed on 2026-07-27 after persisted multi-seed/multi-sample stability diagnostics |
-| Server tests | 38 passed on 2026-07-27 after Gate 2 security/provenance fixture journey; one upstream deprecation warning |
+| Server tests | 40 passed on 2026-07-27 after target-intake API; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-27 |
 | Gas UI | Production build passed on 2026-07-27 |
 | Current families | Eight canonical registry families; legacy node payloads remain readable through explicit parameter normalization |
@@ -61,6 +61,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Q2-06 research completeness | Complete | Codex | Bounded source/byte/time plan records diversity, contradiction search, saturation, and gaps; 36 server tests passed |
 | Q2-07 security/provenance suite | Complete | Codex | Fixture-only end-to-end security/receipt journey, including unsafe redirect rejection; 38 server tests passed |
 | Gate 2 safe research/provenance | Complete | Codex | Local safe retrieval, untrusted isolation, consent receipts, persistence, and completeness reporting verified; no live research claimed |
+| Q3-01 target intake API | Complete | Codex | Resolution-grade `TargetContract` persists/retrieves; ambiguous target data rejects; 40 server tests passed |
 | Gate 3 generalized authoring | Pending | Unassigned | Depends on Gates 1–2 |
 | Gate 4 visual workspace | Pending | Unassigned | Depends on Gate 3 API/contracts |
 | Gate 5 Neodymium acceptance | Pending | Unassigned | Depends on Gates 1–4 |
@@ -82,8 +83,8 @@ Gate 2 exited on 2026-07-27: fixture-tested local URL safety, bounded retrieval,
 
 ## Next Actions
 
-1. Complete Q3-01: add target-intake API backed by `TargetContract`.
-2. Complete Q3-02: add research-review API backed by persisted claims/receipts.
+1. Complete Q3-02: add research-review API backed by persisted claims/receipts.
+2. Complete Q3-03: add ranked 15-factor candidate-graph proposal with three-hop fixture.
 3. Keep proposals inactive until version-bound human approval.
 
 ## Blockers

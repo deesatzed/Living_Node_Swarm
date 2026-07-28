@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from lns_kernel.contracts import EvidenceClaim, EvidenceClass, SourceReceipt
+from lns_kernel.contracts import EvidenceClaim, EvidenceClass, SourceReceipt, TargetContract
 from lns_server.research_routing import ProviderRoutingReceipt
 from lns_server.research_plan import ResearchCompletenessReport
 
@@ -14,12 +14,17 @@ class EvidenceStore:
     """Persists metadata/hashes only; retrieved body retention belongs to a separate policy."""
 
     def __init__(self, path: Path) -> None:
-        self._connection = sqlite3.connect(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self._connection = sqlite3.connect(path, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
         self._connection.execute("PRAGMA foreign_keys = ON")
         self._connection.executescript(
             """
             CREATE TABLE IF NOT EXISTS source_receipts (
+                id TEXT PRIMARY KEY,
+                payload_json TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS target_contracts (
                 id TEXT PRIMARY KEY,
                 payload_json TEXT NOT NULL
             );
@@ -45,6 +50,22 @@ class EvidenceStore:
 
     def close(self) -> None:
         self._connection.close()
+
+    def save_target_contract(self, target: TargetContract) -> None:
+        self._connection.execute(
+            """
+            INSERT INTO target_contracts(id, payload_json) VALUES (?, ?)
+            ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json
+            """,
+            (target.id, target.model_dump_json()),
+        )
+        self._connection.commit()
+
+    def get_target_contract(self, target_id: str) -> TargetContract | None:
+        row = self._connection.execute(
+            "SELECT payload_json FROM target_contracts WHERE id=?", (target_id,)
+        ).fetchone()
+        return None if row is None else TargetContract.model_validate_json(row["payload_json"])
 
     def save_source_receipt(self, receipt: SourceReceipt) -> None:
         self._connection.execute(
