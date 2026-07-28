@@ -13,6 +13,7 @@ export function MonitoringSetup({ projectId, client, onBranchToEdit }: { project
   const [config, setConfig] = useState<MonitoringConfigInput | null>(null);
   const [events, setEvents] = useState<JsonObject[]>([]);
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
   const [inspectedEvent, setInspectedEvent] = useState<JsonObject | null>(null);
   useEffect(() => { void (async () => {
     try {
@@ -27,7 +28,7 @@ export function MonitoringSetup({ projectId, client, onBranchToEdit }: { project
   async function save() {
     const nextConfig = config;
     if (!nextConfig) return;
-    try { await client.saveMonitoring(projectId, nextConfig); }
+    try { await client.saveMonitoring(projectId, nextConfig); setStatus(`Monitoring configuration saved. ${nextConfig.mode === "fixture" ? "Fixture events are not live monitoring." : nextConfig.mode === "live" ? "Live monitoring is not running: this setting is saved locally until an external polling integration is configured." : "Local monitoring requires a configured local collector."}`); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save monitoring."); }
   }
   async function acknowledge(eventId: string) {
@@ -41,6 +42,10 @@ export function MonitoringSetup({ projectId, client, onBranchToEdit }: { project
     <label>Freshness threshold days<input type="number" min="1" value={config.freshness_threshold_days} onChange={(event) => setConfig({ ...config, freshness_threshold_days: Number(event.target.value) })} /></label>
     <label>Monitoring mode<select value={config.mode} onChange={(event) => setConfig({ ...config, mode: event.target.value as MonitoringConfigInput["mode"] })}><option value="fixture">fixture</option><option value="local">local</option><option value="live">live</option></select></label>
     <button onClick={save}>Save monitoring configuration</button>
+    {config.mode === "fixture" && <p>Fixture monitoring is for workflow verification and does not retrieve external sources.</p>}
+    {config.mode === "local" && <p>Local monitoring requires a configured local collector; no collector is started by this screen.</p>}
+    {config.mode === "live" && <p>Live monitoring is not running: this setting is saved locally until an external polling integration is configured.</p>}
+    {status && <p role="status">{status}</p>}
     <h2>Monitoring events</h2>
     {inspectedEvent && <section aria-label="Inspected monitoring event"><h3>Event details</h3><p>{String(inspectedEvent.message ?? "Unknown event")}</p><p>Inspection does not change the approved model.</p></section>}
     {events.length === 0 ? <p>No monitoring events yet.</p> : <ul>{events.map((event) => <li key={String(event.id)}><strong>{String(event.severity ?? "info")}</strong>: {String(event.message ?? "Unknown event")}<p>{event.evidence_classification === "fixture_unverified" ? "Fixture event — not live monitoring" : String(event.evidence_classification ?? "Unknown evidence state")}</p>{event.acknowledged_at ? <p>Acknowledged {String(event.acknowledged_at)}</p> : <button onClick={() => void acknowledge(String(event.id))}>Acknowledge event</button>}<button onClick={() => setInspectedEvent(event)}>Inspect event</button><button onClick={onBranchToEdit}>Branch to edit</button></li>)}</ul>}
