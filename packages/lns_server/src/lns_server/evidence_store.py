@@ -6,6 +6,7 @@ import sqlite3
 from pathlib import Path
 
 from lns_kernel.contracts import EvidenceClaim, EvidenceClass, SourceReceipt
+from lns_server.research_routing import ProviderRoutingReceipt
 
 
 class EvidenceStore:
@@ -29,6 +30,10 @@ class EvidenceStore:
             );
             CREATE INDEX IF NOT EXISTS idx_evidence_claims_source
                 ON evidence_claims(source_receipt_id);
+            CREATE TABLE IF NOT EXISTS provider_routing_receipts (
+                id TEXT PRIMARY KEY,
+                payload_json TEXT NOT NULL
+            );
             """
         )
         self._connection.commit()
@@ -84,3 +89,19 @@ class EvidenceStore:
                 (source_receipt_id,),
             ).fetchall()
         return [EvidenceClaim.model_validate_json(row["payload_json"]) for row in rows]
+
+    def save_routing_receipt(self, receipt: ProviderRoutingReceipt) -> None:
+        self._connection.execute(
+            """
+            INSERT INTO provider_routing_receipts(id, payload_json) VALUES (?, ?)
+            ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json
+            """,
+            (receipt.id, receipt.model_dump_json()),
+        )
+        self._connection.commit()
+
+    def get_routing_receipt(self, receipt_id: str) -> ProviderRoutingReceipt | None:
+        row = self._connection.execute(
+            "SELECT payload_json FROM provider_routing_receipts WHERE id=?", (receipt_id,)
+        ).fetchone()
+        return None if row is None else ProviderRoutingReceipt.model_validate_json(row["payload_json"])

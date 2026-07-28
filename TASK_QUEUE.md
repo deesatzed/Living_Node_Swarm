@@ -43,7 +43,7 @@
 | Q2-02 | Implement bounded HTTP fetcher | Q2-01 | scheme/type/size/time/redirect controls tested | Complete (4 focused tests, 28 server tests, 2026-07-27) |
 | Q2-03 | Implement evidence/source persistence | Q0-03 | receipts and claims survive restart and preserve hashes | Complete (restart/hash/conflict tests, 30 server tests, 2026-07-27) |
 | Q2-04 | Implement untrusted-content extraction boundary | Q2-02 | page instructions cannot alter system/provider instructions | Complete (2 focused tests, 32 server tests, 2026-07-27) |
-| Q2-05 | Implement provider payload preview and routing receipt | Q2-03–04 | user sees provider/model/data scope before send | Pending |
+| Q2-05 | Implement provider payload preview and routing receipt | Q2-03–04 | user sees provider/model/data scope before send | Complete (preview/receipt persistence tests, 34 server tests, 2026-07-27) |
 | Q2-06 | Implement bounded research plan | Q2-03–05 | source diversity, contradiction search, saturation, budget, gaps recorded | Pending |
 | Q2-07 | Add research security/provenance suite | Q2-01–06 | all required attack/receipt cases pass | Pending |
 
