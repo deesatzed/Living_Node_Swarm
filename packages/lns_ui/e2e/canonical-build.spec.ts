@@ -26,6 +26,7 @@ test("canonical Project Home has no serious or critical automated accessibility 
 
 test("canonical Monitor inspects a fixture event and branches into a version-bound Edit draft", async ({ page }) => {
   const project = { id: "approved-1", name: "Approved neodymium model", target_id: "target-1", graph_id: "graph-1", active_graph_version: 4, stage: "monitor", evidence_classification: "fixture_unverified" };
+  const derivedFamilies = new Set<string>();
   await page.route("**/api/projects", (route) => route.fulfill({ json: { projects: [project] } }));
   await page.route("**/api/targets/target-1", (route) => route.fulfill({ json: { question: "What will neodymium cost?", forecast_origin: "2026-07-28T00:00:00Z", resolution_at: "2027-07-28T00:00:00Z" } }));
   await page.route("**/api/projects/approved-1/monitoring", (route) => route.fulfill({ json: { config: { cadence: "weekly", freshness_threshold_days: 7, mode: "fixture" }, events: [{ id: "stale-source", severity: "warning", message: "Fixture source is stale", evidence_classification: "fixture_unverified" }] } }));
@@ -34,7 +35,12 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.route("**/api/graphs/graph-1", (route) => route.fulfill({ json: { nodes: {
     input_signal: { id: "input_signal", name: "Input signal", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: [] },
     process_stage: { id: "process_stage", name: "Process stage", distribution_family: "Gamma", parameters: { shape: 2, scale: 1 }, depends_on: ["input_signal"] },
-    outcome: { id: "outcome", name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["process_stage"] },
+    beta_factor: { id: "beta_factor", name: "Beta factor", distribution_family: "Beta", parameters: { alpha: 2, beta: 3 }, depends_on: [] },
+    poisson_factor: { id: "poisson_factor", name: "Poisson factor", distribution_family: "Poisson", parameters: { rate: 2 }, depends_on: [] },
+    negative_binomial_factor: { id: "negative_binomial_factor", name: "Negative binomial factor", distribution_family: "NegativeBinomial", parameters: { mean: 2, dispersion: 3 }, depends_on: [] },
+    student_t_factor: { id: "student_t_factor", name: "Student-t factor", distribution_family: "StudentT", parameters: { loc: 0, scale: 1, df: 4 }, depends_on: [] },
+    deterministic_factor: { id: "deterministic_factor", name: "Deterministic factor", distribution_family: "Deterministic", parameters: { value: 3 }, depends_on: [] },
+    outcome: { id: "outcome", name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["process_stage", "beta_factor", "poisson_factor", "negative_binomial_factor", "student_t_factor", "deterministic_factor"] },
   }, relationships: { "process-to-outcome": { id: "process-to-outcome", parent_node_id: "process_stage", child_node_id: "outcome", state: "active" } } } }));
   await page.route("**/api/authoring/graphs/graph-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 5, p50: 5 }, limitations: ["Candidate changes are simulated in memory and are not persisted or activated."] } }));
   await page.route("**/api/authoring/relationships/validate", (route) => route.fulfill({ json: { dependence_warnings: [{ code: "unresolved_proxy_correlation", message: "Fixture shared cause remains unresolved." }], active_graph_mutated: false } }));
@@ -68,8 +74,20 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
     return route.fulfill({ json: { distribution_spec: { id: "input_signal-median-p90", family_id: "Normal", parameters: [{ id: "loc", value: 5 }, { id: "scale", value: 2 }], elicitation_method: "median_p90_quantile_match", evidence_claim_ids: [], as_of: "2026-07-28T00:00:00Z", confidence_rationale: "Initial operator range; requires evidence review." }, derived_statistics: { mean: 5, median: 5, mode: 5, variance: 4 }, receipt: { method: "median_p90_quantile_match", limitations: ["Fixture initial prior only."] } } });
   });
   await page.route("**/api/authoring/distributions/derive", (route) => {
-    expect(route.request().postDataJSON()).toMatchObject({ id: "process_stage-intuitive-prior", family_id: "Gamma", values: { mean: 8, standard_deviation: 4 } });
-    return route.fulfill({ json: { distribution_spec: { id: "process_stage-intuitive-prior", family_id: "Gamma", parameters: [{ id: "shape", value: 4 }, { id: "scale", value: 2 }], elicitation_method: "intuitive_family_derivation", evidence_claim_ids: [], as_of: "2026-07-28T00:00:00Z", confidence_rationale: "Initial operator range; requires evidence review." }, derived_statistics: { mean: 8, median: null, mode: 6, variance: 16 }, receipt: { method: "intuitive_family_derivation", limitations: ["Fixture gamma prior only."] } } });
+    const body = route.request().postDataJSON() as { id: string; family_id: string; values: Record<string, number> };
+    const fixtures: Record<string, { values: Record<string, number>; parameters: Array<{ id: string; value: number }> }> = {
+      Beta: { values: { mean: 0.4, concentration: 10 }, parameters: [{ id: "alpha", value: 4 }, { id: "beta", value: 6 }] },
+      Poisson: { values: { expected_count: 5 }, parameters: [{ id: "rate", value: 5 }] },
+      NegativeBinomial: { values: { expected_count: 6, dispersion: 2 }, parameters: [{ id: "mean", value: 6 }, { id: "dispersion", value: 2 }] },
+      Gamma: { values: { mean: 8, standard_deviation: 4 }, parameters: [{ id: "shape", value: 4 }, { id: "scale", value: 2 }] },
+      StudentT: { values: { location: 1, scale: 2, degrees_of_freedom: 5 }, parameters: [{ id: "loc", value: 1 }, { id: "scale", value: 2 }, { id: "df", value: 5 }] },
+      Deterministic: { values: { value: 9 }, parameters: [{ id: "value", value: 9 }] },
+    };
+    const fixture = fixtures[body.family_id];
+    expect(fixture).toBeDefined();
+    expect(body.values).toEqual(fixture.values);
+    derivedFamilies.add(body.family_id);
+    return route.fulfill({ json: { distribution_spec: { id: body.id, family_id: body.family_id, parameters: fixture.parameters, elicitation_method: "intuitive_family_derivation", evidence_claim_ids: [], as_of: "2026-07-28T00:00:00Z", confidence_rationale: "Initial operator range; requires evidence review." }, derived_statistics: { mean: 0, median: null, mode: null, variance: 1 }, receipt: { method: "intuitive_family_derivation", limitations: [`Fixture ${body.family_id} prior only.`] } } });
   });
   await page.route("**/api/projects/approved-1/candidate-proposals/proposal-1/approve", (route) => route.fulfill({ json: { approval_receipt: { id: "receipt-1", binding_hash: "binding-123" }, graph: { graph_version: 5 }, project: { ...project, stage: "decide", active_graph_version: 5 } } }));
   await page.route("**/api/projects/approved-1", (route) => route.request().url().endsWith("/api/projects/approved-1") ? route.fulfill({ json: project }) : route.fallback());
@@ -147,10 +165,35 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.getByLabel("Gamma mean").fill("8");
   await page.getByLabel("Gamma standard deviation").fill("4");
   await page.getByRole("button", { name: "Stage derived distribution candidate" }).click();
-  await expect(page.getByLabel("Derived distribution candidate")).toContainText("Fixture gamma prior only.");
+  await expect(page.getByLabel("Derived distribution candidate")).toContainText("Fixture Gamma prior only.");
   await page.getByRole("button", { name: "Run in-memory comparison" }).click();
   await page.getByRole("button", { name: "Save candidate for review" }).click();
   await expect(page.getByLabel("Candidate approval")).toContainText("distribution-binding");
+  await page.getByLabel("Candidate factor").selectOption("beta_factor");
+  await page.getByLabel("Beta mean").fill("0.4");
+  await page.getByLabel("Beta concentration").fill("10");
+  await page.getByRole("button", { name: "Stage derived distribution candidate" }).click();
+  await expect(page.getByLabel("Derived distribution candidate")).toContainText("Fixture Beta prior only.");
+  await page.getByLabel("Candidate factor").selectOption("poisson_factor");
+  await page.getByLabel("Poisson expected count").fill("5");
+  await page.getByRole("button", { name: "Stage derived distribution candidate" }).click();
+  await expect(page.getByLabel("Derived distribution candidate")).toContainText("Fixture Poisson prior only.");
+  await page.getByLabel("Candidate factor").selectOption("negative_binomial_factor");
+  await page.getByLabel("NegativeBinomial expected count").fill("6");
+  await page.getByLabel("NegativeBinomial dispersion").fill("2");
+  await page.getByRole("button", { name: "Stage derived distribution candidate" }).click();
+  await expect(page.getByLabel("Derived distribution candidate")).toContainText("Fixture NegativeBinomial prior only.");
+  await page.getByLabel("Candidate factor").selectOption("student_t_factor");
+  await page.getByLabel("StudentT location").fill("1");
+  await page.getByLabel("StudentT scale").fill("2");
+  await page.getByLabel("StudentT degrees of freedom").fill("5");
+  await page.getByRole("button", { name: "Stage derived distribution candidate" }).click();
+  await expect(page.getByLabel("Derived distribution candidate")).toContainText("Fixture StudentT prior only.");
+  await page.getByLabel("Candidate factor").selectOption("deterministic_factor");
+  await page.getByLabel("Deterministic value").fill("9");
+  await page.getByRole("button", { name: "Stage derived distribution candidate" }).click();
+  await expect(page.getByLabel("Derived distribution candidate")).toContainText("Fixture Deterministic prior only.");
+  expect([...derivedFamilies].sort()).toEqual(["Beta", "Deterministic", "Gamma", "NegativeBinomial", "Poisson", "StudentT"]);
 });
 
 test("canonical Edit retires an isolated non-target factor through a reviewed structural proposal", async ({ page }) => {
