@@ -30,3 +30,9 @@
 - Run full kernel/server/shared/UI browser regressions, restore generated artifacts, update `DECISIONS.md`, `PROGRESS.md`, and `TASK_QUEUE.md`.
 
 **Limit:** This plan retires nodes; it does not physically delete them. Restoring a node requires a fresh reviewed structural proposal.
+
+## Completion receipt
+
+- Contract/trial, atomic apply, Edit mapping, and project/browser lifecycle proof completed on 2026-07-28.
+- Verified: 78 kernel tests, 78 server tests, 100 shared UI tests, shared/UI production builds, and 7 canonical Playwright tests.
+- Scope retained: retirement only; physical deletion and restoration remain future reviewed structural contracts.

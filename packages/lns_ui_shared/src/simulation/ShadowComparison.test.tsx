@@ -230,7 +230,7 @@ describe("ShadowComparison", () => {
     await user.click(screen.getByRole("button", { name: "Stage proposed relationship contract" }));
     await user.click(screen.getByRole("button", { name: "Create structural proposal for review" }));
 
-    expect(createStructuralProposal).toHaveBeenCalledWith("graph-1", { relationships: [expect.objectContaining({ parent_node_id: "input_signal", child_node_id: "outcome", coefficient_parameters: [{ id: "coefficient", value: 0.25 }] })], removed_relationship_ids: [] });
+    expect(createStructuralProposal).toHaveBeenCalledWith("graph-1", { relationships: [expect.objectContaining({ parent_node_id: "input_signal", child_node_id: "outcome", coefficient_parameters: [{ id: "coefficient", value: 0.25 }] })], removed_relationship_ids: [], retired_node_ids: [], target_node_id: "outcome" });
     expect(await screen.findByLabelText("Structural proposal review")).toHaveTextContent("Binding hash: structural-hash");
     await user.click(screen.getByRole("button", { name: "Run structural in-memory comparison" }));
     expect(shadowStructuralProposal).toHaveBeenCalledWith("graph-1", "structural-1", { target_node_id: "outcome" });
@@ -268,7 +268,7 @@ describe("ShadowComparison", () => {
     await user.click(screen.getByRole("button", { name: "Exclude selected dependency in candidate" }));
     await user.click(screen.getByRole("button", { name: "Create structural proposal for review" }));
 
-    expect(createStructuralProposal).toHaveBeenCalledWith("graph-1", { relationships: [], removed_relationship_ids: ["input-to-outcome"] });
+    expect(createStructuralProposal).toHaveBeenCalledWith("graph-1", { relationships: [], removed_relationship_ids: ["input-to-outcome"], retired_node_ids: [], target_node_id: "outcome" });
     expect(await screen.findByLabelText("Structural proposal review")).toHaveTextContent("Binding hash: remove-hash");
     await user.type(screen.getByLabelText("Structural approver identity"), "operator");
     await user.click(screen.getByLabelText("I reviewed this structural binding"));
@@ -276,6 +276,56 @@ describe("ShadowComparison", () => {
     expect(await screen.findByLabelText("Structural approval receipt")).toHaveTextContent("Approved graph version: 5");
     expect(screen.getByLabelText("Candidate relationship change set")).toHaveTextContent("No local candidate relationship-state changes staged.");
     expect(screen.queryByLabelText("Structural proposal review")).not.toBeInTheDocument();
+  });
+
+  it("turns an excluded non-target factor into a complete structural retirement proposal", async () => {
+    const user = userEvent.setup();
+    const createStructuralProposal = vi.fn(async () => ({ proposal: { id: "retire-1", graph_version: 4, binding_hash: "retire-hash", removed_relationship_ids: ["input-to-process", "process-to-outcome"], retired_node_ids: ["process_stage"] } }));
+    const shadowStructuralProposal = vi.fn(async () => ({ active_graph_mutated: false, candidate_relationship_ids: [], removed_relationship_ids: ["input-to-process", "process-to-outcome"], retired_node_ids: ["process_stage"], active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 0.1, p50: 0.1 }, limitations: [] }));
+    render(<ShadowComparison graphId="graph-1" client={{
+      getGraph: async () => ({
+        nodes: {
+          input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] },
+          process_stage: { name: "Process stage", parameters: { mu: 0 }, depends_on: ["input_signal"] },
+          outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["process_stage"] },
+        },
+        relationships: {
+          "input-to-process": { id: "input-to-process", parent_node_id: "input_signal", child_node_id: "process_stage", state: "active" },
+          "process-to-outcome": { id: "process-to-outcome", parent_node_id: "process_stage", child_node_id: "outcome", state: "active" },
+        },
+      }),
+      shadowSimulate: async () => ({}), createStructuralProposal, shadowStructuralProposal,
+    } as never} />);
+    await screen.findByLabelText("Candidate factor");
+    await user.selectOptions(screen.getByLabelText("Candidate factor"), "process_stage");
+    await user.click(screen.getByRole("button", { name: "Exclude selected factor in candidate" }));
+    await user.click(screen.getByRole("button", { name: "Create structural proposal for review" }));
+
+    expect(createStructuralProposal).toHaveBeenCalledWith("graph-1", {
+      relationships: [], removed_relationship_ids: ["input-to-process", "process-to-outcome"], retired_node_ids: ["process_stage"], target_node_id: "outcome",
+    });
+    await user.click(screen.getByRole("button", { name: "Run structural in-memory comparison" }));
+    expect(await screen.findByLabelText("Structural comparison receipt")).toHaveTextContent("Retired nodes: process_stage.");
+  });
+
+  it("does not create a retirement when an incident dependency lacks persisted relationship metadata", async () => {
+    const user = userEvent.setup();
+    const createStructuralProposal = vi.fn();
+    render(<ShadowComparison graphId="graph-1" client={{
+      getGraph: async () => ({ nodes: {
+        input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] },
+        process_stage: { name: "Process stage", parameters: { mu: 0 }, depends_on: ["input_signal"] },
+        outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["process_stage"] },
+      } }),
+      shadowSimulate: async () => ({}), createStructuralProposal,
+    } as never} />);
+    await screen.findByLabelText("Candidate factor");
+    await user.selectOptions(screen.getByLabelText("Candidate factor"), "process_stage");
+    await user.click(screen.getByRole("button", { name: "Exclude selected factor in candidate" }));
+    await user.click(screen.getByRole("button", { name: "Create structural proposal for review" }));
+
+    expect(createStructuralProposal).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("needs a non-target node with complete persisted incident relationship metadata");
   });
 
   it("loads a matching-base persisted revision back into local staging without activation", async () => {

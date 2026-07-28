@@ -4,6 +4,8 @@ from fastapi.testclient import TestClient
 
 from lns_server.app import create_app
 from lns_server.settings import Settings
+from lns_kernel.contracts import RelationshipContract
+from lns_kernel.seed import build_seed_graph
 
 
 def _settings(tmp_path: Path) -> Settings:
@@ -240,6 +242,44 @@ def test_project_bound_structural_approval_syncs_the_persisted_project_lifecycle
     assert approved.json()["project"]["active_graph_version"] == graph["graph_version"] + 1
     assert restored.json()["stage"] == "decide"
     assert restored.json()["active_graph_version"] == graph["graph_version"] + 1
+
+
+def test_project_bound_structural_retirement_syncs_the_persisted_project_lifecycle(tmp_path: Path):
+    settings = _settings(tmp_path)
+    graph = build_seed_graph()
+    input_to_process = RelationshipContract.model_validate({
+        "id": "input-to-process", "parent_node_id": "input_signal", "child_node_id": "process_stage",
+        "relationship_type": "scenario_assumption", "transform": "affine", "source_unit": "index", "target_unit": "index",
+        "sign": "positive", "lag_periods": 0, "coefficient_units": "1", "coefficient_parameters": [{"id": "coefficient", "value": 1.2}], "state": "active",
+    })
+    process_to_outcome = RelationshipContract.model_validate({
+        "id": "process-to-outcome", "parent_node_id": "process_stage", "child_node_id": "outcome",
+        "relationship_type": "scenario_assumption", "transform": "affine", "source_unit": "index", "target_unit": "index",
+        "sign": "positive", "lag_periods": 0, "coefficient_units": "1", "coefficient_parameters": [{"id": "coefficient", "value": 0.8}], "state": "active",
+    })
+    graph.relationships = {input_to_process.id: input_to_process, process_to_outcome.id: process_to_outcome}
+    graph.nodes["process_stage"] = graph.nodes["process_stage"].model_copy(update={"relationship_ids": [input_to_process.id]})
+    graph.nodes["outcome"] = graph.nodes["outcome"].model_copy(update={"relationship_ids": [process_to_outcome.id]})
+    with TestClient(create_app(settings)) as client:
+        client.app.state.store.create_graph(graph)
+        project = client.post("/projects", json={
+            **_project_payload(), "graph_id": graph.id, "active_graph_version": graph.graph_version, "stage": "refine",
+        })
+        proposal = client.post(
+            f"/authoring/graphs/{graph.id}/structural-proposals",
+            json={"relationships": [], "removed_relationship_ids": [input_to_process.id, process_to_outcome.id], "retired_node_ids": ["process_stage"], "target_node_id": "outcome"},
+        ).json()["proposal"]
+        approved = client.post(
+            f"/projects/nd-project/structural-proposals/{proposal['id']}/approve",
+            json={"approved_by": "operator", "binding_hash": proposal["binding_hash"]},
+        )
+        restored = client.get("/projects/nd-project")
+
+    assert project.status_code == 200, project.text
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["graph"]["nodes"]["process_stage"]["status"] == "retired"
+    assert approved.json()["project"]["stage"] == "decide"
+    assert restored.json()["active_graph_version"] == graph.graph_version + 1
 
 
 def test_project_bound_structural_approval_rejects_a_stale_project_version_without_mutation(tmp_path: Path):

@@ -325,6 +325,7 @@ class GraphStore:
         expected_graph_version: int,
         relationships: tuple[RelationshipContract, ...],
         removed_relationship_ids: tuple[str, ...] = (),
+        retired_node_ids: tuple[str, ...] = (),
         actor: str,
         reason: str,
     ) -> tuple[Graph, list[UpdateEvent]]:
@@ -368,6 +369,25 @@ class GraphStore:
                 id=str(uuid.uuid4()), graph_id=graph_id, node_id=child.id,
                 old_version=child.version, new_version=new_child.version, reason=reason, actor=actor,
                 diff_summary={"relationship_removed": relationship_id, "depends_on_before": child.depends_on, "depends_on_after": new_child.depends_on},
+            ))
+        for node_id in retired_node_ids:
+            node = trial.nodes.get(node_id)
+            if node is None:
+                raise ValidationError(f"structural proposal retirement references missing node {node_id}")
+            if node.depends_on or node.relationship_ids:
+                raise ValidationError(f"structural proposal retirement {node_id} left unresolved dependencies")
+            new_node = node.model_copy(update={
+                "status": NodeStatus.RETIRED,
+                "version": node.version + 1,
+                "last_updated_by": actor,
+                "updated_at": utcnow(),
+            })
+            trial.nodes[node_id] = new_node
+            changed_node_ids.add(node_id)
+            events.append(UpdateEvent(
+                id=str(uuid.uuid4()), graph_id=graph_id, node_id=node_id,
+                old_version=node.version, new_version=new_node.version, reason=reason, actor=actor,
+                diff_summary={"status_before": node.status.value, "status_after": NodeStatus.RETIRED.value},
             ))
         for relationship in relationships:
             if relationship.state != "proposed":

@@ -2,6 +2,8 @@ from fastapi.testclient import TestClient
 
 from lns_server.app import create_app
 from lns_server.settings import Settings
+from lns_kernel.contracts import RelationshipContract
+from lns_kernel.seed import build_seed_graph
 
 
 def structural_relationship() -> dict[str, object]:
@@ -19,6 +21,22 @@ def structural_relationship() -> dict[str, object]:
         "coefficient_parameters": [{"id": "coefficient", "value": 0.2}],
         "state": "proposed",
     }
+
+
+def persisted_seed_graph_with_relationship_metadata():
+    graph = build_seed_graph()
+    input_to_process = RelationshipContract.model_validate({
+        **structural_relationship(), "id": "input-to-process", "child_node_id": "process_stage",
+        "coefficient_parameters": [{"id": "coefficient", "value": 1.2}], "state": "active",
+    })
+    process_to_outcome = RelationshipContract.model_validate({
+        **structural_relationship(), "id": "process-to-outcome", "parent_node_id": "process_stage",
+        "coefficient_parameters": [{"id": "coefficient", "value": 0.8}], "state": "active",
+    })
+    graph.relationships = {input_to_process.id: input_to_process, process_to_outcome.id: process_to_outcome}
+    graph.nodes["process_stage"] = graph.nodes["process_stage"].model_copy(update={"relationship_ids": ["input-to-process"]})
+    graph.nodes["outcome"] = graph.nodes["outcome"].model_copy(update={"relationship_ids": ["process-to-outcome"]})
+    return graph
 
 
 def test_structural_proposal_validates_exact_active_graph_without_mutating_it(tmp_path):
@@ -163,3 +181,50 @@ def test_structural_proposal_can_remove_an_exact_active_relationship_without_mut
     assert approved.status_code == 200, approved.text
     assert approved.json()["graph"]["nodes"]["outcome"]["depends_on"] == ["process_stage"]
     assert "input-to-outcome-proposal" not in approved.json()["graph"]["relationships"]
+
+
+def test_structural_node_retirement_requires_complete_incident_edges_and_retires_atomically(tmp_path):
+    app = create_app(Settings(db_path=str(tmp_path / "graph.db")))
+    with TestClient(app) as client:
+        graph = persisted_seed_graph_with_relationship_metadata()
+        app.state.store.create_graph(graph)
+        incomplete = client.post(
+            f"/authoring/graphs/{graph.id}/structural-proposals",
+            json={"relationships": [], "removed_relationship_ids": ["process-to-outcome"], "retired_node_ids": ["process_stage"], "target_node_id": "outcome"},
+        )
+        reconnecting = client.post(
+            f"/authoring/graphs/{graph.id}/structural-proposals",
+            json={"relationships": [{**structural_relationship(), "id": "process-to-outcome-proposal", "parent_node_id": "process_stage", "child_node_id": "outcome"}], "removed_relationship_ids": ["input-to-process", "process-to-outcome"], "retired_node_ids": ["process_stage"], "target_node_id": "outcome"},
+        )
+        proposal_response = client.post(
+            f"/authoring/graphs/{graph.id}/structural-proposals",
+            json={"relationships": [], "removed_relationship_ids": ["input-to-process", "process-to-outcome"], "retired_node_ids": ["process_stage"], "target_node_id": "outcome"},
+        )
+        assert proposal_response.status_code == 200, proposal_response.text
+        proposal = proposal_response.json()["proposal"]
+        unchanged = client.get(f"/graphs/{graph.id}").json()
+        comparison = client.post(
+            f"/authoring/graphs/{graph.id}/structural-proposals/{proposal['id']}/shadow-simulate",
+            json={"target_node_id": "outcome", "seed": 42, "n_samples": 1000},
+        )
+        approved = client.post(
+            f"/authoring/graphs/{graph.id}/structural-proposals/{proposal['id']}/approve",
+            json={"approved_by": "operator", "binding_hash": proposal["binding_hash"]},
+        )
+
+    assert incomplete.status_code == 422
+    assert "must remove every incident" in incomplete.json()["detail"]
+    assert reconnecting.status_code == 422
+    assert "cannot add a relationship incident to a retired node" in reconnecting.json()["detail"]
+    assert proposal_response.status_code == 200, proposal_response.text
+    assert proposal["retired_node_ids"] == ["process_stage"]
+    assert unchanged["nodes"]["process_stage"]["status"] == "active"
+    assert comparison.status_code == 200, comparison.text
+    assert comparison.json()["retired_node_ids"] == ["process_stage"]
+    assert comparison.json()["active_graph_mutated"] is False
+    assert approved.status_code == 200, approved.text
+    retired = approved.json()["graph"]
+    assert retired["nodes"]["process_stage"]["status"] == "retired"
+    assert retired["nodes"]["process_stage"]["depends_on"] == []
+    assert retired["nodes"]["outcome"]["depends_on"] == []
+    assert retired["relationships"] == {}

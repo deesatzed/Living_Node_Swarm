@@ -136,6 +136,8 @@ export interface CandidateApprovalInput {
 export interface StructuralProposalInput {
   relationships?: JsonObject[];
   removed_relationship_ids?: string[];
+  retired_node_ids?: string[];
+  target_node_id?: string;
 }
 
 export interface StructuralShadowSimulationInput {

@@ -105,6 +105,46 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByText("Draft draft-1 is ready for proposed changes.")).toBeVisible();
 });
 
+test("canonical Edit retires an isolated non-target factor through a reviewed structural proposal", async ({ page }) => {
+  const project = { id: "retire-1", name: "Retirement fixture", target_id: "target-1", graph_id: "graph-1", active_graph_version: 4, stage: "monitor", evidence_classification: "fixture_unverified" };
+  await page.route("**/api/projects", (route) => route.fulfill({ json: { projects: [project] } }));
+  await page.route("**/api/targets/target-1", (route) => route.fulfill({ json: { question: "What will neodymium cost?", forecast_origin: "2026-07-28T00:00:00Z", resolution_at: "2027-07-28T00:00:00Z" } }));
+  await page.route("**/api/projects/retire-1/monitoring", (route) => route.fulfill({ json: { config: { cadence: "weekly", freshness_threshold_days: 7, mode: "fixture" }, events: [{ id: "retire-source", severity: "warning", message: "Fixture source is stale", evidence_classification: "fixture_unverified" }] } }));
+  await page.route("**/api/projects/retire-1/drafts", (route) => route.fulfill({ json: { id: "draft-1", base_graph_version: 4 } }));
+  await page.route("**/api/projects/retire-1/revisions", (route) => route.fulfill({ json: { drafts: [] } }));
+  await page.route("**/api/projects/retire-1/candidate-revisions", (route) => route.fulfill({ json: { candidate_revisions: [] } }));
+  await page.route("**/api/projects/retire-1", (route) => route.fulfill({ json: project }));
+  await page.route("**/api/graphs/graph-1", (route) => route.fulfill({ json: { nodes: {
+    input_signal: { id: "input_signal", name: "Input signal", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: [] },
+    process_stage: { id: "process_stage", name: "Process stage", distribution_family: "Normal", parameters: { mu: 0, sigma: 0.3 }, depends_on: ["input_signal"] },
+    outcome: { id: "outcome", name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["process_stage"] },
+  }, relationships: {
+    "input-to-process": { id: "input-to-process", parent_node_id: "input_signal", child_node_id: "process_stage", state: "active" },
+    "process-to-outcome": { id: "process-to-outcome", parent_node_id: "process_stage", child_node_id: "outcome", state: "active" },
+  } } }));
+  await page.route("**/api/authoring/graphs/graph-1/structural-proposals", (route) => {
+    const body = route.request().postDataJSON() as { removed_relationship_ids?: string[]; retired_node_ids?: string[]; target_node_id?: string };
+    expect(body).toEqual({ relationships: [], removed_relationship_ids: ["input-to-process", "process-to-outcome"], retired_node_ids: ["process_stage"], target_node_id: "outcome" });
+    return route.fulfill({ json: { proposal: { id: "retire-structural-1", graph_version: 4, binding_hash: "retire-hash", candidate_relationship_ids: [], removed_relationship_ids: body.removed_relationship_ids, retired_node_ids: body.retired_node_ids } } });
+  });
+  await page.route("**/api/authoring/graphs/graph-1/structural-proposals/retire-structural-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, candidate_relationship_ids: [], removed_relationship_ids: ["input-to-process", "process-to-outcome"], retired_node_ids: ["process_stage"], active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 0.1, p50: 0.1 }, limitations: ["Fixture structural impact only."] } }));
+  await page.route("**/api/projects/retire-1/structural-proposals/retire-structural-1/approve", (route) => route.fulfill({ json: { approval_receipt: { id: "retire-receipt", binding_hash: "retire-hash" }, graph: { graph_version: 5 }, project: { ...project, stage: "decide", active_graph_version: 5 } } }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Monitor" }).click();
+  await page.getByRole("button", { name: "Inspect event" }).click();
+  await page.getByRole("button", { name: "Branch to edit" }).click();
+  await page.getByLabel("Candidate factor").selectOption("process_stage");
+  await page.getByRole("button", { name: "Exclude selected factor in candidate" }).click();
+  await page.getByRole("button", { name: "Create structural proposal for review" }).click();
+  await page.getByRole("button", { name: "Run structural in-memory comparison" }).click();
+  await expect(page.getByLabel("Structural comparison receipt")).toContainText("Retired nodes: process_stage.");
+  await expect(page.getByLabel("Structural comparison receipt")).toContainText("Active graph unchanged: yes.");
+  await page.getByLabel("Structural approver identity").fill("fixture-operator");
+  await page.getByLabel("I reviewed this structural binding").check();
+  await page.getByRole("button", { name: "Approve structural proposal" }).click();
+  await expect(page.getByLabel("Structural approval receipt")).toContainText("Approval receipt: retire-receipt");
+});
+
 test("canonical Run renders an authoritative successful simulation receipt without editing structure", async ({ page }) => {
   const project = { id: "run-1", name: "Approved neodymium model", target_id: "target-1", graph_id: "graph-1", active_graph_version: 4, stage: "simulate", evidence_classification: "local_verified" };
   const runResponse = {

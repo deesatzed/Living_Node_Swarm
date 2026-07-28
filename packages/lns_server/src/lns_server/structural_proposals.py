@@ -22,6 +22,8 @@ class StructuralProposalBody(BaseModel):
 
     relationships: tuple[RelationshipContract, ...] = ()
     removed_relationship_ids: tuple[str, ...] = ()
+    retired_node_ids: tuple[str, ...] = ()
+    target_node_id: str | None = None
 
     @field_validator("relationships")
     @classmethod
@@ -36,12 +38,16 @@ class StructuralProposalBody(BaseModel):
 
     @model_validator(mode="after")
     def require_a_structural_delta(self) -> "StructuralProposalBody":
-        if not self.relationships and not self.removed_relationship_ids:
-            raise ValueError("structural proposal requires a relationship addition or removal")
+        if not self.relationships and not self.removed_relationship_ids and not self.retired_node_ids:
+            raise ValueError("structural proposal requires a relationship addition, removal, or node retirement")
         if len(set(self.removed_relationship_ids)) != len(self.removed_relationship_ids):
             raise ValueError("structural proposal removal ids must be unique")
         if set(self.removed_relationship_ids) & {relationship.id for relationship in self.relationships}:
             raise ValueError("structural proposal cannot add and remove the same relationship id")
+        if len(set(self.retired_node_ids)) != len(self.retired_node_ids):
+            raise ValueError("structural proposal retired node ids must be unique")
+        if self.retired_node_ids and not self.target_node_id:
+            raise ValueError("structural node retirement requires target_node_id")
         return self
 
 
@@ -53,6 +59,8 @@ class StructuralGraphProposal(BaseModel):
     graph_version: int = Field(ge=1)
     relationships: tuple[RelationshipContract, ...]
     removed_relationship_ids: tuple[str, ...] = ()
+    retired_node_ids: tuple[str, ...] = ()
+    target_node_id: str | None = None
     candidate_relationship_ids: tuple[str, ...]
     dependence_warnings: tuple[dict[str, str], ...] = ()
     created_at: datetime
@@ -110,12 +118,51 @@ def _remove_relationship_from_trial(trial: Graph, relationship_id: str) -> None:
 
 
 def materialize_structural_trial(
-    graph: Graph, relationships: tuple[RelationshipContract, ...], removed_relationship_ids: tuple[str, ...] = ()
+    graph: Graph, relationships: tuple[RelationshipContract, ...], removed_relationship_ids: tuple[str, ...] = (),
+    retired_node_ids: tuple[str, ...] = (), target_node_id: str | None = None,
 ) -> Graph:
     """Return a validated in-memory graph with exact proposed relationship changes active."""
     trial = graph.model_copy(deep=True)
+    if target_node_id in retired_node_ids:
+        raise ValidationError("structural proposal cannot retire target node")
+    retired_ids = set(retired_node_ids)
+    if any(
+        relationship.parent_node_id in retired_ids or relationship.child_node_id in retired_ids
+        for relationship in relationships
+    ):
+        raise ValidationError("structural proposal cannot add a relationship incident to a retired node")
+    removal_ids = set(removed_relationship_ids)
+    active_relationships = tuple(graph.relationships.values())
+    for node_id in retired_node_ids:
+        node = graph.nodes.get(node_id)
+        if node is None:
+            raise ValidationError(f"structural proposal retirement references missing node {node_id}")
+        incident_ids = {
+            relationship.id for relationship in active_relationships
+            if relationship.parent_node_id == node_id or relationship.child_node_id == node_id
+        }
+        incident_edges = {
+            (relationship.parent_node_id, relationship.child_node_id)
+            for relationship in active_relationships
+            if relationship.id in incident_ids
+        }
+        graph_edges = {
+            (parent, child.id)
+            for child in graph.nodes.values()
+            for parent in child.depends_on
+            if parent == node_id or child.id == node_id
+        }
+        if graph_edges != incident_edges:
+            raise ValidationError(f"structural proposal retirement {node_id} requires complete persisted incident relationship metadata")
+        if not incident_ids.issubset(removal_ids):
+            raise ValidationError(f"structural proposal retirement {node_id} must remove every incident active relationship")
     for relationship_id in removed_relationship_ids:
         _remove_relationship_from_trial(trial, relationship_id)
+    for node_id in retired_node_ids:
+        node = trial.nodes[node_id]
+        if node.depends_on or node.relationship_ids:
+            raise ValidationError(f"structural proposal retirement {node_id} left unresolved dependencies")
+        trial.nodes[node_id] = node.model_copy(update={"status": "retired"})
     for relationship in relationships:
         if relationship.transform == "affine" and not relationship.coefficient_parameters:
             raise ValidationError(
@@ -165,13 +212,17 @@ def materialize_structural_trial(
 def make_structural_proposal(graph: Graph, body: StructuralProposalBody) -> StructuralGraphProposal:
     """Validate a structural delta against a copy of the exact active graph."""
 
-    trial = materialize_structural_trial(graph, body.relationships, body.removed_relationship_ids)
+    trial = materialize_structural_trial(
+        graph, body.relationships, body.removed_relationship_ids, body.retired_node_ids, body.target_node_id,
+    )
     return StructuralGraphProposal(
         id=str(uuid.uuid4()),
         graph_id=graph.id,
         graph_version=graph.graph_version,
         relationships=body.relationships,
         removed_relationship_ids=body.removed_relationship_ids,
+        retired_node_ids=body.retired_node_ids,
+        target_node_id=body.target_node_id,
         candidate_relationship_ids=tuple(relationship.id for relationship in body.relationships),
         dependence_warnings=tuple(asdict(warning) for warning in detect_dependence_warnings(trial.relationships.values())),
         created_at=datetime.now(timezone.utc),
