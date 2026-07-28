@@ -41,15 +41,15 @@ describe("ShadowComparison", () => {
   it("requires an exact saved proposal and operator identity before approval", async () => {
     const user = userEvent.setup();
     const createCandidateProposal = vi.fn(async () => ({ proposal: { id: "proposal-1", graph_version: 4, binding_hash: "binding-123" } }));
-    const approveCandidateProposal = vi.fn(async () => ({ approval_receipt: { id: "receipt-1", binding_hash: "binding-123" }, graph: { graph_version: 5 } }));
-    render(<ShadowComparison graphId="graph-1" client={{
+    const approveProjectCandidateProposal = vi.fn(async () => ({ approval_receipt: { id: "receipt-1", binding_hash: "binding-123" }, graph: { graph_version: 5 }, project: { stage: "decide", active_graph_version: 5 } }));
+    render(<ShadowComparison graphId="graph-1" projectId="project-1" client={{
       getGraph: async () => ({ nodes: {
         input_signal: { id: "input_signal", name: "Input signal", parameters: { mu: 0 }, depends_on: [] },
         outcome: { id: "outcome", name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] },
       }}),
       shadowSimulate: async () => ({ active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 5, p50: 5 } }),
       createCandidateProposal,
-      approveCandidateProposal,
+      approveProjectCandidateProposal,
     } as never} />);
 
     await screen.findByLabelText("Candidate value");
@@ -64,8 +64,9 @@ describe("ShadowComparison", () => {
     await user.click(screen.getByLabelText("I reviewed this exact binding"));
     await user.click(screen.getByRole("button", { name: "Approve candidate version" }));
 
-    expect(approveCandidateProposal).toHaveBeenCalledWith("graph-1", "proposal-1", { approved_by: "operator", binding_hash: "binding-123" });
+    expect(approveProjectCandidateProposal).toHaveBeenCalledWith("project-1", "proposal-1", { approved_by: "operator", binding_hash: "binding-123" });
     expect(await screen.findByText("Approval receipt: receipt-1")).toBeVisible();
     expect(screen.getByText("Approved graph version: 5")).toBeVisible();
+    expect(screen.getByText("Project lifecycle: decide · active graph version 5")).toBeVisible();
   });
 });

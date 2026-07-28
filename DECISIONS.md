@@ -36,6 +36,7 @@ This file records product and architecture decisions that future agents must pre
 | D-026 | 2026-07-28 | Canonical browser-flow verification uses Playwright with localhost API interception and fixed desktop viewports. | Accepted | The GUI goal requires browser/viewport evidence. Playwright is Apache-2.0; tests use fixture API responses only and make no live research/provider requests. |
 | D-027 | 2026-07-28 | Existing-model comparison uses the existing shadow-simulation endpoint with a selected in-memory parameter override before any persistent candidate-edit UI exists. | Accepted | It exposes a real active-versus-candidate result while preserving the no-silent-mutation rule; the UI must label it as a structural comparison, not an approved revision or accuracy improvement. |
 | D-028 | 2026-07-28 | The approval UI may submit only a server-issued proposal binding hash after an explicit named human acknowledgment. | Accepted | The UI must not synthesize a hash or offer approval from browser-local state; the server validates the version-bound proposal before applying it. |
+| D-029 | 2026-07-28 | Project-scoped approval updates the workspace lifecycle/version only after the graph store accepts the bound proposal. | Accepted | Graph and workspace metadata are separate stores, so the UI must not claim a cross-store atomic transaction. The project endpoint validates project/graph/proposal alignment and returns the confirmed project record after the graph approval. |
 
 ## Initial Default Decisions
 

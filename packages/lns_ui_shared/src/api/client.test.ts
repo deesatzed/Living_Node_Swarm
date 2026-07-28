@@ -122,6 +122,19 @@ describe("workspace API client", () => {
     await expect(client.createDraft("project-1", { id: "draft-1", base_graph_version: 4 })).resolves.toMatchObject({ id: "draft-1" });
   });
 
+  it("approves a candidate through the project-scoped lifecycle endpoint", async () => {
+    const client = createWorkspaceClient({
+      baseUrl: "http://localhost:8787",
+      fetch: async (input, init) => {
+        expect(input).toBe("http://localhost:8787/projects/project-1/candidate-proposals/proposal-1/approve");
+        expect(init?.method).toBe("POST");
+        return new Response(JSON.stringify({ project: { stage: "decide", active_graph_version: 5 } }));
+      },
+    });
+
+    await expect(client.approveProjectCandidateProposal("project-1", "proposal-1", { approved_by: "operator", binding_hash: "binding-123" })).resolves.toMatchObject({ project: { stage: "decide" } });
+  });
+
   it("lists persisted version-bound drafts for the selected project", async () => {
     const client = createWorkspaceClient({
       baseUrl: "http://localhost:8787",
@@ -174,6 +187,7 @@ describe("workspace API client", () => {
     expect(Object.keys(client).sort()).toEqual([
       "acknowledgeMonitoringEvent",
       "approveCandidateProposal",
+      "approveProjectCandidateProposal",
       "createCandidateProposal",
       "createDraft",
       "createFixtureCandidateProposal",

@@ -16,6 +16,7 @@ export interface ExistingProjectClient extends RunModelClient, MonitoringClient,
   shadowSimulate?: ShadowComparisonClient["shadowSimulate"];
   createCandidateProposal?: ShadowComparisonClient["createCandidateProposal"];
   approveCandidateProposal?: ShadowComparisonClient["approveCandidateProposal"];
+  approveProjectCandidateProposal?: ShadowComparisonClient["approveProjectCandidateProposal"];
   patchProject?(projectId: string, patch: JsonObject): Promise<JsonObject>;
 }
 
@@ -74,7 +75,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
     {mode === "run" && typeof project.graph_id !== "string" && <p role="alert">This project has no approved graph to run yet.</p>}
     {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} onBranchToEdit={onBranchToEdit} />}
     {mode === "edit" && <EditModel projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : null} client={client} />}
-    {mode === "edit" && typeof project.graph_id === "string" && client.getGraph && client.shadowSimulate && <ShadowComparison graphId={project.graph_id} client={{ getGraph: client.getGraph, shadowSimulate: client.shadowSimulate, createCandidateProposal: client.createCandidateProposal, approveCandidateProposal: client.approveCandidateProposal }} />}
+    {mode === "edit" && typeof project.graph_id === "string" && client.getGraph && client.shadowSimulate && <ShadowComparison graphId={project.graph_id} projectId={projectId} client={{ getGraph: client.getGraph, shadowSimulate: client.shadowSimulate, createCandidateProposal: client.createCandidateProposal, approveCandidateProposal: client.approveCandidateProposal, approveProjectCandidateProposal: client.approveProjectCandidateProposal }} />}
     <button onClick={onBack}>Back to projects</button>
   </WorkspaceShell>;
 }

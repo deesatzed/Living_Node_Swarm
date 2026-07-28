@@ -111,3 +111,35 @@ def test_workspace_scenarios_do_not_mutate_the_active_graph(tmp_path: Path):
     assert restored.status_code == 200, restored.text
     assert restored.json()["graph_version"] == graph["graph_version"]
     assert restored.json()["nodes"] == graph["nodes"]
+
+
+def test_project_bound_approval_syncs_the_persisted_project_lifecycle(tmp_path: Path):
+    settings = _settings(tmp_path)
+    with TestClient(create_app(settings)) as client:
+        graph = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        project = client.post(
+            "/projects",
+            json={
+                **_project_payload(),
+                "graph_id": graph["id"],
+                "active_graph_version": graph["graph_version"],
+                "stage": "refine",
+            },
+        )
+        proposal = client.post(
+            f"/authoring/graphs/{graph['id']}/candidate-proposals",
+            json={"candidate_parameter_overrides": {"input_signal": {"mu": 5.0}}},
+        ).json()["proposal"]
+        approved = client.post(
+            f"/projects/nd-project/candidate-proposals/{proposal['id']}/approve",
+            json={"approved_by": "operator", "binding_hash": proposal["binding_hash"]},
+        )
+        restored = client.get("/projects/nd-project")
+
+    assert project.status_code == 200, project.text
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["graph"]["graph_version"] == graph["graph_version"] + 1
+    assert approved.json()["project"]["stage"] == "decide"
+    assert approved.json()["project"]["active_graph_version"] == graph["graph_version"] + 1
+    assert restored.json()["stage"] == "decide"
+    assert restored.json()["active_graph_version"] == graph["graph_version"] + 1

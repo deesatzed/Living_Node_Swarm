@@ -457,10 +457,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.evidence_store.save_candidate_approval_proposal(proposal)
         return {"proposal": proposal.response_payload()}
 
-    @app.post("/authoring/graphs/{graph_id}/candidate-proposals/{proposal_id}/approve")
-    def approve_candidate_proposal(
-        graph_id: str, proposal_id: str, body: ApproveCandidateBody
-    ) -> dict[str, Any]:
+    def apply_candidate_approval(graph_id: str, proposal_id: str, body: ApproveCandidateBody) -> tuple[Any, Any]:
         proposal = app.state.evidence_store.get_candidate_approval_proposal(proposal_id)
         if proposal is None or proposal.graph_id != graph_id:
             raise HTTPException(404, "candidate proposal not found")
@@ -477,9 +474,39 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(409, str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from exc
+        return receipt, graph
+
+    @app.post("/authoring/graphs/{graph_id}/candidate-proposals/{proposal_id}/approve")
+    def approve_candidate_proposal(
+        graph_id: str, proposal_id: str, body: ApproveCandidateBody
+    ) -> dict[str, Any]:
+        receipt, graph = apply_candidate_approval(graph_id, proposal_id, body)
         return {
             "approval_receipt": json.loads(receipt.model_dump_json()),
             "graph": json.loads(graph.model_dump_json()),
+        }
+
+    @app.post("/projects/{project_id}/candidate-proposals/{proposal_id}/approve")
+    def approve_project_candidate_proposal(
+        project_id: str, proposal_id: str, body: ApproveCandidateBody
+    ) -> dict[str, Any]:
+        project = require_project(project_id)
+        if project.graph_id is None:
+            raise HTTPException(409, "project has no approved graph")
+        proposal = app.state.evidence_store.get_candidate_approval_proposal(proposal_id)
+        if proposal is None or proposal.graph_id != project.graph_id:
+            raise HTTPException(404, "candidate proposal not found for project graph")
+        if project.active_graph_version != proposal.graph_version:
+            raise HTTPException(409, "project active graph version does not match candidate proposal")
+        receipt, graph = apply_candidate_approval(project.graph_id, proposal_id, body)
+        updated = app.state.workspace_store.update_project(
+            project_id,
+            WorkspaceProjectPatch(stage="decide", active_graph_version=graph.graph_version),
+        )
+        return {
+            "approval_receipt": json.loads(receipt.model_dump_json()),
+            "graph": json.loads(graph.model_dump_json()),
+            "project": updated.model_dump(mode="json"),
         }
 
     @app.post("/graphs")

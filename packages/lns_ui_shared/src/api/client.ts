@@ -68,6 +68,11 @@ export interface WorkspaceClient {
     proposalId: string,
     body: CandidateApprovalInput,
   ): Promise<JsonObject>;
+  approveProjectCandidateProposal(
+    projectId: string,
+    proposalId: string,
+    body: CandidateApprovalInput,
+  ): Promise<JsonObject>;
   getGraph(graphId: string): Promise<JsonObject>;
   runSimulation(graphId: string): Promise<JsonObject>;
   getSimulationStatus(graphId: string): Promise<JsonObject>;
@@ -182,6 +187,11 @@ export function createWorkspaceClient({
     approveCandidateProposal: (graphId, proposalId, body) =>
       request<JsonObject>(
         `/authoring/graphs/${encodeURIComponent(graphId)}/candidate-proposals/${encodeURIComponent(proposalId)}/approve`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    approveProjectCandidateProposal: (projectId, proposalId, body) =>
+      request<JsonObject>(
+        `/projects/${encodeURIComponent(projectId)}/candidate-proposals/${encodeURIComponent(proposalId)}/approve`,
         { method: "POST", body: JSON.stringify(body) },
       ),
     getGraph: (graphId) => request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}`, { method: "GET" }),
