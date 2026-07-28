@@ -145,3 +145,7 @@ The shared distribution inspector now receives units and evidence classification
 New weighted-mixture configurations require a nonblank operator rationale. The rationale persists with the version-bound members and contributes to the server-issued binding hash that approval verifies. Legacy records retain a `Not recorded` read fallback, but cannot be newly created without an explicit rationale.
 
 This records why the mixture was requested without treating either member as more accurate, activating an ensemble, or mutating an approved graph.
+
+# 2026-07-28 — Gas nodes reuse shared distribution inspection without inventing missing metadata
+
+The Gas preset supplies its selected node family, canonical parameters, and returned simulation statistics to the shared distribution inspector. It must render unsupported adapter metadata as `Not recorded` rather than manufacture units, source provenance, or an as-of timestamp. Preset-specific editable controls remain separate until they can use the generalized revision/approval workflow.

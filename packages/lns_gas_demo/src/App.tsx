@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { GAS_PRESET, HopGraph, WORKFLOW_STAGES, WorkspaceShell, type CandidateFactor } from "@lns/ui-shared";
+import { DistributionInspector, GAS_PRESET, HopGraph, WORKFLOW_STAGES, WorkspaceShell, type CandidateFactor } from "@lns/ui-shared";
 import { api, type Graph, type Node, type Snapshot } from "./api";
 
 function histogram(samples: number[], bins = 22): number[] {
@@ -201,6 +201,22 @@ export default function App() {
                   <em>AI rationale:</em> {selected.discovery_rationale}
                 </p>
               )}
+              <DistributionInspector
+                family={selected.distribution_family}
+                parameters={selected.parameters}
+                support="Not recorded by the Gas adapter"
+                units="Not recorded by the Gas adapter"
+                asOf="Not recorded"
+                classification={selected.tags?.includes("ai-dynamic") ? "model-inferred proposed factor" : "Not recorded"}
+                provenance={selected.discovery_rationale ? "Model-generated discovery rationale is shown above; source receipt not recorded." : "Not recorded"}
+                derived={predictive ? {
+                  mean: predictive.derived_mean ?? undefined,
+                  standardDeviation: predictive.derived_std ?? undefined,
+                  interval: predictive.quantiles.p05 !== undefined && predictive.quantiles.p50 !== undefined && predictive.quantiles.p95 !== undefined
+                    ? `P05 ${predictive.quantiles.p05.toFixed(3)} · P50 ${predictive.quantiles.p50.toFixed(3)} · P95 ${predictive.quantiles.p95.toFixed(3)} (Gas simulation receipt)`
+                    : undefined,
+                } : undefined}
+              />
               {Object.keys(paramEdit).map((k) => (
                 <label key={k}>
                   {k}
