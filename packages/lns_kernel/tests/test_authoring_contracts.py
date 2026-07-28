@@ -83,6 +83,29 @@ def test_affine_relationship_requires_coefficient_units():
         )
 
 
+def test_relationship_contract_preserves_finite_numeric_coefficient_parameters():
+    RelationshipContract = contract_type("RelationshipContract")
+    RelationshipType = contract_type("RelationshipType")
+    ParameterValue = contract_type("ParameterValue")
+
+    relationship = RelationshipContract(
+        id="rel-demand-price",
+        parent_node_id="ev_demand",
+        child_node_id="nd_price",
+        relationship_type=RelationshipType.CAUSAL_HYPOTHESIS,
+        transform="affine",
+        source_unit="vehicles/year",
+        target_unit="USD/kg",
+        sign="positive",
+        lag_periods=1,
+        lag_unit="month",
+        coefficient_units="USD*year/(kg*vehicles)",
+        coefficient_parameters=(ParameterValue(id="coefficient", value=0.25),),
+    )
+
+    assert relationship.coefficient_parameter_map == {"coefficient": 0.25}
+
+
 def graph_proposal(*, node_ids: tuple[str, ...] = ("nd_price",)):
     GraphProposal = contract_type("GraphProposal")
     return GraphProposal(

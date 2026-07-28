@@ -284,6 +284,7 @@ class RelationshipContract(ContractModel):
     lag_periods: int = Field(ge=0)
     lag_unit: str | None = None
     coefficient_units: str | None = None
+    coefficient_parameters: tuple[ParameterValue, ...] = ()
     shared_latent_parent_id: str | None = None
     state: str = "proposed"
     evidence_claim_ids: tuple[str, ...] = ()
@@ -325,6 +326,9 @@ class RelationshipContract(ContractModel):
             raise ValueError("nonzero lag_periods require lag_unit day|week|month|quarter|year|step")
         if self.lag_periods == 0 and self.lag_unit is not None:
             raise ValueError("lag_unit must be omitted when lag_periods is zero")
+        coefficient_parameter_ids = [parameter.id for parameter in self.coefficient_parameters]
+        if len(coefficient_parameter_ids) != len(set(coefficient_parameter_ids)):
+            raise ValueError("coefficient parameter ids must be unique")
         assert_relationship_units(
             transform=self.transform,
             source_unit=self.source_unit,
@@ -332,6 +336,10 @@ class RelationshipContract(ContractModel):
             coefficient_units=self.coefficient_units,
         )
         return self
+
+    @property
+    def coefficient_parameter_map(self) -> dict[str, float]:
+        return {parameter.id: parameter.value for parameter in self.coefficient_parameters}
 
 
 class GraphProposal(ContractModel):
