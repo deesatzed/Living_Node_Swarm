@@ -1,10 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
+import { createWorkspaceClient, ProjectWorkspaceRouter } from "@lns/ui-shared";
 import "./styles.css";
+
+const workspaceClient = createWorkspaceClient();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <ProjectWorkspaceRouter client={workspaceClient} />
   </React.StrictMode>
 );

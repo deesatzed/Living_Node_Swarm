@@ -33,6 +33,8 @@ export {
 export { ProjectHome, type ProjectAction, type ProjectHomeItem } from "./projects/ProjectHome";
 export { ProjectHomeLoader, type ProjectHomeClient } from "./projects/ProjectHomeLoader";
 export { NewProjectFlow, type NewProjectClient } from "./projects/NewProjectFlow";
+export { ProjectWorkspaceRouter, type ProjectWorkspaceClient } from "./projects/ProjectWorkspaceRouter";
+export { ExistingProjectWorkspace, type ExistingProjectClient, type ExistingProjectMode } from "./modes/ExistingProjectWorkspace";
 export { WorkspaceShell } from "./workspace/WorkspaceShell";
 export { FixtureWorkspace } from "./workspace/FixtureWorkspace";
 export { canMoveToStage, type StageTransitionContext } from "./workflow/guards";
