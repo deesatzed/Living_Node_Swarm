@@ -176,7 +176,7 @@ Gas dependency edges now use the shared relationship inspector in read-only form
 
 **Why:** A reviewable structural proposal must contain executable transforms and coefficients. Leaving them implicit would block validation; presenting them as learned or sourced would be false.
 
-**Consequence:** Map may create a non-active binding for a selected direct factor and show its hash. It refuses incomplete multi-hop paths, has no approval control, and cannot support any accuracy claim from the fixture.
+**Consequence:** Map may create a non-active binding for a selected direct factor or for a complete selected path whose relationship count matches the factor’s declared hop distance, and show its hash. It refuses incomplete or mismatched paths and cannot support any accuracy claim from the fixture.
 
 # 2026-07-28 — First Build approval establishes, rather than assumes, an active graph version
 
@@ -184,4 +184,4 @@ Gas dependency edges now use the shared relationship inspector in read-only form
 
 **Why:** A target-only review graph is not an approved model. Requiring the exact Map-stage approval avoids pre-populating an active version merely to make the existing project endpoint callable.
 
-**Consequence:** The Map presents the same named operator and review acknowledgment gate as other structural approvals. The exception is deliberately narrow: empty-version projects outside Map still reject, and the fixture’s result remains a scenario analysis rather than evidence-backed forecast quality.
+**Consequence:** The Map presents the same named operator and review acknowledgment gate as other structural approvals, after its exact binding has an in-memory structural comparison receipt that confirms no active-graph mutation. The exception is deliberately narrow: empty-version projects outside Map still reject, and the fixture’s result remains a scenario analysis rather than evidence-backed forecast quality.

@@ -98,6 +98,39 @@ describe("CandidateMap", () => {
     expect(screen.getByLabelText("Fixture structural review")).toHaveTextContent("No factor is active until exact named approval");
   });
 
+  it("creates an exact proposed-only structural review for a complete three-hop fixture path", async () => {
+    const user = userEvent.setup();
+    const fixture = createNeodymiumGraphFixture();
+    fixture.relationships = fixture.relationships.map((relationship) => ({
+      ...relationship,
+      id: relationship.parent_node_id === "weather_disruption" ? "weather_to_freight"
+        : relationship.parent_node_id === "freight_capacity" ? "freight_to_refining"
+          : relationship.parent_node_id === "refining_throughput" ? "refining_to_target"
+            : relationship.id,
+    }));
+    const createStructuralProposal = vi.fn(async () => ({ proposal: { id: "fixture-review-path", binding_hash: "fixture-path-hash", graph_version: 1 }, active_graph_mutated: false }));
+    render(<CandidateMap targetId="fixture-nd-retail-2027" client={{
+      createFixtureCandidateProposal: async () => fixture,
+      materializeFixtureCandidateProposal: async () => ({ graph: { id: "fixture-graph-path" }, active_graph_mutated: false }),
+      createStructuralProposal,
+    }} />);
+
+    await user.click(screen.getByRole("button", { name: "Load labeled fixture candidate map" }));
+    await user.click(await screen.findByRole("button", { name: "Materialize fixture proposal for review" }));
+    await user.selectOptions(screen.getByLabelText("Candidate factor for fixture refinement"), "weather_disruption");
+    await user.click(screen.getByRole("button", { name: "Create structural review for complete selected fixture path" }));
+
+    expect(createStructuralProposal).toHaveBeenCalledWith("fixture-graph-path", expect.objectContaining({
+      activated_node_ids: ["weather_disruption", "freight_capacity", "refining_throughput"],
+      relationships: expect.arrayContaining([
+        expect.objectContaining({ id: "weather_to_freight" }),
+        expect.objectContaining({ id: "freight_to_refining" }),
+        expect.objectContaining({ id: "refining_to_target" }),
+      ]),
+    }));
+    expect(await screen.findByLabelText("Fixture structural review")).toHaveTextContent("Binding hash: fixture-path-hash");
+  });
+
   it("requires a named explicit review before approving a fixture structural binding for its project", async () => {
     const user = userEvent.setup();
     const approveProjectStructuralProposal = vi.fn(async () => ({ approval_receipt: { id: "receipt-1" }, graph: { graph_version: 2 }, project: { stage: "decide", active_graph_version: 2 } }));

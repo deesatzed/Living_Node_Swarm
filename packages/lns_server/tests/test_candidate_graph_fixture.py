@@ -86,6 +86,27 @@ def test_materialized_fixture_can_create_a_non_active_exact_structural_review_fo
     assert unchanged["relationships"] == {}
 
 
+def test_materialized_fixture_can_create_a_non_active_exact_structural_review_for_its_three_hop_path(tmp_path: Path):
+    app = create_app(Settings(db_path=str(tmp_path / "graph.db")))
+    with TestClient(app) as client:
+        assert client.post("/targets", json=target_body()).status_code == 200
+        graph = client.post("/authoring/targets/nd-retail-2027/candidate-proposals/fixture/materialize").json()["graph"]
+        fixture = client.post("/authoring/targets/nd-retail-2027/candidate-proposals/fixture").json()
+        path_ids = ["weather_to_freight", "freight_to_refining", "refining_to_target"]
+        relationships = [next(item for item in fixture["relationships"] if item["id"] == relationship_id) for relationship_id in path_ids]
+        proposal = client.post(
+            f"/authoring/graphs/{graph['id']}/structural-proposals",
+            json={"relationships": relationships, "activated_node_ids": ["weather_disruption", "freight_capacity", "refining_throughput"]},
+        )
+        unchanged = client.get(f"/graphs/{graph['id']}").json()
+
+    assert proposal.status_code == 200, proposal.text
+    assert proposal.json()["active_graph_mutated"] is False
+    assert proposal.json()["proposal"]["candidate_relationship_ids"] == path_ids
+    assert proposal.json()["proposal"]["activated_node_ids"] == ["weather_disruption", "freight_capacity", "refining_throughput"]
+    assert unchanged["relationships"] == {}
+
+
 def test_map_stage_project_can_make_its_first_exact_structural_approval(tmp_path: Path):
     app = create_app(Settings(db_path=str(tmp_path / "graph.db")))
     with TestClient(app) as client:

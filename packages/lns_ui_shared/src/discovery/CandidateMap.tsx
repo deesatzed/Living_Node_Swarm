@@ -19,6 +19,21 @@ function copyRevision(revision: FixtureCandidateRevision): FixtureCandidateRevis
   return { factors: revision.factors.map((factor) => ({ ...factor })), relationships: revision.relationships.map((relationship) => ({ ...relationship })) };
 }
 
+function completeFixturePath(relationships: Record<string, unknown>[], startNodeId: string, targetNodeId: string, expectedHops: number): Record<string, unknown>[] | null {
+  function visit(nodeId: string, path: Record<string, unknown>[], visited: Set<string>): Record<string, unknown>[] | null {
+    if (nodeId === targetNodeId) return path.length === expectedHops ? path : null;
+    if (path.length >= expectedHops) return null;
+    for (const relationship of relationships) {
+      const childNodeId = typeof relationship.child_node_id === "string" ? relationship.child_node_id : "";
+      if (relationship.parent_node_id !== nodeId || !childNodeId || visited.has(childNodeId)) continue;
+      const result = visit(childNodeId, [...path, relationship], new Set([...visited, childNodeId]));
+      if (result) return result;
+    }
+    return null;
+  }
+  return visit(startNodeId, [], new Set([startNodeId]));
+}
+
 export function CandidateMap({ targetId, projectId, client, onMaterialized }: { targetId: string; projectId?: string; client: CandidateMapClient; onMaterialized?: (graphId: string) => Promise<void> | void }) {
   const [fixture, setFixture] = useState<CandidateGraphFixture | null>(null);
   const [revision, setRevision] = useState<FixtureCandidateRevision | null>(null);
@@ -54,6 +69,8 @@ export function CandidateMap({ targetId, projectId, client, onMaterialized }: { 
   const addedFactors = factors.filter((factor) => !baselineFactors.some((baseline) => baseline.id === factor.id));
   const baselineEdges = new Set((fixture?.relationships ?? []).map((relationship) => `${String(relationship.parent_node_id)}:${String(relationship.child_node_id)}`));
   const addedEdges = relationships.filter((relationship) => !baselineEdges.has(`${String(relationship.parent_node_id)}:${String(relationship.child_node_id)}`));
+  const targetNodeId = typeof fixture?.graph_proposal.target_node_id === "string" ? fixture.graph_proposal.target_node_id : "";
+  const selectedCompletePath = selectedFactor && targetNodeId ? completeFixturePath(relationships, selectedFactor.id, targetNodeId, selectedFactor.hop_distance) : null;
 
   function removeSelectedFactor() {
     if (!selectedFactor) return;
@@ -109,13 +126,19 @@ export function CandidateMap({ targetId, projectId, client, onMaterialized }: { 
     }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to materialize fixture candidate graph."); }
   }
-  async function createStructuralReview() {
+  async function createStructuralReview(kind: "direct" | "complete") {
     if (!fixture || !materializedGraphId || !client.createStructuralProposal) return;
     const targetNodeId = typeof fixture.graph_proposal.target_node_id === "string" ? fixture.graph_proposal.target_node_id : "";
-    const relationship = fixture.relationships.find((candidate) => candidate.parent_node_id === selectedFactorId && candidate.child_node_id === targetNodeId);
-    if (!relationship) { setError("The selected fixture factor has no direct target relationship. Review its complete multi-hop path before creating a structural proposal."); return; }
+    const proposalRelationships = kind === "complete"
+      ? selectedCompletePath
+      : (() => {
+        const relationship = fixture.relationships.find((candidate) => candidate.parent_node_id === selectedFactorId && candidate.child_node_id === targetNodeId);
+        return relationship ? [relationship] : null;
+      })();
+    if (!proposalRelationships?.length) { setError(kind === "complete" ? "The selected fixture factor has no complete target path matching its hop distance." : "The selected fixture factor has no direct target relationship. Review its complete multi-hop path before creating a structural proposal."); return; }
+    const activatedNodeIds = [...new Set(proposalRelationships.flatMap((relationship) => [relationship.parent_node_id, relationship.child_node_id]).filter((nodeId): nodeId is string => typeof nodeId === "string" && nodeId !== targetNodeId))];
     try {
-      const result = await client.createStructuralProposal(materializedGraphId, { relationships: [relationship], activated_node_ids: [selectedFactorId] });
+      const result = await client.createStructuralProposal(materializedGraphId, { relationships: proposalRelationships, activated_node_ids: activatedNodeIds });
       setStructuralReview(result.proposal ?? null);
       setStructuralApprover(""); setStructuralReviewed(false); setStructuralComparison(null); setStructuralApproval(null);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to create structural review."); }
@@ -144,7 +167,8 @@ export function CandidateMap({ targetId, projectId, client, onMaterialized }: { 
         <button onClick={removeSelectedFactor} disabled={!selectedFactor}>Remove selected fixture factor</button><button onClick={extendSelectedBranch} disabled={!selectedFactor}>Extend selected fixture branch</button><button onClick={saveFixtureRevision} disabled={!revision}>Request fixture branch revision</button><button onClick={replayFixtureRevision} disabled={!savedRevision}>Replay fixture branch revision</button>
         {client.materializeFixtureCandidateProposal && <button onClick={() => void materialize()}>Materialize fixture proposal for review</button>}
         {materializedGraphId && <p role="status">Fixture candidate graph {materializedGraphId} persisted for separate review; no factor is active.</p>}
-        {materializedGraphId && client.createStructuralProposal && <button onClick={() => void createStructuralReview()}>Create structural review for selected fixture factor</button>}
+        {materializedGraphId && client.createStructuralProposal && <button onClick={() => void createStructuralReview("direct")}>Create structural review for selected fixture factor</button>}
+        {materializedGraphId && client.createStructuralProposal && selectedCompletePath && <button onClick={() => void createStructuralReview("complete")}>Create structural review for complete selected fixture path</button>}
         {structuralReview && <section aria-label="Fixture structural review"><h3>Fixture structural review</h3><p>Proposal {structuralReview.id ?? "Not recorded"} · graph version {structuralReview.graph_version ?? "Not recorded"}</p><p>Binding hash: {structuralReview.binding_hash ?? "Not recorded"}</p><p>Fixture scenario assumptions only. No factor is active until exact named approval.</p>{projectId && client.approveProjectStructuralProposal && <>{client.shadowStructuralProposal ? <><button onClick={() => void runStructuralComparison()}>Run fixture structural in-memory comparison</button>{structuralComparison && <section aria-label="Fixture structural comparison receipt"><h4>Fixture structural comparison receipt</h4><p>Active mean: {structuralComparison.active_summary?.mean ?? "Not recorded"} · p50: {structuralComparison.active_summary?.p50 ?? "Not recorded"}</p><p>Candidate mean: {structuralComparison.candidate_summary?.mean ?? "Not recorded"} · p50: {structuralComparison.candidate_summary?.p50 ?? "Not recorded"}</p><p>Active graph unchanged: {structuralComparison.active_graph_mutated === false ? "yes" : "not confirmed"}.</p><p>A distribution shift is structural impact, not forecast accuracy.</p>{structuralComparison.limitations && <ul>{structuralComparison.limitations.map((limitation, index) => <li key={`${limitation}-${index}`}>{limitation}</li>)}</ul>}</section>}</> : <p>Structural comparison is unavailable; approval is not enabled.</p>}<label>Fixture structural approver identity<input aria-label="Fixture structural approver identity" value={structuralApprover} onChange={(event) => setStructuralApprover(event.target.value)} /></label><label><input aria-label="I reviewed this fixture structural binding" type="checkbox" checked={structuralReviewed} onChange={(event) => setStructuralReviewed(event.target.checked)} />I reviewed this fixture structural binding</label>{client.shadowStructuralProposal && <button onClick={() => void approveStructuralReview()} disabled={!structuralApprover.trim() || !structuralReviewed || structuralComparison?.active_graph_mutated !== false}>Approve fixture structural binding</button>}</>}</section>}
         {structuralApproval && <section aria-label="Fixture structural approval receipt"><h3>Fixture structural approval receipt</h3><p>Approval receipt: {structuralApproval.approval_receipt?.id ?? "Not recorded"}</p><p>Approved graph version: {structuralApproval.graph?.graph_version ?? "Not recorded"}</p><p>Project stage: {structuralApproval.project?.stage ?? "Not recorded"}</p></section>}
         {revisionStatus && <p role="status">{revisionStatus}</p>}
