@@ -343,6 +343,7 @@ class GraphStore:
         *,
         expected_graph_version: int,
         relationships: tuple[RelationshipContract, ...],
+        activated_node_ids: tuple[str, ...] = (),
         removed_relationship_ids: tuple[str, ...] = (),
         retired_node_ids: tuple[str, ...] = (),
         actor: str,
@@ -358,6 +359,25 @@ class GraphStore:
         trial = graph.model_copy(deep=True)
         events: list[UpdateEvent] = []
         changed_node_ids: set[str] = set()
+        for node_id in activated_node_ids:
+            node = trial.nodes.get(node_id)
+            if node is None:
+                raise ValidationError(f"structural proposal activation references missing node {node_id}")
+            if node.status != NodeStatus.PROPOSED:
+                raise ValidationError(f"structural proposal activation requires a proposed node: {node_id}")
+            new_node = node.model_copy(update={
+                "status": NodeStatus.ACTIVE,
+                "version": node.version + 1,
+                "last_updated_by": actor,
+                "updated_at": utcnow(),
+            })
+            trial.nodes[node_id] = new_node
+            changed_node_ids.add(node_id)
+            events.append(UpdateEvent(
+                id=str(uuid.uuid4()), graph_id=graph_id, node_id=node_id,
+                old_version=node.version, new_version=new_node.version, reason=reason, actor=actor,
+                diff_summary={"status_before": node.status.value, "status_after": NodeStatus.ACTIVE.value},
+            ))
         for relationship_id in removed_relationship_ids:
             relationship = trial.relationships.get(relationship_id)
             if relationship is None:

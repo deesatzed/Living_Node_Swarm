@@ -161,3 +161,11 @@ Gas dependency edges now use the shared relationship inspector in read-only form
 **Why:** Persisted review gives the Map a durable handoff without treating browser-session fixture state as model structure. The existing exact-binding approval paths only cover numeric overrides and separately supported relationship deltas; using either to activate an entire fixture graph would misrepresent what was reviewed and validated.
 
 **Consequence:** The fixture materialization receipt states that no active graph changed. A complete Build workflow still needs a first-class, version-bound new-node-and-relationship proposal that validates, shadow-simulates, and atomically applies the exact reviewed candidate structure.
+
+# 2026-07-28 — Proposed-node activation is part of the structural binding
+
+**Decision:** An existing proposed node may become active only through an explicit `activated_node_ids` set on a version-bound structural proposal, never as a side effect of persisting, viewing, or simulating a candidate.
+
+**Why:** Structural edges alone do not identify which candidate factors were reviewed for inclusion. Including the exact node set in the immutable proposal payload makes the approval receipt, trial graph, and atomic store update agree on the intended scope.
+
+**Consequence:** The server can now activate reviewed existing proposed nodes together with a structural delta. It still cannot infer missing transforms, coefficients, or dependencies from a fixture, and the Build UI must create those explicitly before this capability is exposed as a workflow.

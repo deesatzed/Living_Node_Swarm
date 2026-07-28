@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from lns_server.app import create_app
 from lns_server.settings import Settings
 from lns_kernel.contracts import RelationshipContract
+from lns_kernel.models import DistributionFamily, Graph, Node, NodeStatus, TransformKind
 from lns_kernel.seed import build_seed_graph
 
 
@@ -98,6 +99,37 @@ def test_exact_structural_proposal_approval_activates_the_trial_atomically(tmp_p
     assert activated["nodes"]["outcome"]["depends_on"] == ["process_stage", "input_signal"]
     assert activated["nodes"]["outcome"]["transform_params"]["a2"] == 0.2
     assert activated["relationships"]["input-to-outcome-proposal"]["state"] == "active"
+
+
+def test_structural_proposal_activates_only_its_exact_proposed_factor_on_approval(tmp_path):
+    app = create_app(Settings(db_path=str(tmp_path / "graph.db")))
+    graph = Graph(
+        id="review-graph",
+        nodes={
+            "target": Node(id="target", name="Target", distribution_family=DistributionFamily.DETERMINISTIC, parameters={"value": 0.0}, transform=TransformKind.AFFINE, transform_params={"a0": 0.0}),
+            "candidate": Node(id="candidate", name="Candidate", distribution_family=DistributionFamily.NORMAL, parameters={"mu": 0.0, "sigma": 1.0}, status=NodeStatus.PROPOSED, requires_human_approval=True),
+        },
+    )
+    relationship = {**structural_relationship(), "id": "candidate-to-target", "parent_node_id": "candidate", "child_node_id": "target"}
+    with TestClient(app) as client:
+        app.state.store.create_graph(graph)
+        created = client.post(
+            "/authoring/graphs/review-graph/structural-proposals",
+            json={"relationships": [relationship], "activated_node_ids": ["candidate"]},
+        )
+        unchanged = client.get("/graphs/review-graph").json()
+        assert created.status_code == 200, created.text
+        proposal = created.json()["proposal"]
+        approved = client.post(
+            f"/authoring/graphs/review-graph/structural-proposals/{proposal['id']}/approve",
+            json={"approved_by": "operator", "binding_hash": proposal["binding_hash"]},
+        )
+
+    assert proposal["activated_node_ids"] == ["candidate"]
+    assert unchanged["nodes"]["candidate"]["status"] == "proposed"
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["graph"]["nodes"]["candidate"]["status"] == "active"
+    assert approved.json()["graph"]["relationships"]["candidate-to-target"]["state"] == "active"
 
 
 def test_structural_proposal_is_invalidated_by_an_intervening_graph_edit(tmp_path):

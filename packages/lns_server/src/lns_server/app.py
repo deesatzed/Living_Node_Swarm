@@ -708,6 +708,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 graph_id,
                 expected_graph_version=proposal.graph_version,
                 relationships=proposal.relationships,
+                activated_node_ids=proposal.activated_node_ids,
                 removed_relationship_ids=proposal.removed_relationship_ids,
                 retired_node_ids=proposal.retired_node_ids,
                 actor=body.approved_by,
@@ -737,7 +738,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             trial = materialize_structural_trial(
                 graph, proposal.relationships, proposal.removed_relationship_ids,
-                proposal.retired_node_ids, proposal.target_node_id,
+                proposal.retired_node_ids, proposal.target_node_id, proposal.activated_node_ids,
             )
             return run_structural_shadow_simulation(
                 graph, trial, body, candidate_relationship_ids=proposal.candidate_relationship_ids,
@@ -767,6 +768,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 project.graph_id,
                 expected_graph_version=proposal.graph_version,
                 relationships=proposal.relationships,
+                activated_node_ids=proposal.activated_node_ids,
                 removed_relationship_ids=proposal.removed_relationship_ids,
                 retired_node_ids=proposal.retired_node_ids,
                 actor=body.approved_by,

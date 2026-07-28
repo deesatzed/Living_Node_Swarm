@@ -21,6 +21,7 @@ class StructuralProposalBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     relationships: tuple[RelationshipContract, ...] = ()
+    activated_node_ids: tuple[str, ...] = ()
     removed_relationship_ids: tuple[str, ...] = ()
     retired_node_ids: tuple[str, ...] = ()
     target_node_id: str | None = None
@@ -38,8 +39,10 @@ class StructuralProposalBody(BaseModel):
 
     @model_validator(mode="after")
     def require_a_structural_delta(self) -> "StructuralProposalBody":
-        if not self.relationships and not self.removed_relationship_ids and not self.retired_node_ids:
-            raise ValueError("structural proposal requires a relationship addition, removal, or node retirement")
+        if not self.relationships and not self.activated_node_ids and not self.removed_relationship_ids and not self.retired_node_ids:
+            raise ValueError("structural proposal requires a relationship addition, node activation, removal, or node retirement")
+        if len(set(self.activated_node_ids)) != len(self.activated_node_ids):
+            raise ValueError("structural proposal activated node ids must be unique")
         if len(set(self.removed_relationship_ids)) != len(self.removed_relationship_ids):
             raise ValueError("structural proposal removal ids must be unique")
         if set(self.removed_relationship_ids) & {relationship.id for relationship in self.relationships}:
@@ -58,6 +61,7 @@ class StructuralGraphProposal(BaseModel):
     graph_id: str
     graph_version: int = Field(ge=1)
     relationships: tuple[RelationshipContract, ...]
+    activated_node_ids: tuple[str, ...] = ()
     removed_relationship_ids: tuple[str, ...] = ()
     retired_node_ids: tuple[str, ...] = ()
     target_node_id: str | None = None
@@ -119,12 +123,19 @@ def _remove_relationship_from_trial(trial: Graph, relationship_id: str) -> None:
 
 def materialize_structural_trial(
     graph: Graph, relationships: tuple[RelationshipContract, ...], removed_relationship_ids: tuple[str, ...] = (),
-    retired_node_ids: tuple[str, ...] = (), target_node_id: str | None = None,
+    retired_node_ids: tuple[str, ...] = (), target_node_id: str | None = None, activated_node_ids: tuple[str, ...] = (),
 ) -> Graph:
     """Return a validated in-memory graph with exact proposed relationship changes active."""
     trial = graph.model_copy(deep=True)
     if target_node_id in retired_node_ids:
         raise ValidationError("structural proposal cannot retire target node")
+    for node_id in activated_node_ids:
+        node = trial.nodes.get(node_id)
+        if node is None:
+            raise ValidationError(f"structural proposal activation references missing node {node_id}")
+        if node.status.value != "proposed":
+            raise ValidationError(f"structural proposal activation requires a proposed node: {node_id}")
+        trial.nodes[node_id] = node.model_copy(update={"status": "active"})
     retired_ids = set(retired_node_ids)
     if any(
         relationship.parent_node_id in retired_ids or relationship.child_node_id in retired_ids
@@ -214,12 +225,14 @@ def make_structural_proposal(graph: Graph, body: StructuralProposalBody) -> Stru
 
     trial = materialize_structural_trial(
         graph, body.relationships, body.removed_relationship_ids, body.retired_node_ids, body.target_node_id,
+        body.activated_node_ids,
     )
     return StructuralGraphProposal(
         id=str(uuid.uuid4()),
         graph_id=graph.id,
         graph_version=graph.graph_version,
         relationships=body.relationships,
+        activated_node_ids=body.activated_node_ids,
         removed_relationship_ids=body.removed_relationship_ids,
         retired_node_ids=body.retired_node_ids,
         target_node_id=body.target_node_id,
