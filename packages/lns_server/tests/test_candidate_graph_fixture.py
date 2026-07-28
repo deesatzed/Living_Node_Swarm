@@ -114,8 +114,12 @@ def test_map_stage_project_can_make_its_first_exact_structural_approval(tmp_path
         graph = client.post("/authoring/targets/nd-retail-2027/candidate-proposals/fixture/materialize").json()["graph"]
         app.state.workspace_store.create_project(WorkspaceProject(id="project-1", name="Fixture Build", target_id="nd-retail-2027", graph_id=graph["id"], stage="map"))
         fixture = client.post("/authoring/targets/nd-retail-2027/candidate-proposals/fixture").json()
-        relationship = next(item for item in fixture["relationships"] if item["id"] == "china_export_controls_to_target")
-        proposal = client.post(f"/authoring/graphs/{graph['id']}/structural-proposals", json={"relationships": [relationship], "activated_node_ids": ["china_export_controls"]}).json()["proposal"]
+        path_ids = ["weather_to_freight", "freight_to_refining", "refining_to_target"]
+        relationships = [next(item for item in fixture["relationships"] if item["id"] == relationship_id) for relationship_id in path_ids]
+        proposal = client.post(
+            f"/authoring/graphs/{graph['id']}/structural-proposals",
+            json={"relationships": relationships, "activated_node_ids": ["weather_disruption", "freight_capacity", "refining_throughput"]},
+        ).json()["proposal"]
         approved = client.post(
             f"/projects/project-1/structural-proposals/{proposal['id']}/approve",
             json={"approved_by": "operator", "binding_hash": proposal["binding_hash"]},
@@ -124,4 +128,7 @@ def test_map_stage_project_can_make_its_first_exact_structural_approval(tmp_path
     assert approved.status_code == 200, approved.text
     assert approved.json()["project"]["stage"] == "decide"
     assert approved.json()["project"]["active_graph_version"] == 2
-    assert approved.json()["graph"]["nodes"]["china_export_controls"]["status"] == "active"
+    assert approved.json()["graph"]["nodes"]["weather_disruption"]["status"] == "active"
+    assert approved.json()["graph"]["nodes"]["freight_capacity"]["status"] == "active"
+    assert approved.json()["graph"]["nodes"]["refining_throughput"]["status"] == "active"
+    assert list(approved.json()["graph"]["relationships"]) == path_ids
