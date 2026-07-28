@@ -48,6 +48,25 @@ def test_fixture_candidate_graph_has_15_ranked_inactive_factors_and_three_hop_pa
     assert all(factor["warning"] == "Fixture-unverified" for factor in factors)
     assert all(factor["monitorability"] == "Not assessed in fixture" for factor in factors)
     assert any(factor["hop_distance"] == 3 for factor in factors)
+    weather_edge = next(edge for edge in proposal["relationships"] if edge["id"] == "weather_to_freight")
+    assert weather_edge == {
+        "id": "weather_to_freight",
+        "parent_node_id": "weather_disruption",
+        "child_node_id": "freight_capacity",
+        "relationship_type": "scenario_assumption",
+        "transform": "affine",
+        "source_unit": "index",
+        "target_unit": "index",
+        "sign": "negative",
+        "lag_periods": 0,
+        "lag_unit": None,
+        "coefficient_units": "1",
+        "coefficient_parameters": [{"id": "coefficient", "value": -0.2}],
+        "shared_latent_parent_id": None,
+        "state": "proposed",
+        "evidence_claim_ids": [],
+        "schema_version": 1,
+    }
     assert [factor["rank"] for factor in factors] == list(range(1, 16))
     assert {edge["parent_node_id"] for edge in proposal["relationships"]} >= {
         "weather_disruption",

@@ -356,10 +356,10 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
       evidence_classification: "fixture_unverified", generation_basis: "deterministic_fixture", active_graph_mutated: false,
       limitations: ["Fixture only"], graph_proposal: { target_node_id: "fixture_target" },
       relationships: [
-        { id: "weather_to_freight", parent_node_id: "weather_disruption", child_node_id: "freight_capacity" },
-        { id: "freight_to_refining", parent_node_id: "freight_capacity", child_node_id: "refining_throughput" },
-        { id: "refining_to_target", parent_node_id: "refining_throughput", child_node_id: "fixture_target" },
-        { id: "china_export_controls_to_target", parent_node_id: "china_export_controls", child_node_id: "fixture_target", transform: "affine", coefficient_parameters: [{ id: "coefficient", value: 0.2 }], state: "proposed" },
+        { id: "weather_to_freight", parent_node_id: "weather_disruption", child_node_id: "freight_capacity", relationship_type: "scenario_assumption", transform: "affine", source_unit: "index", target_unit: "index", sign: "negative", lag_periods: 0, coefficient_units: "1", state: "proposed", evidence_status: "fixture_unverified" },
+        { id: "freight_to_refining", parent_node_id: "freight_capacity", child_node_id: "refining_throughput", relationship_type: "scenario_assumption", transform: "affine", source_unit: "index", target_unit: "index", sign: "positive", lag_periods: 0, coefficient_units: "1", state: "proposed", evidence_status: "fixture_unverified" },
+        { id: "refining_to_target", parent_node_id: "refining_throughput", child_node_id: "fixture_target", relationship_type: "scenario_assumption", transform: "affine", source_unit: "index", target_unit: "USD/kg", sign: "negative", lag_periods: 0, coefficient_units: "USD/(kg*index)", state: "proposed", evidence_status: "fixture_unverified" },
+        { id: "china_export_controls_to_target", parent_node_id: "china_export_controls", child_node_id: "fixture_target", relationship_type: "scenario_assumption", transform: "affine", source_unit: "index", target_unit: "USD/kg", sign: "positive", lag_periods: 0, coefficient_units: "USD/(kg*index)", coefficient_parameters: [{ id: "coefficient", value: 0.2 }], state: "proposed", evidence_status: "fixture_unverified" },
       ], factors,
     }});
   });
@@ -395,7 +395,7 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await expect(page.getByText("Fixture candidate map — not live research")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Warnings and limitations" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Visual target-centered graph" })).toBeVisible();
-  await expect(page.getByLabel("Textual model dependencies")).toContainText("Weather disruption → Freight capacity — proposed; fixture_unverified");
+  await expect(page.getByLabel("Textual model dependencies")).toContainText("Weather disruption → Freight capacity — type scenario_assumption; transform affine; sign negative; lag 0; units index → index; coefficient units 1; evidence fixture_unverified; state proposed");
   await expect(page.getByRole("button", { name: "Weather disruption" })).toContainText("Fixture scenario factor");
   await expect(page.getByRole("button", { name: "Weather disruption" })).toContainText("Normal · fixture p05–p95: -1.64 to 1.64 index");
   await expect(page.getByText(/30 factors shown\. Use arrow keys while this graph is focused/)).toBeVisible();

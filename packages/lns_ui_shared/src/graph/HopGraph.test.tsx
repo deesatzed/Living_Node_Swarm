@@ -13,7 +13,7 @@ describe("HopGraph", () => {
     expect(screen.getByRole("searchbox", { name: "Search factors" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Weather disruption" })).toBeVisible();
     expect(screen.getAllByText("proposed")[0]).toBeVisible();
-    expect(screen.getByLabelText("Textual model dependencies")).toHaveTextContent("Weather disruption → Freight capacity — proposed; fixture_unverified");
+    expect(screen.getByLabelText("Textual model dependencies")).toHaveTextContent("Weather disruption → Freight capacity — type scenario_assumption; transform affine; sign negative; lag 0; units index → index; coefficient units 1; evidence fixture_unverified; state proposed");
     expect(screen.getByRole("button", { name: "Weather disruption" })).toHaveTextContent("Fixture scenario factor");
     expect(screen.getByRole("button", { name: "Weather disruption" })).toHaveTextContent("Normal · fixture p05–p95: -1.64 to 1.64 index");
     expect(screen.getByRole("button", { name: "Weather disruption" })).toHaveTextContent("Warning: Fixture-unverified; monitorability: Not assessed in fixture");

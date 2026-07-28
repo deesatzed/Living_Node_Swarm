@@ -67,10 +67,10 @@ export function createNeodymiumGraphFixture(): CandidateGraphFixture & {
     },
     factors,
     relationships: [
-      { parent_node_id: "weather_disruption", child_node_id: "freight_capacity" },
-      { parent_node_id: "freight_capacity", child_node_id: "refining_throughput" },
-      { parent_node_id: "refining_throughput", child_node_id: target.target_node_id },
-      { parent_node_id: "china_export_controls", child_node_id: target.target_node_id, id: "china_export_controls_to_target", transform: "affine", coefficient_parameters: [{ id: "coefficient", value: 0.2 }], state: "proposed" },
+      { id: "weather_to_freight", parent_node_id: "weather_disruption", child_node_id: "freight_capacity", relationship_type: "scenario_assumption", transform: "affine", source_unit: "index", target_unit: "index", sign: "negative", lag_periods: 0, coefficient_units: "1", state: "proposed", evidence_status: "fixture_unverified" },
+      { id: "freight_to_refining", parent_node_id: "freight_capacity", child_node_id: "refining_throughput", relationship_type: "scenario_assumption", transform: "affine", source_unit: "index", target_unit: "index", sign: "positive", lag_periods: 0, coefficient_units: "1", state: "proposed", evidence_status: "fixture_unverified" },
+      { id: "refining_to_target", parent_node_id: "refining_throughput", child_node_id: target.target_node_id, relationship_type: "scenario_assumption", transform: "affine", source_unit: "index", target_unit: "USD/kg", sign: "negative", lag_periods: 0, coefficient_units: "USD/(kg*index)", state: "proposed", evidence_status: "fixture_unverified" },
+      { parent_node_id: "china_export_controls", child_node_id: target.target_node_id, id: "china_export_controls_to_target", relationship_type: "scenario_assumption", transform: "affine", source_unit: "index", target_unit: "USD/kg", sign: "positive", lag_periods: 0, coefficient_units: "USD/(kg*index)", coefficient_parameters: [{ id: "coefficient", value: 0.2 }], state: "proposed", evidence_status: "fixture_unverified" },
     ],
   };
 }
