@@ -11,6 +11,7 @@ export type ExistingProjectMode = "run" | "edit" | "monitor";
 export interface ExistingProjectClient extends RunModelClient, MonitoringClient, EditModelClient, ScenarioClient {
   getProject(projectId: string): Promise<JsonObject>;
   getTarget(targetId: string): Promise<JsonObject>;
+  patchProject?(projectId: string, patch: JsonObject): Promise<JsonObject>;
 }
 
 const MODE_COPY: Record<ExistingProjectMode, { title: string; summary: string }> = {
@@ -60,7 +61,10 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack }: { 
   >
     <h1>{copy.title}</h1>
     <p>{copy.summary}</p>
-    {mode === "run" && typeof project.graph_id === "string" && <RunModel graphId={project.graph_id} client={client} projectId={projectId} scenarioClient={client} />}
+    {mode === "run" && typeof project.graph_id === "string" && <RunModel graphId={project.graph_id} client={client} projectId={projectId} scenarioClient={client} onReceipt={async (result) => {
+      const snapshot = result.snapshot as JsonObject | undefined;
+      await client.patchProject?.(projectId, { last_run: { snapshot_id: stringValue(snapshot?.id, "unknown"), graph_version: stringValue(snapshot?.graph_version, "unknown"), freshness: stringValue((result.sim_status as JsonObject | undefined)?.freshness, "unknown") } });
+    }} />}
     {mode === "run" && typeof project.graph_id !== "string" && <p role="alert">This project has no approved graph to run yet.</p>}
     {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} />}
     {mode === "edit" && <EditModel projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : null} client={client} />}

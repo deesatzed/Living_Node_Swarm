@@ -31,7 +31,7 @@ function toProjectHomeItem(project: JsonObject, target: JsonObject | undefined):
     freshness: (project.active_graph_version ? "active" : "stale") as VisibleNodeState,
     warningCount: 0,
     evidenceClassification: evidence,
-    lastRun: "Not yet run",
+    lastRun: typeof project.last_run === "object" && project.last_run !== null ? `Snapshot ${text((project.last_run as JsonObject).snapshot_id, "unknown")}` : "Not yet run",
   };
 }
 

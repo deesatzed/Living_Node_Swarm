@@ -29,6 +29,7 @@ class WorkspaceProject(BaseModel):
     draft_base_version: int | None = Field(default=None, ge=1)
     discovery_ledger: list[dict[str, str]] = Field(default_factory=list)
     research_consent: dict[str, str] | None = None
+    last_run: dict[str, str] | None = None
     updated_at: datetime = Field(default_factory=utcnow)
 
 
@@ -43,6 +44,7 @@ class WorkspaceProjectPatch(BaseModel):
     active_graph_version: int | None = Field(default=None, ge=1)
     discovery_ledger: list[dict[str, str]] | None = None
     research_consent: dict[str, str] | None = None
+    last_run: dict[str, str] | None = None
 
 
 class WorkspaceDraft(BaseModel):

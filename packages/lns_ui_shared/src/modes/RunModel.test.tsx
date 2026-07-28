@@ -18,4 +18,13 @@ describe("RunModel", () => {
     expect(screen.getByText("Graph version 4 · seed 12 · 5000 samples · fresh")).toBeVisible();
     expect(screen.queryByRole("button", { name: /edit structure/i })).not.toBeInTheDocument();
   });
+
+  it("can persist a successful receipt without changing the run request", async () => {
+    const user = userEvent.setup();
+    const result = { snapshot: { id: "snapshot-8", graph_version: 5, seed: 14, n_samples: 1000 }, sim_status: { freshness: "fresh" } };
+    const onReceipt = vi.fn(async () => undefined);
+    render(<RunModel graphId="graph-1" client={{ runSimulation: async () => result }} onReceipt={onReceipt} />);
+    await user.click(screen.getByRole("button", { name: "Run approved version" }));
+    expect(onReceipt).toHaveBeenCalledWith(result);
+  });
 });

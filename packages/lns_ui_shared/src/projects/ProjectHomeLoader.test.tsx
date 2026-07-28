@@ -15,4 +15,9 @@ describe("ProjectHomeLoader", () => {
     expect(await screen.findByText("What will neodymium cost?")).toBeVisible();
     expect(screen.getByText("365 days")).toBeVisible();
   });
+
+  it("shows the persisted last successful run receipt", async () => {
+    render(<ProjectHomeLoader client={{ listProjects: async () => ({ projects: [{ id: "project-1", name: "Neodymium", last_run: { snapshot_id: "snapshot-9" } }] }), getTarget: async () => ({}) }} onAction={() => undefined} />);
+    expect(await screen.findByRole("listitem")).toHaveTextContent("Snapshot snapshot-9");
+  });
 });

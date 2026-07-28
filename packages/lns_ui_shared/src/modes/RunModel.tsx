@@ -10,14 +10,14 @@ function text(value: unknown, fallback: string): string {
   return typeof value === "string" || typeof value === "number" ? String(value) : fallback;
 }
 
-export function RunModel({ graphId, client, projectId, scenarioClient }: { graphId: string; client: RunModelClient; projectId?: string; scenarioClient?: ScenarioClient }) {
+export function RunModel({ graphId, client, projectId, scenarioClient, onReceipt }: { graphId: string; client: RunModelClient; projectId?: string; scenarioClient?: ScenarioClient; onReceipt?: (result: JsonObject) => Promise<void> }) {
   const [result, setResult] = useState<JsonObject | null>(null);
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
   async function run() {
     setRunning(true);
     setError("");
-    try { setResult(await client.runSimulation(graphId)); }
+    try { const next = await client.runSimulation(graphId); setResult(next); await onReceipt?.(next); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Run failed."); }
     finally { setRunning(false); }
   }
