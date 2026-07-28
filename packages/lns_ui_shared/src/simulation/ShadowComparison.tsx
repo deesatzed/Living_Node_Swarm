@@ -26,6 +26,7 @@ interface GraphNode {
   name: string;
   family?: string;
   provenance: string;
+  asOf: string;
   units: string;
   support: string;
   parameters: Record<string, number>;
@@ -66,10 +67,19 @@ function graphNodes(graph: JsonObject): GraphNode[] {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
     const node = raw as Record<string, unknown>;
     const parameters = Object.fromEntries(Object.entries(node.parameters as Record<string, unknown> | undefined ?? {}).filter((entry): entry is [string, number] => typeof entry[1] === "number"));
-    const supportLower = typeof node.support_lower === "number" ? node.support_lower : undefined;
-    const supportUpper = typeof node.support_upper === "number" ? node.support_upper : undefined;
+    const distributionSpec = node.distribution_spec && typeof node.distribution_spec === "object" && !Array.isArray(node.distribution_spec) ? node.distribution_spec as JsonObject : undefined;
+    const supportLower = typeof node.support_lower === "number" ? node.support_lower : typeof distributionSpec?.support_lower === "number" ? distributionSpec.support_lower : undefined;
+    const supportUpper = typeof node.support_upper === "number" ? node.support_upper : typeof distributionSpec?.support_upper === "number" ? distributionSpec.support_upper : undefined;
     const support = supportLower !== undefined || supportUpper !== undefined ? `${supportLower ?? "−∞"} to ${supportUpper ?? "∞"}` : SUPPORT[typeof node.distribution_family === "string" ? node.distribution_family : ""] ?? "Not recorded on graph node";
-    return [{ id, name: typeof node.name === "string" ? node.name : id, family: typeof node.distribution_family === "string" ? node.distribution_family : undefined, provenance: typeof node.evidence_classification === "string" ? node.evidence_classification : "Not recorded on graph node", units: typeof node.units === "string" ? node.units : "Not recorded on graph node", support, parameters, dependsOn: Array.isArray(node.depends_on) ? node.depends_on.filter((item): item is string => typeof item === "string") : [] }];
+    const evidenceClaims = Array.isArray(distributionSpec?.evidence_claim_ids) ? distributionSpec.evidence_claim_ids.filter((claim): claim is string => typeof claim === "string" && Boolean(claim.trim())) : [];
+    const provenance = distributionSpec
+      ? [
+        typeof distributionSpec.elicitation_method === "string" ? distributionSpec.elicitation_method : "method not recorded",
+        typeof distributionSpec.confidence_rationale === "string" ? `Confidence: ${distributionSpec.confidence_rationale}` : "confidence rationale not recorded",
+        `Evidence claims: ${evidenceClaims.length ? evidenceClaims.join(", ") : "none recorded"}`,
+      ].join(" · ")
+      : typeof node.evidence_classification === "string" ? node.evidence_classification : "Not recorded on graph node";
+    return [{ id, name: typeof node.name === "string" ? node.name : id, family: typeof node.distribution_family === "string" ? node.distribution_family : undefined, provenance, asOf: typeof distributionSpec?.as_of === "string" ? distributionSpec.as_of : "Not recorded on graph node", units: typeof node.units === "string" ? node.units : "Not recorded on graph node", support, parameters, dependsOn: Array.isArray(node.depends_on) ? node.depends_on.filter((item): item is string => typeof item === "string") : [] }];
   });
 }
 
@@ -451,6 +461,9 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
         ? await client.approveProjectCandidateProposal(projectId, proposalId, body)
         : await client.approveCandidateProposal!(graphId, proposalId, body);
       setApproval(response);
+      if (response.graph && typeof response.graph === "object" && !Array.isArray(response.graph) && "nodes" in response.graph) {
+        setNodes(graphNodes(response.graph as JsonObject));
+      }
       if (response.project && typeof response.project === "object" && !Array.isArray(response.project)) onApproved?.(response.project as JsonObject);
     }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to approve this candidate version."); }
@@ -480,7 +493,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
       {structuralComparison && <section aria-label="Structural comparison receipt"><h3>Structural comparison receipt</h3><p>Added relationships: {Array.isArray(structuralComparison.candidate_relationship_ids) ? structuralComparison.candidate_relationship_ids.map(numeric).join(", ") || "none" : "not reported"}.</p><p>Removed relationships: {Array.isArray(structuralComparison.removed_relationship_ids) ? structuralComparison.removed_relationship_ids.map(numeric).join(", ") || "none" : "not reported"}.</p><p>Retired nodes: {Array.isArray(structuralComparison.retired_node_ids) ? structuralComparison.retired_node_ids.map(numeric).join(", ") || "none" : "not reported"}.</p><p>Active mean: {numeric(structuralActive?.mean)} · p50: {numeric(structuralActive?.p50)}</p><p>Candidate mean: {numeric(structuralCandidate?.mean)} · p50: {numeric(structuralCandidate?.p50)}</p><p>Active graph unchanged: {structuralComparison.active_graph_mutated === false ? "yes" : "not confirmed"}.</p><h4>Limitations</h4><ul>{structuralLimitations.map((limitation) => <li key={limitation}>{limitation}</li>)}<li>A distribution shift is structural impact, not evidence of improved forecast accuracy.</li></ul></section>}
       {structuralApproval && <section aria-label="Structural approval receipt"><h3>Structural approval receipt</h3><p>Approval receipt: {numeric((structuralApproval.approval_receipt as JsonObject | undefined)?.id)}</p><p>Approved graph version: {numeric((structuralApproval.graph as JsonObject | undefined)?.graph_version)}</p><p>The server applied only the reviewed structural proposal binding.</p></section>}
       <section aria-label="Candidate new-factor set"><h3>Candidate new-factor set</h3><label>New factor ID<input aria-label="New factor ID" value={newNodeId} onChange={(event) => setNewNodeId(event.target.value)} /></label><label>New factor name<input aria-label="New factor name" value={newNodeName} onChange={(event) => setNewNodeName(event.target.value)} /></label><label>New factor location<input aria-label="New factor location" type="number" value={newNodeLocation} onChange={(event) => setNewNodeLocation(event.target.value)} /></label><label>New factor scale<input aria-label="New factor scale" type="number" min="0" value={newNodeScale} onChange={(event) => setNewNodeScale(event.target.value)} /></label><button onClick={stageNewNode}>Stage proposed Normal factor</button>{stagedNewNodes.length === 0 ? <p>No proposed new factors staged.</p> : <ul>{stagedNewNodes.map((node) => <li key={numeric(node.id)}>{numeric(node.name)} · proposed Normal root factor <button onClick={() => removeStagedNewNode(numeric(node.id))}>Remove proposed factor {numeric(node.id)}</button></li>)}</ul>}<p>New factors are proposed-only, require human approval, and cannot be simulated or approved until a complete structural proposal exists.</p></section>
-      {selected?.family && <DistributionInspector family={selected.family} parameters={selected.parameters} support={selected.support} asOf="Not recorded on graph node" provenance={`${selected.provenance} · Units: ${selected.units}`} derived={derived ? { mean: derived.statistics.mean ?? undefined, median: derived.statistics.median ?? undefined, mode: derived.statistics.mode ?? undefined, standardDeviation: derived.statistics.variance === null ? undefined : Math.sqrt(derived.statistics.variance) } : undefined} />}
+      {selected?.family && <DistributionInspector family={selected.family} parameters={selected.parameters} support={selected.support} asOf={selected.asOf} provenance={`${selected.provenance} · Units: ${selected.units}`} derived={derived ? { mean: derived.statistics.mean ?? undefined, median: derived.statistics.median ?? undefined, mode: derived.statistics.mode ?? undefined, standardDeviation: derived.statistics.variance === null ? undefined : Math.sqrt(derived.statistics.variance) } : undefined} />}
     </>}
     {nodes.length === 0 && !error && <p role="alert">This graph has no editable numeric node parameters.</p>}
     {error && <p role="alert">{error}</p>}{revisionStatus && <p role="status">{revisionStatus}</p>}

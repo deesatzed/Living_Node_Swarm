@@ -73,6 +73,30 @@ describe("ShadowComparison", () => {
     expect(screen.getByText(/not evidence of improved forecast accuracy/i)).toBeVisible();
   });
 
+  it("renders active distribution provenance persisted on the selected graph node", async () => {
+    render(<ShadowComparison graphId="graph-1" client={{
+      getGraph: async () => ({ nodes: {
+        demand: {
+          id: "demand", name: "Demand", distribution_family: "Gamma", parameters: { shape: 4, scale: 2 }, depends_on: [],
+          distribution_spec: {
+            id: "demand-reviewed-prior", family_id: "Gamma", parameters: [{ id: "shape", value: 4 }, { id: "scale", value: 2 }],
+            support_lower: 0, support_upper: 20, elicitation_method: "intuitive_family_derivation", evidence_claim_ids: ["claim-1"],
+            as_of: "2026-07-28T00:00:00Z", confidence_rationale: "Reviewed operator range.",
+          },
+        },
+      }}),
+      shadowSimulate: async () => ({}),
+      getDistributionStatistics: async () => ({ family_id: "Gamma", parameters: { shape: 4, scale: 2 }, statistics: { mean: 8, median: null, mode: 6, variance: 16, support_lower: 0, support_upper: 20 } }),
+    }} />);
+
+    const inspector = await screen.findByLabelText("Distribution inspector");
+    expect(inspector).toHaveTextContent("Support: 0 to 20");
+    expect(inspector).toHaveTextContent("As of: 2026-07-28T00:00:00Z");
+    expect(inspector).toHaveTextContent("intuitive_family_derivation");
+    expect(inspector).toHaveTextContent("Reviewed operator range.");
+    expect(inspector).toHaveTextContent("claim-1");
+  });
+
   it("requires an exact saved proposal and operator identity before approval", async () => {
     const user = userEvent.setup();
     const createCandidateProposal = vi.fn(async () => ({ proposal: { id: "proposal-1", graph_version: 4, binding_hash: "binding-123" } }));
@@ -134,7 +158,7 @@ describe("ShadowComparison", () => {
     expect(screen.getByText("Candidate revision saved without changing the active graph.")).toBeVisible();
   });
 
-  it("elicits a same-family median/P90 candidate with its provenance and withholds numeric approval", async () => {
+  it("elicits a same-family median/P90 candidate with provenance for exact review", async () => {
     const user = userEvent.setup();
     const elicitDistribution = vi.fn(async () => ({
       distribution_spec: { id: "input-signal-median-p90", family_id: "Normal", parameters: [{ id: "loc", value: 5 }, { id: "scale", value: 2 }], elicitation_method: "median_p90_quantile_match", evidence_claim_ids: [], as_of: "2026-07-28T00:00:00Z", confidence_rationale: "Initial range." },
@@ -186,7 +210,7 @@ describe("ShadowComparison", () => {
     expect(elicitDistribution).not.toHaveBeenCalled();
   });
 
-  it("derives and persists a Gamma candidate from mean and standard deviation without numeric approval", async () => {
+  it("derives, reviews, and refreshes an approved Gamma candidate from mean and standard deviation", async () => {
     const user = userEvent.setup();
     const deriveDistribution = vi.fn(async () => ({
       distribution_spec: { id: "demand-prior", family_id: "Gamma", parameters: [{ id: "shape", value: 4 }, { id: "scale", value: 2 }], elicitation_method: "intuitive_family_derivation", evidence_claim_ids: [], as_of: "2026-07-28T00:00:00Z", confidence_rationale: "Initial gamma assumption." },
@@ -195,10 +219,18 @@ describe("ShadowComparison", () => {
     }));
     const createCandidateRevision = vi.fn(async (_projectId, revision) => ({ ...revision, id: "gamma-input" }));
     const createCandidateProposal = vi.fn(async () => ({ proposal: { id: "gamma-proposal", graph_version: 4, binding_hash: "gamma-binding" } }));
+    const approveProjectCandidateProposal = vi.fn(async () => ({
+      approval_receipt: { id: "gamma-receipt", binding_hash: "gamma-binding" },
+      graph: { graph_version: 5, nodes: {
+        demand: { name: "Demand", distribution_family: "Gamma", parameters: { shape: 4, scale: 2 }, depends_on: [], distribution_spec: { id: "demand-prior", family_id: "Gamma", parameters: [{ id: "shape", value: 4 }, { id: "scale", value: 2 }], elicitation_method: "intuitive_family_derivation", evidence_claim_ids: ["claim-gamma"], as_of: "2026-07-28T00:00:00Z", confidence_rationale: "Approved gamma range." } },
+        outcome: { name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: ["demand"] },
+      } },
+      project: { stage: "decide", active_graph_version: 5 },
+    }));
     const shadowSimulate = vi.fn(async () => ({ active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 8, p50: 8 } }));
     render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{
       getGraph: async () => ({ nodes: { demand: { name: "Demand", distribution_family: "Gamma", parameters: { shape: 2, scale: 1 }, depends_on: [] }, outcome: { name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: ["demand"] } } }),
-      shadowSimulate, deriveDistribution, createCandidateRevision, createCandidateProposal,
+      shadowSimulate, deriveDistribution, createCandidateRevision, createCandidateProposal, approveProjectCandidateProposal,
     } as never} />);
 
     await screen.findByLabelText("Gamma mean");
@@ -217,6 +249,12 @@ describe("ShadowComparison", () => {
       candidate_distribution_specs: { demand: expect.objectContaining({ family_id: "Gamma", elicitation_method: "intuitive_family_derivation" }) },
     });
     expect(await screen.findByLabelText("Candidate approval")).toHaveTextContent("gamma-binding");
+    await user.type(screen.getByLabelText("Approver identity"), "operator");
+    await user.click(screen.getByLabelText("I reviewed this exact binding"));
+    await user.click(screen.getByRole("button", { name: "Approve candidate version" }));
+    expect(approveProjectCandidateProposal).toHaveBeenCalledWith("project-1", "gamma-proposal", { approved_by: "operator", binding_hash: "gamma-binding" });
+    expect(await screen.findByLabelText("Distribution inspector")).toHaveTextContent("Approved gamma range.");
+    expect(screen.getByLabelText("Distribution inspector")).toHaveTextContent("claim-gamma");
     await user.click(screen.getByRole("button", { name: "Save durable candidate revision" }));
     expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({ candidate_distribution_specs: { demand: expect.objectContaining({ family_id: "Gamma" }) } }));
   });
