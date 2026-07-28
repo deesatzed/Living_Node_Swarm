@@ -299,6 +299,10 @@ def test_candidate_revision_persists_proposed_relationship_contract_without_muta
             "id": "relationship-contract", "base_graph_version": graph["graph_version"],
             "candidate_relationship_contracts": [relationship],
         })
+        unsupported_evidence = client.post("/projects/nd-project/candidate-revisions", json={
+            "id": "relationship-contract-missing-evidence", "base_graph_version": graph["graph_version"],
+            "candidate_relationship_contracts": [{**relationship, "id": "missing-evidence", "evidence_claim_ids": ["claim-not-found"]}],
+        })
         active = client.get(f"/graphs/{graph['id']}")
 
     with TestClient(create_app(settings)) as restarted:
@@ -311,6 +315,8 @@ def test_candidate_revision_persists_proposed_relationship_contract_without_muta
     assert saved_relationship["child_node_id"] == relationship["child_node_id"]
     assert saved_relationship["state"] == "proposed"
     assert listed.json()["candidate_revisions"][0]["candidate_relationship_contracts"] == [saved_relationship]
+    assert unsupported_evidence.status_code == 422
+    assert "unknown evidence claims" in unsupported_evidence.text
     assert active.json()["nodes"]["process_stage"]["depends_on"] == graph["nodes"]["process_stage"]["depends_on"]
 
 

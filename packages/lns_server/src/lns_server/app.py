@@ -371,6 +371,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             unknown_contract_nodes = sorted(relationship_contract_nodes - set(graph.nodes))
             if unknown_contract_nodes:
                 raise HTTPException(422, f"candidate relationship contract references unknown graph nodes: {', '.join(unknown_contract_nodes)}")
+            unknown_evidence_claims = sorted({
+                claim_id
+                for relationship in revision.candidate_relationship_contracts
+                for claim_id in relationship.evidence_claim_ids
+                if app.state.evidence_store.get_evidence_claim(claim_id) is None
+            })
+            if unknown_evidence_claims:
+                raise HTTPException(422, f"candidate relationship contract references unknown evidence claims: {', '.join(unknown_evidence_claims)}")
             duplicate_nodes = sorted({node.id for node in revision.candidate_new_nodes} & set(graph.nodes))
             if duplicate_nodes:
                 raise HTTPException(422, f"candidate revision new nodes already exist in active graph: {', '.join(duplicate_nodes)}")
