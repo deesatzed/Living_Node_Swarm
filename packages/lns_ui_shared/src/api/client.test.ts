@@ -122,6 +122,18 @@ describe("workspace API client", () => {
     await expect(client.createDraft("project-1", { id: "draft-1", base_graph_version: 4 })).resolves.toMatchObject({ id: "draft-1" });
   });
 
+  it("lists persisted version-bound drafts for the selected project", async () => {
+    const client = createWorkspaceClient({
+      baseUrl: "http://localhost:8787",
+      fetch: async (input) => {
+        expect(input).toBe("http://localhost:8787/projects/project-1/revisions");
+        return new Response(JSON.stringify({ drafts: [{ id: "draft-1", base_graph_version: 4 }] }));
+      },
+    });
+
+    await expect(client.listDrafts("project-1")).resolves.toEqual({ drafts: [{ id: "draft-1", base_graph_version: 4 }] });
+  });
+
   it("persists named scenarios separately from the active graph", async () => {
     const calls: string[] = [];
     const client = createWorkspaceClient({ baseUrl: "http://localhost:8787", fetch: async (input, init) => {
@@ -177,6 +189,7 @@ describe("workspace API client", () => {
       "getSimulationStatus",
       "getSnapshot",
       "getTarget",
+      "listDrafts",
       "listGraphEvents",
       "listProjects",
       "listScenarios",

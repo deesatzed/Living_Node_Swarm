@@ -17,4 +17,13 @@ describe("EditModel", () => {
     expect(await screen.findByText("Draft draft-7 is ready for proposed changes.")).toBeVisible();
     expect(screen.getByText(/active graph remains unchanged/i)).toBeVisible();
   });
+
+  it("shows persisted draft history without treating it as active structure", async () => {
+    const listDrafts = vi.fn(async () => ({ drafts: [{ id: "draft-older", base_graph_version: 4 }] }));
+    render(<EditModel projectId="project-1" activeGraphVersion={4} client={{ createDraft: vi.fn(), listDrafts } as never} />);
+
+    expect(await screen.findByText("Draft draft-older — base version 4")).toBeVisible();
+    expect(screen.getByText(/draft history only; none of these drafts change the active graph/i)).toBeVisible();
+    expect(listDrafts).toHaveBeenCalledWith("project-1");
+  });
 });

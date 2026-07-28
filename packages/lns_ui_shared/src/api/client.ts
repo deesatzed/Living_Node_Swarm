@@ -76,6 +76,7 @@ export interface WorkspaceClient {
   listProjects(): Promise<{ projects: JsonObject[] }>;
   createProject(project: WorkspaceProjectInput): Promise<JsonObject>;
   createDraft(projectId: string, draft: WorkspaceDraftInput): Promise<JsonObject>;
+  listDrafts(projectId: string): Promise<{ drafts: JsonObject[] }>;
   createScenario(projectId: string, scenario: WorkspaceScenarioInput): Promise<JsonObject>;
   listScenarios(projectId: string): Promise<{ scenarios: JsonObject[] }>;
   getProject(projectId: string): Promise<JsonObject>;
@@ -195,6 +196,7 @@ export function createWorkspaceClient({
     listProjects: () => request<{ projects: JsonObject[] }>("/projects", { method: "GET" }),
     createProject: (project) => request<JsonObject>("/projects", { method: "POST", body: JSON.stringify(project) }),
     createDraft: (projectId, draft) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/drafts`, { method: "POST", body: JSON.stringify(draft) }),
+    listDrafts: (projectId) => request<{ drafts: JsonObject[] }>(`/projects/${encodeURIComponent(projectId)}/revisions`, { method: "GET" }),
     createScenario: (projectId, scenario) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/scenarios`, { method: "POST", body: JSON.stringify(scenario) }),
     listScenarios: (projectId) => request<{ scenarios: JsonObject[] }>(`/projects/${encodeURIComponent(projectId)}/scenarios`, { method: "GET" }),
     getProject: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "GET" }),

@@ -80,3 +80,10 @@ This file records product and architecture decisions that future agents must pre
 | P-003 | Gate 2 | Retain full retrieved text locally or only normalized claims/excerpts/hash? | Minimize retention: normalized claims, permitted excerpts, hash, metadata. |
 | P-004 | Gate 4 | Which graph renderer/layout library best satisfies 30-node readability and accessibility? | Prototype candidates; choose based on evidence. |
 | P-005 | Gate 5 | Which Neodymium history is legally and methodologically suitable for hindcasting? | Do not claim lift until resolved. |
+# 2026-07-28 — Edit draft history precedes editable candidate commands
+
+**Decision:** Expose persisted version-bound drafts as read-only history before adding candidate-edit controls.
+
+**Why:** The server already persists project revisions, while no project-scoped candidate command/revision model exists. History gives operators a durable, honest revision surface and avoids presenting browser-local edits as scientific state.
+
+**Consequence:** The Edit workspace remains explicitly incomplete: it does not yet offer undo/redo, structural candidate commands, validation, shadow comparison, or approval.
