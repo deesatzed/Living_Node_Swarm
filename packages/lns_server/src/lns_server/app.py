@@ -20,6 +20,7 @@ from lns_kernel.ensemble import compare_transforms, run_ensemble, weighted_outco
 from lns_kernel.contracts import TargetContract
 from lns_kernel.distributions import REGISTRY, distribution_display_quantiles, distribution_statistics, get_family, normalize_parameters, validate_family_parameters
 from lns_kernel.models import (
+    Graph,
     Node,
     NodeLayout,
     NodeStatus,
@@ -637,6 +638,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if target is None:
             raise HTTPException(404, "target not found")
         return json.loads(build_neodymium_fixture(target).model_dump_json())
+
+    @app.post("/authoring/targets/{target_id}/candidate-proposals/fixture/materialize")
+    def materialize_fixture_candidate_proposal(target_id: str) -> dict[str, Any]:
+        target = app.state.evidence_store.get_target_contract(target_id)
+        if target is None:
+            raise HTTPException(404, "target not found")
+        fixture = build_neodymium_fixture(target)
+        import uuid
+        graph_id = f"fixture-candidate:{uuid.uuid4()}"
+        nodes = {
+            target.target_node_id: Node(id=target.target_node_id, name=target.question, distribution_family="Deterministic", parameters={"value": 0.0}, units=target.unit, status=NodeStatus.ACTIVE, created_by="fixture_materializer", last_updated_by="fixture_materializer"),
+            **{factor.id: Node(id=factor.id, name=factor.label, distribution_family="Normal", parameters={"mu": 0.0, "sigma": 1.0}, status=NodeStatus.PROPOSED, requires_human_approval=True, created_by="fixture_materializer", last_updated_by="fixture_materializer", tags=["fixture_unverified"]) for factor in fixture.factors},
+        }
+        graph = Graph(id=graph_id, name=f"Fixture candidate: {target.question}", nodes=nodes, target_contract_id=target.id)
+        store.create_graph(graph)
+        return {"graph": json.loads(graph.model_dump_json()), "generation_basis": "deterministic_fixture", "active_graph_mutated": False, "limitations": list(fixture.limitations)}
 
     @app.post("/authoring/distributions/elicit")
     def elicit_distribution(body: ElicitDistributionBody) -> dict[str, Any]:

@@ -48,3 +48,18 @@ def test_fixture_candidate_graph_has_15_ranked_inactive_factors_and_three_hop_pa
         "freight_capacity",
         "refining_throughput",
     }
+
+
+def test_fixture_candidate_graph_can_be_materialized_as_a_non_active_persisted_graph(tmp_path: Path):
+    app = create_app(Settings(db_path=str(tmp_path / "graph.db")))
+    with TestClient(app) as client:
+        assert client.post("/targets", json=target_body()).status_code == 200
+        response = client.post("/authoring/targets/nd-retail-2027/candidate-proposals/fixture/materialize")
+
+    assert response.status_code == 200, response.text
+    graph = response.json()["graph"]
+    assert graph["target_contract_id"] == "nd-retail-2027"
+    assert graph["nodes"]["nd_price"]["status"] == "active"
+    assert len(graph["nodes"]) == 16
+    assert all(node["status"] == "proposed" for node_id, node in graph["nodes"].items() if node_id != "nd_price")
+    assert response.json()["active_graph_mutated"] is False
