@@ -64,13 +64,14 @@
 
 | ID | Task | Depends on | Acceptance | Status |
 |---|---|---|---|---|
+| Q4-00 | Freeze hybrid workflow and autonomous GUI completion contract | Gate 3 | `GOAL_GUI.md` covers Build, Run, Edit, Monitor, proof gates, safe defaults, and no intermediate user approval | Complete (2026-07-28) |
 | Q4-01 | Scaffold private `lns_ui_shared` package | Q0-07 | both apps consume shared types/client | Pending |
 | Q4-02 | Build target-intake and research-consent flow | Q3-01–02, Q4-01 | accessible forms and error states tested | Pending |
 | Q4-03 | Build target-centered hop graph | Q3-03, Q4-01 | 30-node deterministic layout has no default overlap | Pending |
 | Q4-04 | Build node distribution inspector | Q1-01–04, Q4-01 | eight family forms/curves/derived values tested | Pending |
 | Q4-05 | Build relationship inspector | Q3-05, Q4-01 | type, units, lag, evidence, state editable/reviewable | Pending |
 | Q4-06 | Build evidence drawer and warning center | Q2-03, Q4-01 | claims/conflicts/unknowns trace to nodes | Pending |
-| Q4-07 | Build active-vs-candidate comparison | Q3-06, Q4-01 | paths and distribution changes visible; no false improvement label | Pending |
+| Q4-07 | Build active-vs-candidate and model/ensemble comparison | Q3-06, Q4-01 | paths and distribution changes visible; explicit two-model weighted ensemble is backend-owned and no false improvement label appears | Pending |
 | Q4-08 | Build approval and run-receipt views | Q3-07, Q4-01 | version-bound review and receipts visible | Pending |
 | Q4-09 | Add component/accessibility tests | Q4-02–08 | keyboard, labels, statuses, reduced motion pass | Pending |
 | Q4-10 | Add Playwright canonical flow and screenshots | Q4-02–09 | full 15-factor journey passes at both viewports | Pending |
