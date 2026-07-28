@@ -272,6 +272,7 @@ describe("workspace API client", () => {
     expect(Object.keys(client).sort()).toEqual([
       "acknowledgeMonitoringEvent",
       "approveCandidateProposal",
+      "approveEnsemble",
       "approveProjectCandidateProposal",
       "createCandidateProposal",
       "createCandidateRevision",

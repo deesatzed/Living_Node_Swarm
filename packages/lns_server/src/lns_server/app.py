@@ -402,12 +402,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 raise HTTPException(409, f"ensemble member graph version is stale: {member.graph_id}")
             if member.target_node_id not in graph.nodes or graph.nodes[member.target_node_id].status != NodeStatus.ACTIVE:
                 raise HTTPException(422, f"ensemble member target is not active: {member.graph_id}:{member.target_node_id}")
-        return app.state.workspace_store.save_ensemble(project_id, ensemble).model_dump(mode="json")
+        saved = app.state.workspace_store.save_ensemble(project_id, ensemble)
+        return {**saved.model_dump(mode="json"), "binding_hash": saved.binding_hash}
 
     @app.get("/projects/{project_id}/ensembles")
     def list_workspace_ensembles(project_id: str) -> dict[str, Any]:
         require_project(project_id)
-        return {"ensembles": [ensemble.model_dump(mode="json") for ensemble in app.state.workspace_store.list_ensembles(project_id)]}
+        return {"ensembles": [{**ensemble.model_dump(mode="json"), "binding_hash": ensemble.binding_hash} for ensemble in app.state.workspace_store.list_ensembles(project_id)]}
 
     @app.post("/projects/{project_id}/ensembles/{ensemble_id}/approve")
     def approve_workspace_ensemble(project_id: str, ensemble_id: str, body: ApproveEnsembleBody) -> dict[str, Any]:

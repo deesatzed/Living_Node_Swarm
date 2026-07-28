@@ -112,4 +112,17 @@ describe("RunModel", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("saved for review only; it is not approved or active");
     expect(screen.getByLabelText("Saved ensemble configurations")).toHaveTextContent("Saved configurations are not approved or active");
   });
+
+  it("approves only a saved server-issued ensemble binding after named review", async () => {
+    const user = userEvent.setup();
+    const approveEnsemble = vi.fn(async () => ({ approval_receipt: { id: "ensemble-receipt-1", approved_by: "operator" }, active_graph_mutated: false }));
+    render(<RunModel graphId="graph-1" targetNodeId="outcome" activeGraphVersion={4} projectId="project-1" client={{ runSimulation: async () => ({ snapshot: {} }), runWeightedEnsemble: async () => ({}), approveEnsemble, listEnsembles: async () => ({ ensembles: [{ id: "blend", name: "Blend", combination_method: "weighted_distribution_mixture", binding_hash: "a".repeat(64), members: [] }] }) }} />);
+
+    await user.type(await screen.findByLabelText("Ensemble approver identity"), "operator");
+    await user.click(screen.getByLabelText("I reviewed this exact ensemble binding"));
+    await user.click(screen.getByRole("button", { name: "Approve ensemble Blend" }));
+    expect(approveEnsemble).toHaveBeenCalledWith("project-1", "blend", { approved_by: "operator", binding_hash: "a".repeat(64) });
+    expect(await screen.findByLabelText("Ensemble approval receipt")).toHaveTextContent("Approval receipt: ensemble-receipt-1");
+    expect(screen.getByLabelText("Ensemble approval receipt")).toHaveTextContent("Member graphs unchanged: yes.");
+  });
 });

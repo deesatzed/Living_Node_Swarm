@@ -8,6 +8,7 @@ export interface RunModelClient {
   runWeightedEnsemble?(members: WeightedEnsembleMemberInput[]): Promise<JsonObject>;
   createEnsemble?(projectId: string, ensemble: WorkspaceEnsembleInput): Promise<JsonObject>;
   listEnsembles?(projectId: string): Promise<{ ensembles: JsonObject[] }>;
+  approveEnsemble?(projectId: string, ensembleId: string, body: { approved_by: string; binding_hash: string }): Promise<JsonObject>;
   listSnapshots?(graphId: string, limit?: number): Promise<{ snapshots: JsonObject[] }>;
 }
 
@@ -39,6 +40,9 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
   const [ensembleName, setEnsembleName] = useState("");
   const [savedEnsembles, setSavedEnsembles] = useState<JsonObject[]>([]);
   const [ensembleStatus, setEnsembleStatus] = useState("");
+  const [ensembleApprover, setEnsembleApprover] = useState("");
+  const [ensembleReviewed, setEnsembleReviewed] = useState(false);
+  const [ensembleApproval, setEnsembleApproval] = useState<JsonObject | null>(null);
   useEffect(() => {
     let active = true;
     if (!client.listSnapshots) return;
@@ -92,6 +96,12 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
     if (!current || !alternative) { setError("This saved configuration does not bind the selected approved model."); return; }
     setCurrentWeight(String(current.weight)); setAlternativeGraphId(text(alternative.graph_id, "")); setAlternativeGraphVersion(text(alternative.graph_version, "")); setAlternativeTargetId(text(alternative.target_node_id, "")); setAlternativeWeight(String(alternative.weight)); setEnsembleName(text(ensemble.name, "")); setEnsembleStatus(`Loaded ${text(ensemble.name, "ensemble")} for review. It is not approved or active.`); setError("");
   }
+  async function approveEnsemble(ensemble: JsonObject) {
+    const id = text(ensemble.id, ""); const bindingHash = text(ensemble.binding_hash, "");
+    if (!projectId || !client.approveEnsemble || !id || !bindingHash || !ensembleApprover.trim() || !ensembleReviewed) { setError("Use a server-issued saved binding hash, provide an operator identity, and acknowledge review before approving this ensemble."); return; }
+    try { const result = await client.approveEnsemble(projectId, id, { approved_by: ensembleApprover.trim(), binding_hash: bindingHash }); setEnsembleApproval(result); setError(""); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to approve this ensemble configuration."); }
+  }
   const snapshot = result?.snapshot as JsonObject | undefined;
   const status = result?.sim_status as JsonObject | undefined;
   const predictives = object(snapshot?.node_predictives);
@@ -119,7 +129,7 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
         <p>Active graphs unchanged: {mixture.active_graph_mutated === false ? "yes" : "not confirmed"}.</p>
       </section>}
     </section>}
-    {savedEnsembles.length > 0 && <section aria-label="Saved ensemble configurations"><h2>Saved ensemble configurations</h2><p>Saved configurations are not approved or active.</p><ul>{savedEnsembles.map((ensemble) => <li key={text(ensemble.id, "unknown")}>{text(ensemble.name, text(ensemble.id, "unknown"))} · {text(ensemble.combination_method, "weighted_distribution_mixture")} <button onClick={() => loadEnsemble(ensemble)}>Load ensemble {text(ensemble.name, text(ensemble.id, "unknown"))}</button></li>)}</ul></section>}
+    {savedEnsembles.length > 0 && <section aria-label="Saved ensemble configurations"><h2>Saved ensemble configurations</h2><p>Saved configurations are not approved or active.</p>{projectId && client.approveEnsemble && <><label>Ensemble approver identity<input aria-label="Ensemble approver identity" value={ensembleApprover} onChange={(event) => setEnsembleApprover(event.target.value)} /></label><label><input aria-label="I reviewed this exact ensemble binding" type="checkbox" checked={ensembleReviewed} onChange={(event) => setEnsembleReviewed(event.target.checked)} />I reviewed this exact ensemble binding</label></>}<ul>{savedEnsembles.map((ensemble) => <li key={text(ensemble.id, "unknown")}>{text(ensemble.name, text(ensemble.id, "unknown"))} · {text(ensemble.combination_method, "weighted_distribution_mixture")} <button onClick={() => loadEnsemble(ensemble)}>Load ensemble {text(ensemble.name, text(ensemble.id, "unknown"))}</button>{projectId && client.approveEnsemble && <button onClick={() => void approveEnsemble(ensemble)}>Approve ensemble {text(ensemble.name, text(ensemble.id, "unknown"))}</button>}</li>)}</ul>{ensembleApproval && <section aria-label="Ensemble approval receipt"><h3>Ensemble approval receipt</h3><p>Approval receipt: {text(object(ensembleApproval.approval_receipt)?.id, "unknown")}</p><p>Approved by: {text(object(ensembleApproval.approval_receipt)?.approved_by, "unknown")}</p><p>Member graphs unchanged: {ensembleApproval.active_graph_mutated === false ? "yes" : "not confirmed"}.</p></section>}</section>}
     {projectId && scenarioClient && <ScenarioEditor projectId={projectId} client={scenarioClient} targetNodeId={targetNodeId} activeGraphVersion={activeGraphVersion} />}
     {error && <p role="alert">{error}</p>}
     {snapshot && <section aria-label="Run receipt">

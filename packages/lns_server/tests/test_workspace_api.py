@@ -1,5 +1,3 @@
-import hashlib
-import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -166,7 +164,7 @@ def test_ensemble_approval_binds_saved_configuration_and_rejects_wrong_hash(tmp_
             {"graph_id": other["id"], "graph_version": other["graph_version"], "target_node_id": "outcome", "weight": 1},
         ]}).json()
         rejected = client.post("/projects/nd-project/ensembles/blend/approve", json={"approved_by": "operator", "binding_hash": "0" * 64})
-        approved = client.post("/projects/nd-project/ensembles/blend/approve", json={"approved_by": "operator", "binding_hash": hashlib.sha256(json.dumps(ensemble, sort_keys=True, separators=(",", ":")).encode()).hexdigest()})
+        approved = client.post("/projects/nd-project/ensembles/blend/approve", json={"approved_by": "operator", "binding_hash": ensemble["binding_hash"]})
         active = client.get(f"/graphs/{graph['id']}")
 
     assert rejected.status_code == 409
