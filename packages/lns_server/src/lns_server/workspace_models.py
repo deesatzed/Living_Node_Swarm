@@ -104,6 +104,40 @@ class WorkspaceScenario(BaseModel):
         return self
 
 
+class WorkspaceEnsembleMember(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    graph_id: str
+    graph_version: int = Field(ge=1)
+    target_node_id: str
+    weight: float = Field(ge=0)
+
+    @model_validator(mode="after")
+    def require_finite_weight(self) -> "WorkspaceEnsembleMember":
+        if not math.isfinite(self.weight):
+            raise ValueError("ensemble member weight must be finite")
+        return self
+
+
+class WorkspaceEnsemble(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    members: list[WorkspaceEnsembleMember] = Field(min_length=2, max_length=8)
+    combination_method: Literal["weighted_distribution_mixture"] = "weighted_distribution_mixture"
+    created_at: datetime = Field(default_factory=utcnow)
+
+    @model_validator(mode="after")
+    def require_unique_members_and_positive_total_weight(self) -> "WorkspaceEnsemble":
+        bindings = [(member.graph_id, member.graph_version, member.target_node_id) for member in self.members]
+        if len(bindings) != len(set(bindings)):
+            raise ValueError("ensemble members must have unique graph/version/target bindings")
+        if sum(member.weight for member in self.members) <= 0:
+            raise ValueError("ensemble member weights must sum to a positive value")
+        return self
+
+
 class MonitoringConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

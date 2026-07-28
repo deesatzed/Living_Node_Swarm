@@ -11,6 +11,7 @@ from lns_server.workspace_models import (
     MonitoringFixtureEvent,
     WorkspaceCandidateRevision,
     WorkspaceDraft,
+    WorkspaceEnsemble,
     WorkspaceProject,
     WorkspaceProjectPatch,
     WorkspaceScenario,
@@ -29,6 +30,7 @@ class WorkspaceStore:
             CREATE TABLE IF NOT EXISTS workspace_drafts (project_id TEXT NOT NULL, id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(project_id, id));
             CREATE TABLE IF NOT EXISTS workspace_candidate_revisions (project_id TEXT NOT NULL, id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(project_id, id));
             CREATE TABLE IF NOT EXISTS workspace_scenarios (project_id TEXT NOT NULL, id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(project_id, id));
+            CREATE TABLE IF NOT EXISTS workspace_ensembles (project_id TEXT NOT NULL, id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(project_id, id));
             CREATE TABLE IF NOT EXISTS workspace_monitoring (project_id TEXT PRIMARY KEY, payload_json TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS workspace_monitoring_events (project_id TEXT NOT NULL, id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(project_id, id));
             """
@@ -110,6 +112,15 @@ class WorkspaceStore:
     def list_scenarios(self, project_id: str) -> list[WorkspaceScenario]:
         rows = self._connection.execute("SELECT payload_json FROM workspace_scenarios WHERE project_id=? ORDER BY id", (project_id,)).fetchall()
         return [WorkspaceScenario.model_validate_json(row["payload_json"]) for row in rows]
+
+    def save_ensemble(self, project_id: str, ensemble: WorkspaceEnsemble) -> WorkspaceEnsemble:
+        self._connection.execute("INSERT INTO workspace_ensembles VALUES (?, ?, ?)", (project_id, ensemble.id, ensemble.model_dump_json()))
+        self._connection.commit()
+        return ensemble
+
+    def list_ensembles(self, project_id: str) -> list[WorkspaceEnsemble]:
+        rows = self._connection.execute("SELECT payload_json FROM workspace_ensembles WHERE project_id=? ORDER BY id", (project_id,)).fetchall()
+        return [WorkspaceEnsemble.model_validate_json(row["payload_json"]) for row in rows]
 
     def save_monitoring(self, project_id: str, config: MonitoringConfig) -> MonitoringConfig:
         self._connection.execute("INSERT INTO workspace_monitoring VALUES (?, ?) ON CONFLICT(project_id) DO UPDATE SET payload_json=excluded.payload_json", (project_id, config.model_dump_json()))

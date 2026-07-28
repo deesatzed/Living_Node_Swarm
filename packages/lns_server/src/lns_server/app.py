@@ -54,6 +54,7 @@ from lns_server.workspace_models import (
     MonitoringFixtureEvent,
     WorkspaceCandidateRevision,
     WorkspaceDraft,
+    WorkspaceEnsemble,
     WorkspaceProject,
     WorkspaceProjectPatch,
     WorkspaceScenario,
@@ -383,6 +384,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def list_workspace_scenarios(project_id: str) -> dict[str, Any]:
         require_project(project_id)
         return {"scenarios": [scenario.model_dump(mode="json") for scenario in app.state.workspace_store.list_scenarios(project_id)]}
+
+    @app.post("/projects/{project_id}/ensembles")
+    def create_workspace_ensemble(project_id: str, ensemble: WorkspaceEnsemble) -> dict[str, Any]:
+        require_project(project_id)
+        for member in ensemble.members:
+            graph = app.state.store.get_graph(member.graph_id)
+            if graph is None:
+                raise HTTPException(404, f"ensemble member graph not found: {member.graph_id}")
+            if graph.graph_version != member.graph_version:
+                raise HTTPException(409, f"ensemble member graph version is stale: {member.graph_id}")
+            if member.target_node_id not in graph.nodes or graph.nodes[member.target_node_id].status != NodeStatus.ACTIVE:
+                raise HTTPException(422, f"ensemble member target is not active: {member.graph_id}:{member.target_node_id}")
+        return app.state.workspace_store.save_ensemble(project_id, ensemble).model_dump(mode="json")
+
+    @app.get("/projects/{project_id}/ensembles")
+    def list_workspace_ensembles(project_id: str) -> dict[str, Any]:
+        require_project(project_id)
+        return {"ensembles": [ensemble.model_dump(mode="json") for ensemble in app.state.workspace_store.list_ensembles(project_id)]}
 
     @app.post("/projects/{project_id}/scenarios/{scenario_id}/simulate")
     def simulate_workspace_scenario(project_id: str, scenario_id: str) -> dict[str, Any]:
