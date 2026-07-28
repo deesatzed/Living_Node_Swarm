@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-**20% complete – Gates 0–2 complete; Gate 3 generalized authoring next**
+**30% complete – Gates 0–3 complete; Gate 4 Prediction Workspace next**
 
 The new domain-general goal has a hardened control surface and the first typed kernel contracts. The existing v0.1/v0.2 shell remains the verified baseline; no generalized research, authoring API, or workspace has been built yet.
 
@@ -11,7 +11,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Surface | Verified state |
 |---|---|
 | Kernel tests | 72 passed on 2026-07-27 after persisted multi-seed/multi-sample stability diagnostics |
-| Server tests | 50 passed on 2026-07-28 after version-bound candidate approval; one upstream deprecation warning |
+| Server tests | 51 passed on 2026-07-28 after full fixture generalized-authoring journey; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-27 |
 | Gas UI | Production build passed on 2026-07-27 |
 | Current families | Eight canonical registry families; legacy node payloads remain readable through explicit parameter normalization |
@@ -68,6 +68,8 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Q3-05 relationship authoring | Complete | Codex | Proposed-only relationship API validates contracts and returns unresolved-dependence warnings without graph mutation; 46 server tests passed |
 | Q3-06 shadow simulation | Complete | Codex | Active/candidate paired runs simulate in memory and prove active graph immutability; 48 server tests passed |
 | Q3-07 version-bound approval | Complete | Codex | Exact binding hash required; graph edits invalidate pending candidate; approved overrides apply atomically; 50 server tests and 72 kernel tests passed |
+| Q3-08 authoring journey | Complete | Codex | Fixture-only target→review→15-factor→elicitation→shadow→approval API journey; 51 server tests and 72 kernel tests passed |
+| Gate 3 generalized authoring | Complete | Codex | API supports reviewed, proposed-only, version-bound generalized authoring; fixture-only until live research is consented |
 | Gate 3 generalized authoring | Pending | Unassigned | Depends on Gates 1–2 |
 | Gate 4 visual workspace | Pending | Unassigned | Depends on Gate 3 API/contracts |
 | Gate 5 Neodymium acceptance | Pending | Unassigned | Depends on Gates 1–4 |
@@ -83,14 +85,14 @@ The new domain-general goal has a hardened control surface and the first typed k
 
 ## Current Milestone
 
-**Gate 3 — Generalized Authoring**
+**Gate 4 — Prediction Workspace**
 
-Gate 2 exited on 2026-07-27: fixture-tested local URL safety, bounded retrieval, untrusted extraction, provenance persistence, explicit provider routing consent, and completeness reporting are verified. No live research has been performed. The next exit is an approval-gated generalized authoring workflow.
+Gate 3 exited on 2026-07-28: fixture-tested target intake, evidence review, broad candidate proposal, distribution elicitation, relationship validation, shadow simulation, and hash-bound approval are verified. The next exit is the shared visual workspace that makes this reviewable logic usable.
 
 ## Next Actions
 
-1. Complete Q3-08: run a full deterministic generalized-authoring API journey.
-2. Start the shared Prediction Workspace once Gate 3 integration is green.
+1. Complete Q4-01: scaffold a private shared UI package consumed by canonical and gas apps.
+2. Complete Q4-02/03: target intake/research consent flow and target-centered hop graph.
 3. Keep fixture proposals clearly labeled until live research is consented and completed.
 
 ## Blockers
