@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import Callable, Mapping
 
 import numpy as np
 
@@ -152,6 +152,40 @@ def compare_transforms(
             }
         )
     return results
+
+
+def weighted_outcome_mixture(
+    member_samples: Mapping[str, np.ndarray],
+    weights: Mapping[str, float],
+    *,
+    seed: int,
+    node_id: str = "weighted_ensemble",
+) -> tuple[PredictivePayload, dict[str, float]]:
+    """Sample a reproducible mixture from already-generated member outcomes.
+
+    This is distribution mixing, not arithmetic averaging of point summaries.
+    """
+
+    if not member_samples:
+        raise ValueError("at least one ensemble member is required")
+    if set(member_samples) != set(weights):
+        raise ValueError("ensemble weights must name exactly the supplied members")
+    values = {member_id: np.asarray(samples, dtype=float) for member_id, samples in member_samples.items()}
+    if any(samples.ndim != 1 or len(samples) == 0 or not np.all(np.isfinite(samples)) for samples in values.values()):
+        raise ValueError("ensemble member samples must be non-empty finite one-dimensional arrays")
+    raw_weights = np.array([weights[member_id] for member_id in values], dtype=float)
+    if not np.all(np.isfinite(raw_weights)) or np.any(raw_weights < 0) or raw_weights.sum() <= 0:
+        raise ValueError("ensemble weights must be finite, non-negative, and sum to a positive value")
+    normalized = raw_weights / raw_weights.sum()
+    member_ids = list(values)
+    output_size = max(len(samples) for samples in values.values())
+    rng = np.random.default_rng(seed)
+    selected_members = rng.choice(len(member_ids), size=output_size, p=normalized)
+    mixture = np.empty(output_size, dtype=float)
+    for index, member_index in enumerate(selected_members):
+        samples = values[member_ids[member_index]]
+        mixture[index] = samples[int(rng.integers(0, len(samples)))]
+    return _payload(node_id, mixture), {member_id: float(normalized[index]) for index, member_id in enumerate(member_ids)}
 
 
 # Optional scoring helper for experiments: prefer finite variance, non-degenerate spread

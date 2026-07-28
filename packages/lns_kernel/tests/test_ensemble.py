@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from lns_kernel.ensemble import compare_transforms, run_ensemble
+from lns_kernel.ensemble import compare_transforms, run_ensemble, weighted_outcome_mixture
 from lns_kernel.models import DistributionFamily, Node, NodeStatus, TransformKind
 from lns_kernel.seed import build_seed_graph
 
@@ -77,3 +77,21 @@ def test_runtime_ensemble_samples_every_registered_distribution_family():
     assert np.all(samples[DistributionFamily.POISSON.value] >= 0)
     assert np.all(samples[DistributionFamily.GAMMA.value] > 0)
     assert np.all(samples[DistributionFamily.DETERMINISTIC.value] == 7)
+
+
+def test_weighted_outcome_mixture_is_reproducible_and_mixes_distributions_not_means():
+    members = {"low": np.zeros(500), "high": np.full(500, 10.0)}
+    first, normalized = weighted_outcome_mixture(members, {"low": 1, "high": 3}, seed=8)
+    second, _ = weighted_outcome_mixture(members, {"low": 1, "high": 3}, seed=8)
+
+    assert normalized == {"low": 0.25, "high": 0.75}
+    assert first.samples == second.samples
+    assert set(first.samples).issubset({0.0, 10.0})
+    assert 6 < first.derived_mean < 9
+
+
+def test_weighted_outcome_mixture_rejects_invalid_members_or_weights():
+    with pytest.raises(ValueError, match="exactly"):
+        weighted_outcome_mixture({"one": np.ones(2)}, {"other": 1}, seed=1)
+    with pytest.raises(ValueError, match="non-negative"):
+        weighted_outcome_mixture({"one": np.ones(2)}, {"one": -1}, seed=1)
