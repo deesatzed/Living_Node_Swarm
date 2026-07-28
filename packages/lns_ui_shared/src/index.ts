@@ -29,6 +29,7 @@ export {
   type ShadowSimulationInput,
   type WorkspaceProjectInput,
   type WorkspaceDraftInput,
+  type WorkspaceScenarioInput,
   type MonitoringConfigInput,
   type VisibleNodeState,
 } from "./api/types";
@@ -40,6 +41,7 @@ export { ExistingProjectWorkspace, type ExistingProjectClient, type ExistingProj
 export { RunModel, type RunModelClient } from "./modes/RunModel";
 export { EditModel, type EditModelClient } from "./modes/EditModel";
 export { MonitoringSetup, type MonitoringClient } from "./monitoring/MonitoringSetup";
+export { ScenarioEditor, type ScenarioClient } from "./simulation/ScenarioEditor";
 export { WorkspaceShell } from "./workspace/WorkspaceShell";
 export { FixtureWorkspace } from "./workspace/FixtureWorkspace";
 export { canMoveToStage, type StageTransitionContext } from "./workflow/guards";

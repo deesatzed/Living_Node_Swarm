@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { JsonObject } from "../api/types";
+import { ScenarioEditor, type ScenarioClient } from "../simulation/ScenarioEditor";
 
 export interface RunModelClient {
   runSimulation(graphId: string): Promise<JsonObject>;
@@ -9,7 +10,7 @@ function text(value: unknown, fallback: string): string {
   return typeof value === "string" || typeof value === "number" ? String(value) : fallback;
 }
 
-export function RunModel({ graphId, client }: { graphId: string; client: RunModelClient }) {
+export function RunModel({ graphId, client, projectId, scenarioClient }: { graphId: string; client: RunModelClient; projectId?: string; scenarioClient?: ScenarioClient }) {
   const [result, setResult] = useState<JsonObject | null>(null);
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
@@ -25,6 +26,7 @@ export function RunModel({ graphId, client }: { graphId: string; client: RunMode
   return <section aria-label="Run approved model controls">
     <p>Run uses the approved graph exactly as selected; it does not create, activate, or edit structure.</p>
     <button onClick={run} disabled={running}>{running ? "Running approved version…" : "Run approved version"}</button>
+    {projectId && scenarioClient && <ScenarioEditor projectId={projectId} client={scenarioClient} />}
     {error && <p role="alert">{error}</p>}
     {snapshot && <section aria-label="Run receipt">
       <h2>Run receipt: {text(snapshot.id, "unknown")}</h2>

@@ -120,6 +120,21 @@ describe("workspace API client", () => {
     await expect(client.createDraft("project-1", { id: "draft-1", base_graph_version: 4 })).resolves.toMatchObject({ id: "draft-1" });
   });
 
+  it("persists named scenarios separately from the active graph", async () => {
+    const calls: string[] = [];
+    const client = createWorkspaceClient({ baseUrl: "http://localhost:8787", fetch: async (input, init) => {
+      calls.push(`${init?.method ?? "GET"} ${input}`);
+      return new Response(JSON.stringify({ scenarios: [] }));
+    }});
+
+    await client.createScenario("project-1", { id: "upside", name: "Upside", assumptions: { demand: "higher" } });
+    await client.listScenarios("project-1");
+    expect(calls).toEqual([
+      "POST http://localhost:8787/projects/project-1/scenarios",
+      "GET http://localhost:8787/projects/project-1/scenarios",
+    ]);
+  });
+
   it("rejects candidate fixtures with an unrecognized visible state", () => {
     expect(() =>
       parseCandidateGraphFixture({
@@ -148,6 +163,7 @@ describe("workspace API client", () => {
       "createDraft",
       "createFixtureCandidateProposal",
       "createProject",
+      "createScenario",
       "createTarget",
       "elicitDistribution",
       "getDistributionCatalog",
@@ -160,6 +176,7 @@ describe("workspace API client", () => {
       "getTarget",
       "listGraphEvents",
       "listProjects",
+      "listScenarios",
       "patchProject",
       "reviewResearchClaim",
       "runSimulation",

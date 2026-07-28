@@ -4,10 +4,11 @@ import { WorkspaceShell } from "../workspace/WorkspaceShell";
 import { RunModel, type RunModelClient } from "./RunModel";
 import { MonitoringSetup, type MonitoringClient } from "../monitoring/MonitoringSetup";
 import { EditModel, type EditModelClient } from "./EditModel";
+import type { ScenarioClient } from "../simulation/ScenarioEditor";
 
 export type ExistingProjectMode = "run" | "edit" | "monitor";
 
-export interface ExistingProjectClient extends RunModelClient, MonitoringClient, EditModelClient {
+export interface ExistingProjectClient extends RunModelClient, MonitoringClient, EditModelClient, ScenarioClient {
   getProject(projectId: string): Promise<JsonObject>;
   getTarget(targetId: string): Promise<JsonObject>;
 }
@@ -59,7 +60,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack }: { 
   >
     <h1>{copy.title}</h1>
     <p>{copy.summary}</p>
-    {mode === "run" && typeof project.graph_id === "string" && <RunModel graphId={project.graph_id} client={client} />}
+    {mode === "run" && typeof project.graph_id === "string" && <RunModel graphId={project.graph_id} client={client} projectId={projectId} scenarioClient={client} />}
     {mode === "run" && typeof project.graph_id !== "string" && <p role="alert">This project has no approved graph to run yet.</p>}
     {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} />}
     {mode === "edit" && <EditModel projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : null} client={client} />}
