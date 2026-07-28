@@ -109,6 +109,14 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await page.getByLabel("Revision policy").fill("first captured value");
   await page.getByRole("button", { name: "Save target contract" }).click();
   await expect(page.getByRole("heading", { name: "Vet the research brief" })).toBeVisible();
+  await page.getByLabel("Supply").check();
+  await page.getByLabel("Substitution").check();
+  await page.getByRole("button", { name: "Save research categories" }).click();
+  await expect(page.getByRole("status")).toContainText("Research brief categories saved: supply, substitution.");
+  await page.getByLabel("Research routing provider").selectOption("openrouter");
+  await page.getByLabel("I authorize this routing receipt").check();
+  await page.getByRole("button", { name: "Record provider-routing consent" }).click();
+  await expect(page.getByRole("status")).toContainText("Provider-routing consent saved. No research content was sent.");
   await page.getByRole("button", { name: "Proceed now" }).click();
   await page.getByRole("button", { name: "Load labeled fixture candidate map" }).click();
   await expect(page.getByText("Fixture candidate map — not live research")).toBeVisible();
