@@ -34,6 +34,8 @@ assumption into an untracked numeric override.
 - `npm run test -- --run` in `packages/lns_ui_shared`: 30 files, 105 tests
   passed.
 - `npm run build` in `packages/lns_ui_shared`: passed.
+- `npm run test:e2e -- --reporter=line` in `packages/lns_ui`: 8 fixture-only
+  browser tests passed, including the Monitor → Edit elicitation path.
 
 ## Explicit limits
 

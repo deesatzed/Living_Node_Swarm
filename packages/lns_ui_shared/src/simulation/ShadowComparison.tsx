@@ -383,7 +383,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
         id: typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `candidate-revision-${Date.now()}`,
         base_graph_version: activeGraphVersion,
         candidate_parameter_overrides: parameterOverrides,
-        candidate_distribution_specs: stagedDistributionSpecs,
+        ...(Object.keys(stagedDistributionSpecs).length > 0 ? { candidate_distribution_specs: stagedDistributionSpecs } : {}),
         candidate_node_state_overrides: stagedNodeStates,
         candidate_relationship_state_overrides: stagedRelationshipStates,
         candidate_relationship_contracts: stagedRelationshipContracts,

@@ -55,7 +55,11 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
       { id: "revision-base", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 1 } } },
       { id: "revision-alternative", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 3 } }, candidate_node_state_overrides: { process_stage: "excluded" } },
     ] } })
-    : route.fulfill({ json: { id: "revision-1", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 5 } } } }));
+    : (() => { const body = route.request().postDataJSON() as { candidate_distribution_specs?: Record<string, unknown> }; return route.fulfill({ json: body.candidate_distribution_specs && Object.keys(body.candidate_distribution_specs).length > 0 ? { id: "revision-elicited", base_graph_version: 5, candidate_parameter_overrides: { input_signal: { mu: 5, sigma: 2 } }, candidate_distribution_specs: body.candidate_distribution_specs } : { id: "revision-1", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 5 } } } }); })());
+  await page.route("**/api/authoring/distributions/elicit", (route) => {
+    expect(route.request().postDataJSON()).toMatchObject({ id: "input_signal-median-p90", family_id: "Normal", median: 5, p90: 7.56 });
+    return route.fulfill({ json: { distribution_spec: { id: "input_signal-median-p90", family_id: "Normal", parameters: [{ id: "loc", value: 5 }, { id: "scale", value: 2 }], elicitation_method: "median_p90_quantile_match", evidence_claim_ids: [], as_of: "2026-07-28T00:00:00Z", confidence_rationale: "Initial operator range; requires evidence review." }, derived_statistics: { mean: 5, median: 5, mode: 5, variance: 4 }, receipt: { method: "median_p90_quantile_match", limitations: ["Fixture initial prior only."] } } });
+  });
   await page.route("**/api/projects/approved-1/candidate-proposals/proposal-1/approve", (route) => route.fulfill({ json: { approval_receipt: { id: "receipt-1", binding_hash: "binding-123" }, graph: { graph_version: 5 }, project: { ...project, stage: "decide", active_graph_version: 5 } } }));
   await page.route("**/api/projects/approved-1", (route) => route.request().url().endsWith("/api/projects/approved-1") ? route.fulfill({ json: project }) : route.fallback());
   await page.goto("/");
@@ -119,6 +123,14 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByText("Current stage: Decide")).toBeVisible();
   await page.getByRole("button", { name: "Create version-bound draft" }).click();
   await expect(page.getByText("Draft draft-1 is ready for proposed changes.")).toBeVisible();
+  await page.getByLabel("Elicitation median").fill("5");
+  await page.getByLabel("Elicitation P90").fill("7.56");
+  await page.getByRole("button", { name: "Stage elicited distribution candidate" }).click();
+  await expect(page.getByLabel("Elicited distribution candidate")).toContainText("Fixture initial prior only.");
+  await page.getByRole("button", { name: "Run in-memory comparison" }).click();
+  await expect(page.getByRole("button", { name: "Save candidate for review" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Save durable candidate revision" }).click();
+  await expect(page.getByText(/Revision revision-elicited .*1 elicited distribution candidate/)).toBeVisible();
 });
 
 test("canonical Edit retires an isolated non-target factor through a reviewed structural proposal", async ({ page }) => {
