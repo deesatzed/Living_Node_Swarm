@@ -113,7 +113,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
     {mode === "edit" && <EditModel projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : null} client={client} />}
     {mode === "edit" && approvedGraph && <ApprovedGraphMap graph={approvedGraph} onEvidenceClaimIds={setSelectedGraphClaimIds} />}
     {mode === "edit" && approvedGraph && graphClaimIds.length > 0 && typeof project.target_id === "string" && client.getResearchReview && client.reviewResearchClaim && <EvidenceDrawer targetId={project.target_id} claimIds={graphClaimIds} client={{ getResearchReview: client.getResearchReview, reviewResearchClaim: client.reviewResearchClaim }} />}
-    {mode === "edit" && typeof project.graph_id === "string" && client.getGraph && client.shadowSimulate && <ShadowComparison graphId={project.graph_id} projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : undefined} client={shadowClient} onApproved={setProject} />}
+    {mode === "edit" && typeof project.graph_id === "string" && client.getGraph && client.shadowSimulate && <ShadowComparison graphId={project.graph_id} projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : undefined} client={shadowClient} onApproved={setProject} onEvidenceClaimIds={setSelectedGraphClaimIds} />}
     <button onClick={onBack}>Back to projects</button>
   </WorkspaceShell>;
 }
