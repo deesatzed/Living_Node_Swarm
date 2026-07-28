@@ -8,6 +8,8 @@ export interface ShadowComparisonClient {
   createCandidateProposal?(graphId: string, body: CandidateProposalInput): Promise<JsonObject>;
   approveCandidateProposal?(graphId: string, proposalId: string, body: CandidateApprovalInput): Promise<JsonObject>;
   approveProjectCandidateProposal?(projectId: string, proposalId: string, body: CandidateApprovalInput): Promise<JsonObject>;
+  createStructuralProposal?(graphId: string, body: JsonObject): Promise<JsonObject>;
+  approveStructuralProposal?(graphId: string, proposalId: string, body: CandidateApprovalInput): Promise<JsonObject>;
   createCandidateRevision?(projectId: string, revision: WorkspaceCandidateRevisionInput): Promise<JsonObject>;
   listCandidateRevisions?(projectId: string): Promise<{ candidate_revisions: JsonObject[] }>;
   getDistributionStatistics?(familyId: string, parameters: Record<string, number>): Promise<DistributionStatisticsResult>;
