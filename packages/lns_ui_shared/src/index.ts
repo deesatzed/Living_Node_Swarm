@@ -53,3 +53,4 @@ export { WarningCenter, type WorkspaceWarning } from "./inspectors/WarningCenter
 export { DistributionInspector } from "./inspectors/DistributionInspector";
 export { VettingConversation } from "./discovery/VettingConversation";
 export { CandidateMap, type CandidateMapClient } from "./discovery/CandidateMap";
+export { DecisionLedger, type DecisionLedgerClient } from "./discovery/DecisionLedger";
