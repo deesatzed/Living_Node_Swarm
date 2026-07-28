@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800 }]) {
   test(`canonical Build entry remains usable at ${viewport.width}x${viewport.height}`, async ({ page }) => {
@@ -15,6 +16,13 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800
     await page.screenshot({ path: `../../docs/verification/gui/canonical-build-${viewport.width}x${viewport.height}.png`, fullPage: true });
   });
 }
+
+test("canonical Project Home has no serious or critical automated accessibility violations", async ({ page }) => {
+  await page.route("**/api/projects", (route) => route.fulfill({ json: { projects: [] } }));
+  await page.goto("/");
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter((violation) => violation.impact === "serious" || violation.impact === "critical")).toEqual([]);
+});
 
 test("canonical Monitor inspects a fixture event and branches into a version-bound Edit draft", async ({ page }) => {
   const project = { id: "approved-1", name: "Approved neodymium model", target_id: "target-1", graph_id: "graph-1", active_graph_version: 4, stage: "monitor", evidence_classification: "fixture_unverified" };

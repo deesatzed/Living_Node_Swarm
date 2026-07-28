@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-07-28",
+  "command": "cd packages/lns_ui && npm run test:e2e -- --reporter=line",
+  "test_file": "packages/lns_ui/e2e/canonical-build.spec.ts",
+  "result": "passed",
+  "tests_passed": 8,
+  "evidence_classification": "fixture_only",
+  "limitations": [
+    "Routes are deterministic Playwright intercepts and do not prove live research, provider execution, polling, or historical forecast accuracy.",
+    "The receipt proves the covered UI journeys and labels fixture evidence; it is not a production deployment receipt."
+  ]
+}

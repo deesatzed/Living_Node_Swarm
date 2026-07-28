@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-07-28",
+  "command": "cd packages/lns_ui && npm run test:e2e -- canonical-build.spec.ts --grep 'automated accessibility' --reporter=line",
+  "scope": "Fixture Project Home rendered by the canonical Playwright journey",
+  "tool": "@axe-core/playwright",
+  "result": "passed",
+  "serious_or_critical_violations": 0,
+  "evidence_classification": "fixture_only",
+  "limitations": [
+    "This automated scan covers the canonical Project Home fixture, not every workflow screen or assistive-technology interaction.",
+    "Keyboard and reduced-motion component/browser checks remain separate evidence and do not establish universal accessibility conformance."
+  ]
+}
