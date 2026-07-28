@@ -70,6 +70,8 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   const [candidateValue, setCandidateValue] = useState("");
   const [stagedOverrides, setStagedOverrides] = useState<Record<string, Record<string, number>>>({});
   const [stagedNodeStates, setStagedNodeStates] = useState<Record<string, "active" | "excluded">>({});
+  const [selectedRelationship, setSelectedRelationship] = useState("");
+  const [stagedRelationshipStates, setStagedRelationshipStates] = useState<Record<string, "active" | "excluded">>({});
   const [result, setResult] = useState<JsonObject | null>(null);
   const [comparedOverrides, setComparedOverrides] = useState<Record<string, Record<string, number>> | null>(null);
   const [comparedTarget, setComparedTarget] = useState("");
@@ -89,6 +91,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
       const editable = next.find((node) => Object.keys(node.parameters).length > 0);
       setNodes(next);
       setSelectedTarget(targetId(next));
+      setSelectedRelationship(next.flatMap((node) => node.dependsOn.map((parent) => `${parent}:${node.id}`))[0] ?? "");
       setSelectedNode(editable?.id ?? "");
       const parameter = editable ? Object.keys(editable.parameters)[0] ?? "" : "";
       setSelectedParameter(parameter);
@@ -146,6 +149,8 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   function removeStagedNodeState(nodeId: string) {
     setStagedNodeStates((current) => { const next = { ...current }; delete next[nodeId]; return next; });
   }
+  function stageSelectedRelationshipState(state: "active" | "excluded") { if (selectedRelationship) setStagedRelationshipStates((current) => ({ ...current, [selectedRelationship]: state })); }
+  function removeStagedRelationshipState(relationship: string) { setStagedRelationshipStates((current) => { const next = { ...current }; delete next[relationship]; return next; }); }
   async function runComparison() {
     const value = Number(candidateValue);
     if (!selectedTarget || !selectedNode || !selectedParameter || !Number.isFinite(value)) {
@@ -183,7 +188,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   }
   async function saveCandidateRevision() {
     const parameterOverrides = comparedOverrides ?? stagedOverrides;
-    if (!projectId || !activeGraphVersion || !client.createCandidateRevision || (!Object.keys(parameterOverrides).length && !Object.keys(stagedNodeStates).length)) return;
+    if (!projectId || !activeGraphVersion || !client.createCandidateRevision || (!Object.keys(parameterOverrides).length && !Object.keys(stagedNodeStates).length && !Object.keys(stagedRelationshipStates).length)) return;
     setError("");
     try {
       const revision = await client.createCandidateRevision(projectId, {
@@ -191,6 +196,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
         base_graph_version: activeGraphVersion,
         candidate_parameter_overrides: parameterOverrides,
         candidate_node_state_overrides: stagedNodeStates,
+        candidate_relationship_state_overrides: stagedRelationshipStates,
       });
       setCandidateRevisions((current) => [...current, revision]);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save durable candidate revision."); }
@@ -223,13 +229,14 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
       <button onClick={runComparison} disabled={running}>{running ? "Comparing in memory…" : "Run in-memory comparison"}</button>
       <section aria-label="Candidate change set"><h3>Candidate change set</h3>{stagedChanges.length === 0 ? <p>No local candidate changes staged.</p> : <ul>{stagedChanges.map((change) => <li key={`${change.nodeId}-${change.parameter}`}>{change.name} · {change.parameter}: {change.value} <button onClick={() => removeStagedChange(change.nodeId, change.parameter)}>Remove {change.name} {change.parameter}</button></li>)}</ul>}</section>
       <section aria-label="Candidate structural change set"><h3>Candidate structural change set</h3>{Object.keys(stagedNodeStates).length === 0 ? <p>No local candidate node-state changes staged.</p> : <ul>{Object.entries(stagedNodeStates).map(([nodeId, state]) => <li key={nodeId}>{nodes.find((node) => node.id === nodeId)?.name ?? nodeId}: {state} <button onClick={() => removeStagedNodeState(nodeId)}>Remove {nodes.find((node) => node.id === nodeId)?.name ?? nodeId} state change</button></li>)}</ul>}<p>Node-state changes are revision-only and cannot be shadow-simulated or approved until a structural proposal contract exists.</p></section>
+      <section aria-label="Candidate relationship change set"><h3>Candidate relationship change set</h3><label>Candidate dependency<select aria-label="Candidate dependency" value={selectedRelationship} onChange={(event) => setSelectedRelationship(event.target.value)}>{nodes.flatMap((node) => node.dependsOn.map((parent) => <option key={`${parent}:${node.id}`} value={`${parent}:${node.id}`}>{nodes.find((item) => item.id === parent)?.name ?? parent} → {node.name}</option>))}</select></label><button onClick={() => stageSelectedRelationshipState("excluded")}>Exclude selected dependency in candidate</button><button onClick={() => stageSelectedRelationshipState("active")}>Include selected dependency in candidate</button>{Object.keys(stagedRelationshipStates).length === 0 ? <p>No local candidate relationship-state changes staged.</p> : <ul>{Object.entries(stagedRelationshipStates).map(([relationship, state]) => <li key={relationship}>{relationship}: {state} <button onClick={() => removeStagedRelationshipState(relationship)}>Remove {relationship} state change</button></li>)}</ul>}<p>Relationship-state changes are revision-only and cannot be shadow-simulated or approved until a structural proposal contract exists.</p></section>
       {selected?.family && <DistributionInspector family={selected.family} parameters={selected.parameters} support={SUPPORT[selected.family] ?? "not recorded"} asOf="Not recorded on graph node" provenance={selected.provenance} />}
     </>}
     {nodes.length === 0 && !error && <p role="alert">This graph has no editable numeric node parameters.</p>}
     {error && <p role="alert">{error}</p>}
     {active && candidate && <section aria-label="Comparison receipt"><h3>Comparison receipt</h3><p>Active median: {numeric(active.p50)}</p><p>Candidate median: {numeric(candidate.p50)}</p><p>Active mean: {numeric(active.mean)} · Candidate mean: {numeric(candidate.mean)}</p>{path.length > 0 ? <p>Affected path: {path.map((node) => node.name).join(" → ")}</p> : <p>No directed path from the selected factor to the selected target was found.</p>}{result?.active_graph_mutated === false && <p>Active graph unchanged.</p>}</section>}
-    {(comparedOverrides || Object.keys(stagedNodeStates).length > 0) && projectId && activeGraphVersion && client.createCandidateRevision && <button onClick={saveCandidateRevision}>Save durable candidate revision</button>}
-    {candidateRevisions.length > 0 && <section aria-label="Persisted candidate revisions"><h3>Persisted candidate revisions</h3><ul>{candidateRevisions.map((revision) => { const overrides = revision.candidate_parameter_overrides as Record<string, Record<string, number>> | undefined; const nodeStates = revision.candidate_node_state_overrides as Record<string, string> | undefined; const changes = Object.values(overrides ?? {}).reduce((count, parameters) => count + Object.keys(parameters).length, 0); const structuralChanges = Object.keys(nodeStates ?? {}).length; return <li key={numeric(revision.id)}>Revision {numeric(revision.id)} · base graph version {numeric(revision.base_graph_version)} · {changes} parameter change{changes === 1 ? "" : "s"} · {structuralChanges} node-state change{structuralChanges === 1 ? "" : "s"}</li>; })}</ul><p>Candidate revision saved without changing the active graph.</p></section>}
+    {(comparedOverrides || Object.keys(stagedNodeStates).length > 0 || Object.keys(stagedRelationshipStates).length > 0) && projectId && activeGraphVersion && client.createCandidateRevision && <button onClick={saveCandidateRevision}>Save durable candidate revision</button>}
+    {candidateRevisions.length > 0 && <section aria-label="Persisted candidate revisions"><h3>Persisted candidate revisions</h3><ul>{candidateRevisions.map((revision) => { const overrides = revision.candidate_parameter_overrides as Record<string, Record<string, number>> | undefined; const nodeStates = revision.candidate_node_state_overrides as Record<string, string> | undefined; const relationshipStates = revision.candidate_relationship_state_overrides as Record<string, string> | undefined; const changes = Object.values(overrides ?? {}).reduce((count, parameters) => count + Object.keys(parameters).length, 0); const nodeChanges = Object.keys(nodeStates ?? {}).length; const relationshipChanges = Object.keys(relationshipStates ?? {}).length; return <li key={numeric(revision.id)}>Revision {numeric(revision.id)} · base graph version {numeric(revision.base_graph_version)} · {changes} parameter change{changes === 1 ? "" : "s"} · {nodeChanges} node-state change{nodeChanges === 1 ? "" : "s"} · {relationshipChanges} relationship-state change{relationshipChanges === 1 ? "" : "s"}</li>; })}</ul><p>Candidate revision saved without changing the active graph.</p></section>}
     {result && client.createCandidateProposal && !proposal && <button onClick={saveCandidate}>Save candidate for review</button>}
     {proposal && <section aria-label="Candidate approval"><h3>Candidate approval</h3><p>Proposal {proposalId} · graph version {numeric(proposal.graph_version)}</p><p>Binding hash: {bindingHash || "unavailable"}</p><p>Approval applies this exact proposal to the active graph. Review the binding before continuing.</p><label>Approver identity<input aria-label="Approver identity" value={approver} onChange={(event) => setApprover(event.target.value)} /></label><label><input aria-label="I reviewed this exact binding" type="checkbox" checked={reviewed} onChange={(event) => setReviewed(event.target.checked)} />I reviewed this exact binding</label>{(client.approveCandidateProposal || (projectId && client.approveProjectCandidateProposal)) && <button onClick={approveCandidate} disabled={!approver.trim() || !reviewed || !bindingHash}>Approve candidate version</button>}</section>}
     {approval && <section aria-label="Approval receipt"><h3>Approval receipt: {numeric((approval.approval_receipt as JsonObject | undefined)?.id)}</h3><p>Approved graph version: {numeric((approval.graph as JsonObject | undefined)?.graph_version)}</p>{approvedProject && <p>Project lifecycle: {numeric(approvedProject.stage)} · active graph version {numeric(approvedProject.active_graph_version)}</p>}<p>The server validated the proposal binding before applying this version.</p></section>}

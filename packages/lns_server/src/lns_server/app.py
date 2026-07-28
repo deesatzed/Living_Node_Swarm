@@ -316,7 +316,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         project = require_project(project_id)
         if project.active_graph_version is None or revision.base_graph_version != project.active_graph_version:
             raise HTTPException(409, "candidate revision base graph version is stale")
-        if revision.candidate_node_state_overrides:
+        if revision.candidate_node_state_overrides or revision.candidate_relationship_state_overrides:
             if not project.graph_id:
                 raise HTTPException(409, "candidate revision project has no active graph")
             graph = app.state.store.get_graph(project.graph_id)
@@ -325,6 +325,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             unknown = sorted(set(revision.candidate_node_state_overrides) - set(graph.nodes))
             if unknown:
                 raise HTTPException(422, f"candidate revision references unknown graph nodes: {', '.join(unknown)}")
+            known_relationships = {f"{parent}:{node_id}" for node_id, node in graph.nodes.items() for parent in node.depends_on}
+            unknown_relationships = sorted(set(revision.candidate_relationship_state_overrides) - known_relationships)
+            if unknown_relationships:
+                raise HTTPException(422, f"candidate revision references unknown graph relationships: {', '.join(unknown_relationships)}")
         return app.state.workspace_store.save_candidate_revision(project_id, revision).model_dump(mode="json")
 
     @app.get("/projects/{project_id}/candidate-revisions")

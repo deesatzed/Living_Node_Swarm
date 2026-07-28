@@ -62,12 +62,13 @@ class WorkspaceCandidateRevision(BaseModel):
     base_graph_version: int = Field(ge=1)
     candidate_parameter_overrides: dict[str, dict[str, float]] = Field(default_factory=dict)
     candidate_node_state_overrides: dict[str, Literal["active", "excluded"]] = Field(default_factory=dict)
+    candidate_relationship_state_overrides: dict[str, Literal["active", "excluded"]] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=utcnow)
 
     @model_validator(mode="after")
     def require_a_candidate_delta(self) -> "WorkspaceCandidateRevision":
-        if not self.candidate_parameter_overrides and not self.candidate_node_state_overrides:
-            raise ValueError("candidate revision requires a parameter or node-state override")
+        if not self.candidate_parameter_overrides and not self.candidate_node_state_overrides and not self.candidate_relationship_state_overrides:
+            raise ValueError("candidate revision requires a parameter, node-state, or relationship-state override")
         return self
 
 

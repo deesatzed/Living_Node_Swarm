@@ -126,7 +126,7 @@ describe("ShadowComparison", () => {
       base_graph_version: 4,
       candidate_parameter_overrides: { input_signal: { mu: 5 } },
     }));
-    expect(await screen.findByText("Revision revision-1 · base graph version 4 · 1 parameter change · 0 node-state changes")).toBeVisible();
+    expect(await screen.findByText("Revision revision-1 · base graph version 4 · 1 parameter change · 0 node-state changes · 0 relationship-state changes")).toBeVisible();
     expect(screen.getByText("Candidate revision saved without changing the active graph.")).toBeVisible();
   });
 
@@ -139,6 +139,17 @@ describe("ShadowComparison", () => {
     expect(screen.getByLabelText("Candidate structural change set")).toHaveTextContent("Input signal: excluded");
     await user.click(screen.getByRole("button", { name: "Save durable candidate revision" }));
     expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({ candidate_node_state_overrides: { input_signal: "excluded" } }));
-    expect(await screen.findByText("Revision exclude-input · base graph version 4 · 0 parameter changes · 1 node-state change")).toBeVisible();
+    expect(await screen.findByText("Revision exclude-input · base graph version 4 · 0 parameter changes · 1 node-state change · 0 relationship-state changes")).toBeVisible();
+  });
+
+  it("persists a staged dependency exclusion as a structural non-active revision", async () => {
+    const user = userEvent.setup();
+    const createCandidateRevision = vi.fn(async (_projectId, revision) => ({ ...revision, id: "exclude-edge" }));
+    render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] } } }), shadowSimulate: async () => ({}), createCandidateRevision }} />);
+    await screen.findByLabelText("Candidate dependency");
+    await user.click(screen.getByRole("button", { name: "Exclude selected dependency in candidate" }));
+    expect(screen.getByLabelText("Candidate relationship change set")).toHaveTextContent("input_signal:outcome: excluded");
+    await user.click(screen.getByRole("button", { name: "Save durable candidate revision" }));
+    expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({ candidate_relationship_state_overrides: { "input_signal:outcome": "excluded" } }));
   });
 });

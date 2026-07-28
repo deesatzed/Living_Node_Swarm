@@ -196,3 +196,24 @@ def test_candidate_revision_persists_node_state_delta_without_mutating_active_gr
     assert saved.json()["candidate_node_state_overrides"] == {"input_signal": "excluded"}
     assert invalid.status_code == 422
     assert active.json()["nodes"]["input_signal"]["status"] == graph["nodes"]["input_signal"]["status"]
+
+
+def test_candidate_revision_persists_relationship_state_delta_without_mutating_active_graph(tmp_path: Path):
+    settings = _settings(tmp_path)
+    with TestClient(create_app(settings)) as client:
+        graph = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        client.post("/projects", json={**_project_payload(), "graph_id": graph["id"], "active_graph_version": graph["graph_version"], "stage": "refine"})
+        saved = client.post("/projects/nd-project/candidate-revisions", json={
+            "id": "exclude-dependency", "base_graph_version": graph["graph_version"],
+            "candidate_relationship_state_overrides": {"input_signal:process_stage": "excluded"},
+        })
+        invalid = client.post("/projects/nd-project/candidate-revisions", json={
+            "id": "unknown-dependency", "base_graph_version": graph["graph_version"],
+            "candidate_relationship_state_overrides": {"input_signal:missing": "excluded"},
+        })
+        active = client.get(f"/graphs/{graph['id']}")
+
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["candidate_relationship_state_overrides"] == {"input_signal:process_stage": "excluded"}
+    assert invalid.status_code == 422
+    assert active.json()["nodes"]["process_stage"]["depends_on"] == graph["nodes"]["process_stage"]["depends_on"]
