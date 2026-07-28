@@ -27,7 +27,7 @@
 | [P11] Existing-model run immutable | Fixture-only | Canonical Run test and server simulation tests. | Browser response is intercepted fixture data. |
 | [P12] Existing-model branch/edit/approve | Fixture-only | Canonical Monitor → Edit structural comparison/approval journey. | Does not yet prove every stale-approval branch in Playwright. |
 | [P13] Monitor inspect/re-run/branch | Partial | Monitor component and browser proof cover inspect/branch. | Re-run action remains limited. |
-| [P14] 30-node no-overlap graph | Partial | Graph layout/component coverage and 15-factor canonical fixture screenshots. | A dedicated 30-node viewport proof is absent. |
+| [P14] 30-node no-overlap graph | Fixture-only verified | Canonical Build fixture renders 30 factors, asserts 30 unique `data-x:data-y` coordinates, and saves both required viewport screenshots. | Deterministic fixture layout only; not a live researched graph. |
 | [P15] Graph navigation and text alternative | Locally verified | `HopGraph`/layout component tests and canonical graph path interaction. | Coverage is fixture-based. |
 | [P16] Non-color status encoding | Partial | Status labels appear in graph/workspace components and tests. | Full every-node/every-edge audit remains. |
 | [P17] Material-number provenance | Partial | Distribution inspector/graph node tests. | Some legacy graph fields remain explicitly not recorded. |

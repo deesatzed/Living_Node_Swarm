@@ -207,6 +207,11 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
     ["ev_demand", "Electric-vehicle demand", 1], ["wind_turbine_demand", "Wind-turbine demand", 1], ["chip_demand", "Semiconductor demand", 2],
     ["substitution_pressure", "Substitution pressure", 1], ["magnet_efficiency", "Magnet efficiency", 2], ["energy_prices", "Industrial energy prices", 2],
     ["fx_usd_cny", "USD/CNY exchange-rate regime", 1], ["geopolitical_risk", "Geopolitical disruption risk", 2], ["inventory_policy", "Downstream inventory policy", 1],
+    ["ore_grade", "Ore grade", 2], ["processing_reagents", "Processing reagent availability", 2], ["water_availability", "Industrial water availability", 3],
+    ["grid_reliability", "Grid reliability", 2], ["labor_capacity", "Skilled labor capacity", 2], ["port_congestion", "Port congestion", 2],
+    ["sanctions_risk", "Sanctions risk", 2], ["magnet_inventory", "Magnet inventory", 2], ["defense_procurement", "Defense procurement", 2],
+    ["robotics_demand", "Industrial robotics demand", 2], ["vehicle_efficiency", "Vehicle efficiency", 2], ["alternative_magnets", "Alternative magnet adoption", 2],
+    ["scrap_collection", "End-of-life scrap collection", 2], ["refining_policy", "Refining policy", 2], ["credit_conditions", "Industrial credit conditions", 2],
   ].map(([id, label, hop_distance], index) => ({ id, label, hop_distance, rank: index + 1, state: "proposed", evidence_status: "fixture_unverified" }));
   await page.route("**/api/projects", async (route) => {
     if (route.request().method() === "GET") return route.fulfill({ json: { projects: [] } });
@@ -253,7 +258,10 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await expect(page.getByText("Fixture candidate map — not live research")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Warnings and limitations" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Visual target-centered graph" })).toBeVisible();
-  await expect(page.getByText(/15 factors shown\. Use arrow keys while this graph is focused/)).toBeVisible();
+  await expect(page.getByText(/30 factors shown\. Use arrow keys while this graph is focused/)).toBeVisible();
+  const coordinates = await page.getByLabel("Target-centered dependency graph").locator("li[data-x][data-y]").evaluateAll((items) => items.map((item) => `${item.getAttribute("data-x")}:${item.getAttribute("data-y")}`));
+  expect(coordinates).toHaveLength(30);
+  expect(new Set(coordinates).size).toBe(30);
   await page.getByRole("button", { name: "Weather disruption" }).click();
   await expect(page.getByRole("status")).toContainText("Traced path: Weather disruption → Freight capacity → Rare-earth refining throughput → Private-investor retail neodymium price");
   await page.screenshot({ path: `../../docs/verification/gui/canonical-fixture-build-${viewport.width}x${viewport.height}.png`, fullPage: true });
