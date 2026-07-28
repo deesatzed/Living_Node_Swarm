@@ -335,17 +335,28 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await page.route("**/api/targets", (route) => route.fulfill({ json: { target: {} } }));
   await page.route("**/api/research/targets/*/review", (route) => route.fulfill({ json: { claims: [] } }));
   await page.route("**/api/projects/**", (route) => route.fulfill({ json: {} }));
-  await page.route("**/api/authoring/targets/*/candidate-proposals/fixture", (route) =>
-    route.fulfill({ json: {
+  await page.route("**/api/authoring/targets/*/candidate-proposals/fixture/materialize", (route) =>
+    route.fulfill({ json: { graph: { id: "fixture-review-graph" }, active_graph_mutated: false } }),
+  );
+  await page.route("**/api/authoring/graphs/fixture-review-graph/structural-proposals", (route) =>
+    route.fulfill({ json: { proposal: { id: "fixture-structural-review", graph_version: 1, binding_hash: "fixture-structural-hash" }, active_graph_mutated: false } }),
+  );
+  await page.route("**/api/projects/*/structural-proposals/fixture-structural-review/approve", (route) =>
+    route.fulfill({ json: { approval_receipt: { id: "fixture-structural-receipt" }, graph: { graph_version: 2 }, project: { id: "fixture-project", stage: "decide", active_graph_version: 2 } } }),
+  );
+  await page.route("**/api/authoring/targets/*/candidate-proposals/fixture", (route) => {
+    if (route.request().url().endsWith("/materialize")) return route.fulfill({ json: { graph: { id: "fixture-review-graph" }, active_graph_mutated: false } });
+    return route.fulfill({ json: {
       evidence_classification: "fixture_unverified", generation_basis: "deterministic_fixture", active_graph_mutated: false,
       limitations: ["Fixture only"], graph_proposal: { target_node_id: "fixture_target" },
       relationships: [
         { parent_node_id: "weather_disruption", child_node_id: "freight_capacity" },
         { parent_node_id: "freight_capacity", child_node_id: "refining_throughput" },
         { parent_node_id: "refining_throughput", child_node_id: "fixture_target" },
+        { id: "china_export_controls_to_target", parent_node_id: "china_export_controls", child_node_id: "fixture_target", transform: "affine", coefficient_parameters: [{ id: "coefficient", value: 0.2 }], state: "proposed" },
       ], factors,
-    }}),
-  );
+    }});
+  });
   await page.goto("/");
   await page.getByRole("button", { name: "New project" }).click();
   await page.getByRole("button", { name: "Create project" }).click();
@@ -395,6 +406,17 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await expect(page.getByLabel("Fixture revision delta")).toContainText("Active graph unchanged: yes.");
   await page.getByRole("button", { name: "Replay fixture branch revision" }).click();
   await expect(page.getByText("Replayed fixture branch revision without changing an active graph.")).toBeVisible();
+  await page.getByRole("button", { name: "Materialize fixture proposal for review" }).click();
+  await expect(page.getByText("Fixture candidate graph fixture-review-graph persisted for separate review; no factor is active.")).toBeVisible();
+  await page.getByLabel("Candidate factor for fixture refinement").selectOption("china_export_controls");
+  await page.getByRole("button", { name: "Create structural review for selected fixture factor" }).click();
+  await expect(page.getByLabel("Fixture structural review")).toContainText("Binding hash: fixture-structural-hash");
+  await expect(page.getByLabel("Fixture structural review")).toContainText("No factor is active until exact named approval.");
+  await page.getByLabel("Fixture structural approver identity").fill("fixture-operator");
+  await page.getByLabel("I reviewed this fixture structural binding").check();
+  await page.getByRole("button", { name: "Approve fixture structural binding" }).click();
+  await expect(page.getByLabel("Fixture structural approval receipt")).toContainText("Approval receipt: fixture-structural-receipt");
+  await expect(page.getByLabel("Fixture structural approval receipt")).toContainText("Approved graph version: 2");
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations.filter((violation) => violation.impact === "serious" || violation.impact === "critical")).toEqual([]);
   await page.screenshot({ path: `../../docs/verification/gui/canonical-fixture-build-${viewport.width}x${viewport.height}.png`, fullPage: true });
