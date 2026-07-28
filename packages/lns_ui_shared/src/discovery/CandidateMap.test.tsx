@@ -39,4 +39,14 @@ describe("CandidateMap", () => {
     await user.click(screen.getByRole("button", { name: "Replay fixture branch revision" }));
     expect(screen.getByRole("status")).toHaveTextContent("Replayed fixture branch revision without changing an active graph.");
   });
+
+  it("materializes a fixture proposal for separate review without claiming activation", async () => {
+    const user = userEvent.setup();
+    const materializeFixtureCandidateProposal = vi.fn(async () => ({ graph: { id: "fixture-graph-1" }, active_graph_mutated: false }));
+    render(<CandidateMap targetId="fixture-nd-retail-2027" client={{ createFixtureCandidateProposal: async () => createNeodymiumGraphFixture(), materializeFixtureCandidateProposal }} />);
+    await user.click(screen.getByRole("button", { name: "Load labeled fixture candidate map" }));
+    await user.click(await screen.findByRole("button", { name: "Materialize fixture proposal for review" }));
+    expect(materializeFixtureCandidateProposal).toHaveBeenCalledWith("fixture-nd-retail-2027");
+    expect(await screen.findByRole("status")).toHaveTextContent("Fixture candidate graph fixture-graph-1 persisted for separate review; no factor is active.");
+  });
 });
