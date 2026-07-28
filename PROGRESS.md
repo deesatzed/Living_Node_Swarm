@@ -14,7 +14,7 @@ Prediction Workspace has not been built yet.
 | Surface | Verified state |
 |---|---|
 | Kernel tests | 72 passed on 2026-07-27 after persisted multi-seed/multi-sample stability diagnostics |
-| Server tests | 51 passed on 2026-07-28 after full fixture generalized-authoring journey; one upstream deprecation warning |
+| Server tests | 55 passed on 2026-07-28 after workspace-persistence coverage; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-28 after consuming `@lns/ui-shared` |
 | Gas UI | Production build passed on 2026-07-28 after consuming `@lns/ui-shared` |
 | Current families | Eight canonical registry families; legacy node payloads remain readable through explicit parameter normalization |
@@ -74,7 +74,7 @@ Prediction Workspace has not been built yet.
 | Q3-08 authoring journey | Complete | Codex | Fixture-only target→review→15-factor→elicitation→shadow→approval API journey; 51 server tests and 72 kernel tests passed |
 | Gate 3 generalized authoring | Complete | Codex | API supports reviewed, proposed-only, version-bound generalized authoring; fixture-only until live research is consented |
 | Define autonomous hybrid GUI goal | Complete | Codex | `GOAL_GUI.md` specifies Build, Run, Edit, and Monitor workflows plus evidence-gated autonomous completion |
-| Q4-01 shared UI package | Complete | Codex | `@lns/ui-shared` exports typed lifecycle/client boundaries and deterministic fixtures; both apps consume the shared lifecycle; its 8-test Vitest 4 suite/type build, zero-vulnerability package audit, 52-server-test catalog check, and both consumer production builds passed on 2026-07-28 |
+| Q4-01 shared UI package | Complete | Codex | `@lns/ui-shared` exports typed lifecycle/client boundaries and deterministic fixtures; both apps consume the shared lifecycle; its current 23-test Vitest 4 suite/type build, zero-vulnerability package audit, 55-server-test catalog/persistence coverage, and both consumer production builds passed on 2026-07-28 |
 | Workspace project persistence | Complete | Codex | Typed SQLite project, draft, scenario, and fixture-monitoring metadata persists across restart; stale bases return 409 and scenario operations preserve active graph state (3 focused tests; 55 server tests, 2026-07-28) |
 | Shared Project Home and workspace shell | Complete | Codex | Accessible New/Run/Edit/Monitor actions, project truth cards, lifecycle guard, and visible target/version/freshness/fixture state are implemented in shared components (3 focused tests and shared type build, 2026-07-28) |
 | Idea/Vet component foundation | In progress | Codex | Accessible target form distinguishes the Neodymium private-investor retail series, blocks incomplete contracts, collects every authoritative target-contract field with timezone-aware submission values, and has a reusable project-persistence wrapper that reports success/failure without attaching a failed target. Vetting surface shows discovery controls and routing scope before consent (4 focused tests and shared type build, 2026-07-28). Canonical-app wiring, ledger persistence, and complete consent flow remain. |
