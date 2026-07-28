@@ -317,6 +317,7 @@ describe("workspace API client", () => {
       "listProjects",
       "listScenarios",
       "listSnapshots",
+      "materializeFixtureCandidateProposal",
       "patchProject",
       "reviewResearchClaim",
       "runLocalSensitivity",

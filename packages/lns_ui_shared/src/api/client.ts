@@ -67,6 +67,7 @@ export interface WorkspaceClient {
   getResearchReview(targetId: string): Promise<JsonObject>;
   reviewResearchClaim(targetId: string, claimId: string, body: ClaimReviewInput): Promise<JsonObject>;
   createFixtureCandidateProposal(targetId: string): Promise<CandidateGraphFixture>;
+  materializeFixtureCandidateProposal(targetId: string): Promise<JsonObject>;
   elicitDistribution(body: ElicitDistributionInput): Promise<JsonObject>;
   deriveDistribution(body: DeriveDistributionInput): Promise<JsonObject>;
   validateRelationships(body: JsonObject): Promise<JsonObject>;
@@ -202,6 +203,8 @@ export function createWorkspaceClient({
           { method: "POST" },
         ),
       ),
+    materializeFixtureCandidateProposal: (targetId) =>
+      request<JsonObject>(`/authoring/targets/${encodeURIComponent(targetId)}/candidate-proposals/fixture/materialize`, { method: "POST" }),
     elicitDistribution: (body) =>
       request<JsonObject>("/authoring/distributions/elicit", { method: "POST", body: JSON.stringify(body) }),
     deriveDistribution: (body) =>
