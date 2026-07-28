@@ -7,6 +7,7 @@ import { EditModel, type EditModelClient } from "./EditModel";
 import type { ScenarioClient } from "../simulation/ScenarioEditor";
 import { ShadowComparison, type ShadowComparisonClient } from "../simulation/ShadowComparison";
 import { ApprovedGraphMap } from "../graph/ApprovedGraphMap";
+import { EvidenceDrawer, type EvidenceDrawerClient } from "../inspectors/EvidenceDrawer";
 
 export type ExistingProjectMode = "run" | "edit" | "monitor";
 
@@ -27,6 +28,8 @@ export interface ExistingProjectClient extends RunModelClient, MonitoringClient,
   elicitDistribution?: ShadowComparisonClient["elicitDistribution"];
   deriveDistribution?: ShadowComparisonClient["deriveDistribution"];
   validateRelationships?: ShadowComparisonClient["validateRelationships"];
+  getResearchReview?: EvidenceDrawerClient["getResearchReview"];
+  reviewResearchClaim?: EvidenceDrawerClient["reviewResearchClaim"];
   patchProject?(projectId: string, patch: JsonObject): Promise<JsonObject>;
 }
 
@@ -44,6 +47,16 @@ function projectHorizon(target: JsonObject | undefined): string {
   if (typeof target?.forecast_origin !== "string" || typeof target.resolution_at !== "string") return "Not yet specified";
   const days = Math.round((Date.parse(target.resolution_at) - Date.parse(target.forecast_origin)) / 86_400_000);
   return Number.isFinite(days) && days >= 0 ? `${days} days` : "Not yet specified";
+}
+
+function approvedGraphClaimIds(graph: JsonObject): string[] {
+  const ids = new Set<string>();
+  const add = (value: unknown) => { if (Array.isArray(value)) for (const id of value) if (typeof id === "string" && id.trim()) ids.add(id); };
+  if (graph.nodes && typeof graph.nodes === "object" && !Array.isArray(graph.nodes)) for (const raw of Object.values(graph.nodes as Record<string, unknown>)) {
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) add((raw as JsonObject).distribution_spec && typeof (raw as JsonObject).distribution_spec === "object" ? ((raw as JsonObject).distribution_spec as JsonObject).evidence_claim_ids : undefined);
+  }
+  if (graph.relationships && typeof graph.relationships === "object" && !Array.isArray(graph.relationships)) for (const raw of Object.values(graph.relationships as Record<string, unknown>)) if (raw && typeof raw === "object" && !Array.isArray(raw)) add((raw as JsonObject).evidence_claim_ids);
+  return [...ids].sort();
 }
 
 export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBranchToEdit }: { mode: ExistingProjectMode; projectId: string; client: ExistingProjectClient; onBack: () => void; onBranchToEdit?: () => void }) {
@@ -76,6 +89,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
   if (error) return <section aria-label="Existing project workspace"><p role="alert">{error}</p><button onClick={onBack}>Back to projects</button></section>;
   if (!project) return <section aria-label="Existing project workspace"><p role="status">Loading selected project…</p></section>;
   const copy = MODE_COPY[mode];
+  const graphClaimIds = approvedGraph ? approvedGraphClaimIds(approvedGraph) : [];
   return <WorkspaceShell
     projectName={stringValue(project.name, "Untitled prediction project")}
     target={stringValue(target?.question, stringValue(project.target_id, "Target not yet specified"))}
@@ -95,6 +109,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
     {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} onBranchToEdit={onBranchToEdit} />}
     {mode === "edit" && <EditModel projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : null} client={client} />}
     {mode === "edit" && approvedGraph && <ApprovedGraphMap graph={approvedGraph} />}
+    {mode === "edit" && approvedGraph && graphClaimIds.length > 0 && typeof project.target_id === "string" && client.getResearchReview && client.reviewResearchClaim && <EvidenceDrawer targetId={project.target_id} claimIds={graphClaimIds} client={{ getResearchReview: client.getResearchReview, reviewResearchClaim: client.reviewResearchClaim }} />}
     {mode === "edit" && typeof project.graph_id === "string" && client.getGraph && client.shadowSimulate && <ShadowComparison graphId={project.graph_id} projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : undefined} client={{ getGraph: client.getGraph, shadowSimulate: client.shadowSimulate, shadowStructuralProposal: client.shadowStructuralProposal, createCandidateProposal: client.createCandidateProposal, approveCandidateProposal: client.approveCandidateProposal, approveProjectCandidateProposal: client.approveProjectCandidateProposal, createStructuralProposal: client.createStructuralProposal, approveStructuralProposal: client.approveStructuralProposal, approveProjectStructuralProposal: client.approveProjectStructuralProposal, createCandidateRevision: client.createCandidateRevision, listCandidateRevisions: client.listCandidateRevisions, elicitDistribution: client.elicitDistribution, deriveDistribution: client.deriveDistribution, validateRelationships: client.validateRelationships }} onApproved={setProject} />}
     <button onClick={onBack}>Back to projects</button>
   </WorkspaceShell>;

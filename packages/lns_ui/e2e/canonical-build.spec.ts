@@ -29,6 +29,7 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   const derivedFamilies = new Set<string>();
   await page.route("**/api/projects", (route) => route.fulfill({ json: { projects: [project] } }));
   await page.route("**/api/targets/target-1", (route) => route.fulfill({ json: { question: "What will neodymium cost?", forecast_origin: "2026-07-28T00:00:00Z", resolution_at: "2027-07-28T00:00:00Z" } }));
+  await page.route("**/research/targets/target-1/review", (route) => route.fulfill({ json: { claims: [{ id: "fixture-claim-process-outcome", claim_text: "Fixture process evidence." }, { id: "unlinked-claim", claim_text: "Unlinked fixture evidence." }] } }));
   await page.route("**/api/projects/approved-1/monitoring", (route) => route.fulfill({ json: { config: { cadence: "weekly", freshness_threshold_days: 7, mode: "fixture" }, events: [{ id: "stale-source", severity: "warning", message: "Fixture source is stale", evidence_classification: "fixture_unverified" }] } }));
   await page.route("**/api/projects/approved-1/drafts", (route) => route.fulfill({ json: { id: "draft-1", base_graph_version: 4 } }));
   await page.route("**/api/projects/approved-1/revisions", (route) => route.fulfill({ json: { drafts: [{ id: "draft-earlier", base_graph_version: 4 }] } }));
@@ -101,6 +102,8 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByLabel("Approved model dependency graph")).toContainText("Approved graph — read-only");
   await expect(page.getByLabel("Approved dependency details")).toContainText("relationship type: causal_hypothesis");
   await expect(page.getByLabel("Approved dependency details")).toContainText("evidence: fixture-claim-process-outcome · state: active");
+  await expect(page.getByLabel("Evidence review drawer")).toContainText("Fixture process evidence.");
+  await expect(page.getByLabel("Evidence review drawer")).not.toContainText("Unlinked fixture evidence.");
   await page.getByLabel("Approved model dependency graph").getByRole("button", { name: "Input signal" }).click();
   await expect(page.getByLabel("Approved model dependency graph").getByRole("status")).toContainText("Traced path: Input signal → Process stage → Outcome");
   await expect(page.getByRole("heading", { name: "Active versus candidate" })).toBeVisible();

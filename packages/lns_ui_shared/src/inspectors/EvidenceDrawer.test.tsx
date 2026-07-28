@@ -17,4 +17,14 @@ describe("EvidenceDrawer", () => {
     expect(reviewResearchClaim).toHaveBeenCalledWith("target-1", "claim-1", expect.objectContaining({ decision: "included", reviewed_by: "operator" }));
     expect(screen.getByText("included")).toBeVisible();
   });
+
+  it("can limit the review surface to claims linked by the active graph", async () => {
+    render(<EvidenceDrawer targetId="target-1" claimIds={["claim-linked"]} client={{ getResearchReview: async () => ({ claims: [
+      { id: "claim-linked", claim_text: "Linked evidence." }, { id: "claim-unlinked", claim_text: "Unlinked evidence." },
+    ] }), reviewResearchClaim: async () => ({}) }} />);
+
+    expect(await screen.findByRole("listitem")).toHaveTextContent("Linked evidence.");
+    expect(screen.queryByRole("listitem", { name: /Unlinked evidence/ })).not.toBeInTheDocument();
+    expect(screen.getByText("Showing 1 claim linked to the approved graph.")).toBeVisible();
+  });
 });
