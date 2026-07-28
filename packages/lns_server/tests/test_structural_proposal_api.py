@@ -78,6 +78,7 @@ def test_exact_structural_proposal_approval_activates_the_trial_atomically(tmp_p
     assert approved.json()["approval_receipt"]["binding_hash"] == proposal["binding_hash"]
     assert activated["graph_version"] == active["graph_version"] + 1
     assert activated["nodes"]["outcome"]["depends_on"] == ["process_stage", "input_signal"]
+    assert activated["nodes"]["outcome"]["transform_params"]["a2"] == 0.2
     assert activated["relationships"]["input-to-outcome-proposal"]["state"] == "active"
 
 

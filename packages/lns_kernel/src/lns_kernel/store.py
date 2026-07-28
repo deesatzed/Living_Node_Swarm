@@ -350,11 +350,21 @@ class GraphStore:
                 raise ValidationError(f"structural proposal relationship {relationship.id} duplicates an active dependency")
             if child.transform == TransformKind.NONE:
                 raise ValidationError(f"structural proposal child {child.id} cannot add a dependency with transform none")
+            if relationship.transform != child.transform.value:
+                raise ValidationError(
+                    f"structural proposal relationship {relationship.id} transform must match child transform {child.transform.value}"
+                )
+            coefficient = relationship.coefficient_parameter_map.get("coefficient")
+            if coefficient is None:
+                raise ValidationError(
+                    f"structural proposal relationship {relationship.id} requires coefficient_parameters.coefficient"
+                )
             active_relationship = relationship.model_copy(update={"state": "active"})
             new_child = child.model_copy(
                 update={
                     "depends_on": [*child.depends_on, relationship.parent_node_id],
                     "relationship_ids": [*child.relationship_ids, relationship.id],
+                    "transform_params": {**child.transform_params, f"a{len(child.depends_on) + 1}": coefficient},
                     "version": child.version + 1,
                     "last_updated_by": actor,
                     "updated_at": utcnow(),
