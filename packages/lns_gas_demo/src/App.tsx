@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { GAS_PRESET, WORKFLOW_STAGES, WorkspaceShell } from "@lns/ui-shared";
+import { GAS_PRESET, HopGraph, WORKFLOW_STAGES, WorkspaceShell, type CandidateFactor } from "@lns/ui-shared";
 import { api, type Graph, type Node, type Snapshot } from "./api";
 
 function histogram(samples: number[], bins = 22): number[] {
@@ -36,6 +36,15 @@ export default function App() {
   const sharedLifecycle = WORKFLOW_STAGES.map((stage) => stage.label).join(" → ");
 
   const nodes = useMemo(() => (graph ? Object.values(graph.nodes) : []), [graph]);
+  const gasFactors = useMemo<CandidateFactor[]>(() => nodes.filter((node) => node.id !== "model_price_index").map((node, index) => ({
+    id: node.id,
+    label: node.name,
+    rank: index + 1,
+    hop_distance: node.depends_on.includes("model_price_index") ? 1 : Math.min(3, node.depends_on.length + 1),
+    state: ["active", "proposed", "excluded", "unsupported", "stale"].includes(node.status) ? node.status as CandidateFactor["state"] : "stale",
+    evidence_status: node.tags?.includes("ai-dynamic") ? "model_inference" : "fixture_unverified",
+  })), [nodes]);
+  const gasRelationships = useMemo(() => nodes.flatMap((node) => node.depends_on.map((parent) => ({ parent_node_id: parent, child_node_id: node.id, state: node.status, evidence_status: node.tags?.includes("ai-dynamic") ? "model_inference" : "fixture_unverified" }))), [nodes]);
   const selected = selectedId && graph ? graph.nodes[selectedId] : null;
   const predictive =
     selectedId && snapshot ? snapshot.node_predictives[selectedId] : null;
@@ -52,6 +61,14 @@ export default function App() {
     if (!selectedId || !g.nodes[selectedId]) {
       setSelectedId(g.nodes["model_price_index"] ? "model_price_index" : Object.keys(g.nodes)[0]);
     }
+  }
+
+  function selectGasNode(nodeId: string) {
+    if (!graph || nodeId === "model_price_index") return;
+    const node = graph.nodes[nodeId];
+    if (!node) return;
+    setSelectedId(nodeId);
+    setParamEdit(Object.fromEntries(Object.entries(node.parameters || {}).map(([key, value]) => [key, String(value)])));
   }
 
   async function bootstrap(expandAi: boolean) {
@@ -165,55 +182,7 @@ export default function App() {
           <p className="muted">Proposed factors remain non-active. Review and approve exact graph structure in the shared Prediction Workspace; this preset cannot bulk-wire or bulk-activate suggestions.</p>
 
           <h2 style={{ marginTop: 18 }}>Living graph (dynamic nodes)</h2>
-          <div className="canvas">
-            {graph && (
-              <svg className="edges">
-                {nodes.flatMap((n) =>
-                  n.depends_on.map((p, i) => {
-                    const a = graph.layout[p] || { x: 40, y: 40 };
-                    const b = graph.layout[n.id] || { x: 200, y: 40 };
-                    return (
-                      <line
-                        key={`${p}-${n.id}-${i}`}
-                        x1={a.x + 70}
-                        y1={a.y + 28}
-                        x2={b.x + 10}
-                        y2={b.y + 28}
-                        stroke="#6a5530"
-                        strokeWidth={2}
-                      />
-                    );
-                  })
-                )}
-              </svg>
-            )}
-            {nodes.map((n) => {
-              const pos = graph?.layout[n.id] || { x: 40, y: 40 };
-              return (
-                <div
-                  key={n.id}
-                  className={`node ${selectedId === n.id ? "selected" : ""} ${
-                    n.status === "proposed" ? "proposed" : ""
-                  }`}
-                  style={{ left: pos.x, top: pos.y }}
-                  onClick={() => {
-                    setSelectedId(n.id);
-                    const pe: Record<string, string> = {};
-                    for (const [k, v] of Object.entries(n.parameters || {})) pe[k] = String(v);
-                    setParamEdit(pe);
-                  }}
-                >
-                  <div className="nid">{n.id}</div>
-                  <div className="nname">{n.name}</div>
-                  <div className="nmeta">
-                    {n.distribution_family} · {n.status}
-                    {n.tags?.includes("ai-dynamic") ? " · AI" : ""}
-                  </div>
-                </div>
-              );
-            })}
-            {!graph && <p className="muted" style={{ padding: 16 }}>Bootstrap a graph to begin.</p>}
-          </div>
+          {graph ? <HopGraph factors={gasFactors} relationships={gasRelationships} targetId="model_price_index" targetLabel="Model gas level" onSelect={selectGasNode} /> : <p className="muted">Bootstrap a graph to begin.</p>}
         </div>
 
         <div className="card">
