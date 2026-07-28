@@ -213,6 +213,15 @@ button:hover {
   background: #234372;
 }
 
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.hop-graph-canvas:focus-visible {
+  outline: 3px solid #8fd0ff;
+  outline-offset: 3px;
+}
+
 button.secondary {
   background: transparent;
 }
@@ -305,4 +314,15 @@ pre.raw {
   padding: 8px;
   border-radius: 8px;
   border: 1px solid #24324a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
+import { useId, useMemo, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import type { CandidateFactor, VisibleNodeState } from "../api/types";
 import { layoutHopGraph } from "./layout";
 
@@ -40,6 +40,7 @@ export function HopGraph({
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragOrigin, setDragOrigin] = useState<{ x: number; y: number } | null>(null);
+  const keyboardHelpId = useId();
   const filtered = useMemo(
     () => factors.filter((factor) => factor.label.toLowerCase().includes(query.toLowerCase())
       && (stateFilter === "all" || factor.state === stateFilter)
@@ -86,8 +87,8 @@ export function HopGraph({
     <button type="button" onClick={() => setZoom((current) => Math.min(2, Number((current + 0.25).toFixed(2))))}>Zoom in</button>
     <button type="button" onClick={() => setZoom((current) => Math.max(0.5, Number((current - 0.25).toFixed(2))))}>Zoom out</button>
     <button type="button" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>Fit graph to view</button>
-    <p>{filtered.length} factors shown. Textual graph alternative:</p>
-    <div role="group" aria-label="Visual target-centered graph" data-zoom={zoom} data-pan={`${pan.x},${pan.y}`} onKeyDown={onGraphKeyDown} onPointerDown={startPan} onPointerMove={movePan} onPointerUp={endPan} onPointerCancel={endPan} onMouseDown={startMousePan} onMouseMove={moveMousePan} onMouseUp={endPan} style={{ position: "relative", minHeight: graphHeight, overflow: "auto", cursor: dragOrigin ? "grabbing" : "grab" }}>
+    <p id={keyboardHelpId}>{filtered.length} factors shown. Use arrow keys while this graph is focused to select adjacent factors. Textual graph alternative:</p>
+    <div className="hop-graph-canvas" role="group" tabIndex={0} aria-label="Visual target-centered graph" aria-describedby={keyboardHelpId} data-zoom={zoom} data-pan={`${pan.x},${pan.y}`} onKeyDown={onGraphKeyDown} onPointerDown={startPan} onPointerMove={movePan} onPointerUp={endPan} onPointerCancel={endPan} onMouseDown={startMousePan} onMouseMove={moveMousePan} onMouseUp={endPan} style={{ position: "relative", minHeight: graphHeight, overflow: "auto", cursor: dragOrigin ? "grabbing" : "grab" }}>
       <div style={{ position: "relative", width: 1240, minHeight: graphHeight, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "top left" }}>
         <svg aria-hidden="true" width="1240" height={graphHeight} style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
           {relationships.filter((relationship) => relationship.parent_node_id && relationship.child_node_id && visibleIds.has(relationship.parent_node_id) && (visibleIds.has(relationship.child_node_id) || relationship.child_node_id === targetId)).map((relationship) => {
