@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from lns_kernel.contracts import RelationshipContract
 from lns_kernel.dependencies import assert_acyclic
 from lns_kernel.models import (
     Freshness,
@@ -28,6 +29,30 @@ def _dt(s: str | None) -> datetime | None:
     if s is None:
         return None
     return datetime.fromisoformat(s)
+
+
+def _validate_graph_relationships(graph: Graph) -> None:
+    for relationship_id, relationship in graph.relationships.items():
+        if relationship_id != relationship.id:
+            raise ValidationError(
+                f"Graph relationship key {relationship_id} does not match contract id {relationship.id}"
+            )
+        if relationship.state != "active":
+            raise ValidationError(f"Graph relationship {relationship_id} must be active")
+        child = graph.nodes.get(relationship.child_node_id)
+        if relationship.parent_node_id not in graph.nodes or child is None:
+            raise ValidationError(f"Graph relationship {relationship_id} references a missing node")
+        if relationship.parent_node_id not in child.depends_on:
+            raise ValidationError(
+                f"Graph relationship {relationship_id} is missing from child dependency {relationship.child_node_id}"
+            )
+    known_relationship_ids = set(graph.relationships)
+    for node in graph.nodes.values():
+        unknown_relationship_ids = set(node.relationship_ids) - known_relationship_ids
+        if unknown_relationship_ids:
+            raise ValidationError(
+                f"Node {node.id} references unknown relationships: {', '.join(sorted(unknown_relationship_ids))}"
+            )
 
 
 class GraphStore:
@@ -63,6 +88,13 @@ class GraphStore:
               PRIMARY KEY (graph_id, node_id),
               FOREIGN KEY (graph_id) REFERENCES graphs(id)
             );
+            CREATE TABLE IF NOT EXISTS relationships (
+              graph_id TEXT NOT NULL,
+              relationship_id TEXT NOT NULL,
+              payload_json TEXT NOT NULL,
+              PRIMARY KEY (graph_id, relationship_id),
+              FOREIGN KEY (graph_id) REFERENCES graphs(id)
+            );
             CREATE TABLE IF NOT EXISTS events (
               id TEXT PRIMARY KEY,
               graph_id TEXT NOT NULL,
@@ -83,6 +115,7 @@ class GraphStore:
     def create_graph(self, graph: Graph) -> Graph:
         validate_graph_nodes(graph.nodes)
         assert_acyclic(graph.nodes)
+        _validate_graph_relationships(graph)
         c = self._conn.cursor()
         c.execute(
             "INSERT INTO graphs (id, name, graph_version, created_at, updated_at, layout_json, freshness) VALUES (?,?,?,?,?,?,?)",
@@ -101,6 +134,11 @@ class GraphStore:
                 "INSERT INTO nodes (graph_id, node_id, payload_json) VALUES (?,?,?)",
                 (graph.id, nid, node.model_dump_json()),
             )
+        for relationship_id, relationship in graph.relationships.items():
+            c.execute(
+                "INSERT INTO relationships (graph_id, relationship_id, payload_json) VALUES (?,?,?)",
+                (graph.id, relationship_id, relationship.model_dump_json()),
+            )
         self._conn.commit()
         return graph
 
@@ -114,12 +152,17 @@ class GraphStore:
         nodes: dict[str, Node] = {}
         for r in c.fetchall():
             nodes[r["node_id"]] = Node.model_validate_json(r["payload_json"])
+        c.execute("SELECT relationship_id, payload_json FROM relationships WHERE graph_id=?", (graph_id,))
+        relationships: dict[str, RelationshipContract] = {}
+        for r in c.fetchall():
+            relationships[r["relationship_id"]] = RelationshipContract.model_validate_json(r["payload_json"])
         layout_raw = json.loads(row["layout_json"] or "{}")
         layout = {k: NodeLayout.model_validate(v) for k, v in layout_raw.items()}
         return Graph(
             id=row["id"],
             name=row["name"],
             nodes=nodes,
+            relationships=relationships,
             layout=layout,
             graph_version=row["graph_version"],
             created_at=_dt(row["created_at"]) or utcnow(),

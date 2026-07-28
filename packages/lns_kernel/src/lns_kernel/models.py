@@ -8,6 +8,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from lns_kernel.contracts import RelationshipContract
+
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -92,6 +94,7 @@ class Graph(BaseModel):
     id: str
     name: str = "untitled"
     nodes: dict[str, Node] = Field(default_factory=dict)
+    relationships: dict[str, RelationshipContract] = Field(default_factory=dict)
     layout: dict[str, NodeLayout] = Field(default_factory=dict)
     graph_version: int = 1
     # These optional links are introduced without changing legacy graph behavior.
