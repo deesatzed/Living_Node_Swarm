@@ -123,8 +123,8 @@ Gate 3 exited on 2026-07-28: fixture-tested target intake, evidence review, broa
 
 ## Next Actions
 
-1. Complete Q4-02: target-intake and research-consent flow using the shared client and fixture labels.
-2. Complete Q4-03: target-centered hop graph with deterministic layout and textual alternative.
+1. Define and implement a separate immutable distribution-spec proposal/approval contract with active-node provenance persistence; do not route provenance-bearing specs through numeric-only approval.
+2. Add browser coverage for the remaining non-quantile distribution forms after that approval boundary is available.
 3. Keep fixture proposals clearly labeled until live research is consented and completed.
 
 ## Blockers
