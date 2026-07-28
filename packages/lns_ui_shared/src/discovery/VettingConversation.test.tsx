@@ -52,4 +52,15 @@ describe("VettingConversation", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Local-only research preference saved");
     expect(screen.getByText(/requires explicit confirmation/i)).toBeVisible();
   });
+
+  it("records explicit provider-routing consent without sending research content", async () => {
+    const user = userEvent.setup();
+    const onRecordProviderRouting = vi.fn(async () => undefined);
+    render(<VettingConversation provider="No provider selected" model="No model selected" dataScope="No content leaves this Mac." onRecordProviderRouting={onRecordProviderRouting} />);
+    await user.selectOptions(screen.getByLabelText("Research routing provider"), "openrouter");
+    await user.click(screen.getByLabelText("I authorize this routing receipt"));
+    await user.click(screen.getByRole("button", { name: "Record provider-routing consent" }));
+    expect(onRecordProviderRouting).toHaveBeenCalledWith(expect.objectContaining({ provider: "openrouter", mode: "provider_routing_authorized", data_scope: "No research content has been sent. Future routing is limited to the explicit research brief." }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Provider-routing consent saved. No research content was sent.");
+  });
 });

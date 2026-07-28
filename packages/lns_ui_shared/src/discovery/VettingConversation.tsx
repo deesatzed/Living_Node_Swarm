@@ -11,13 +11,14 @@ const ACTIONS: Array<{ label: string; classification: VettingEntryKind; prompt: 
   { label: "Correct understanding", classification: "user_claim", prompt: "Corrected understanding" },
 ];
 
-export function VettingConversation({ provider, model, dataScope, onProceed, onRecord, onRecordLocalOnly }: {
+export function VettingConversation({ provider, model, dataScope, onProceed, onRecord, onRecordLocalOnly, onRecordProviderRouting }: {
   provider: string;
   model: string;
   dataScope: string;
   onProceed?: () => void | Promise<void>;
   onRecord?: (entry: VettingEntry) => Promise<void>;
   onRecordLocalOnly?: () => Promise<void>;
+  onRecordProviderRouting?: (receipt: { mode: string; provider: string; model: string; data_scope: string; confirmed_at: string }) => Promise<void>;
 }) {
   const [paused, setPaused] = useState(false);
   const [action, setAction] = useState<(typeof ACTIONS)[number] | null>(null);
@@ -25,6 +26,8 @@ export function VettingConversation({ provider, model, dataScope, onProceed, onR
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [routingProvider, setRoutingProvider] = useState("none");
+  const [routingAuthorized, setRoutingAuthorized] = useState(false);
   async function recordLocalOnly() {
     if (!onRecordLocalOnly) return;
     setBusy(true); setError("");
@@ -41,6 +44,13 @@ export function VettingConversation({ provider, model, dataScope, onProceed, onR
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save discovery entry."); }
     finally { setBusy(false); }
   }
+  async function recordProviderRouting() {
+    if (!onRecordProviderRouting || routingProvider === "none" || !routingAuthorized) return;
+    setBusy(true); setError("");
+    try { await onRecordProviderRouting({ mode: "provider_routing_authorized", provider: routingProvider, model: "not selected", data_scope: "No research content has been sent. Future routing is limited to the explicit research brief.", confirmed_at: new Date().toISOString() }); setStatus("Provider-routing consent saved. No research content was sent."); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save provider-routing consent."); }
+    finally { setBusy(false); }
+  }
   return <section aria-labelledby="vetting-title">
     <h2 id="vetting-title">Vet the research brief</h2>
     <p>Record user claims, proposed interpretations, exclusions, scenarios, and unknowns before model structure is proposed.</p>
@@ -48,6 +58,6 @@ export function VettingConversation({ provider, model, dataScope, onProceed, onR
     {paused && <p role="status">Discovery is paused. No research or routing action is in progress.</p>}
     {action && <section aria-label="Record discovery action"><label>{action.prompt}<input value={text} onChange={(event) => setText(event.target.value)} /></label><button onClick={() => void record()} disabled={busy || !text.trim()}>{busy ? "Saving discovery entry…" : "Save discovery action"}</button></section>}
     {status && <p role="status">{status}</p>}{error && <p role="alert">{error}</p>}
-    <aside aria-label="Provider routing preview"><strong>{provider} · {model}</strong><p>{dataScope}</p><button onClick={() => void recordLocalOnly()} disabled={!onRecordLocalOnly || busy}>Keep research local</button><p>Routing requires explicit confirmation; fixture evidence never becomes live research.</p></aside>
+    <aside aria-label="Provider routing preview"><strong>{provider} · {model}</strong><p>{dataScope}</p><button onClick={() => void recordLocalOnly()} disabled={!onRecordLocalOnly || busy}>Keep research local</button><label>Research routing provider<select aria-label="Research routing provider" value={routingProvider} onChange={(event) => { setRoutingProvider(event.target.value); setRoutingAuthorized(false); }} disabled={!onRecordProviderRouting || busy}><option value="none">No provider selected</option><option value="openrouter">OpenRouter</option></select></label><label><input aria-label="I authorize this routing receipt" type="checkbox" checked={routingAuthorized} disabled={routingProvider === "none" || !onRecordProviderRouting || busy} onChange={(event) => setRoutingAuthorized(event.target.checked)} />I authorize this routing receipt</label><button onClick={() => void recordProviderRouting()} disabled={!onRecordProviderRouting || routingProvider === "none" || !routingAuthorized || busy}>Record provider-routing consent</button><p>Recording consent sends no research content. Provider routing requires explicit confirmation; fixture evidence never becomes live research.</p></aside>
   </section>;
 }
