@@ -24,7 +24,7 @@ test("canonical Project Home has no serious or critical automated accessibility 
   expect(results.violations.filter((violation) => violation.impact === "serious" || violation.impact === "critical")).toEqual([]);
 });
 
-test("canonical Monitor inspects a fixture event and branches into a version-bound Edit draft", async ({ page }) => {
+test("canonical Monitor opens the immutable Run workspace or branches into a version-bound Edit draft", async ({ page }) => {
   const project = { id: "approved-1", name: "Approved neodymium model", target_id: "target-1", graph_id: "graph-1", active_graph_version: 4, stage: "monitor", evidence_classification: "fixture_unverified" };
   const derivedFamilies = new Set<string>();
   await page.route("**/api/projects", (route) => route.fulfill({ json: { projects: [project] } }));
@@ -33,6 +33,10 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.route("**/api/projects/approved-1/monitoring", (route) => route.fulfill({ json: { config: { cadence: "weekly", freshness_threshold_days: 7, mode: "fixture" }, events: [{ id: "stale-source", severity: "warning", message: "Fixture source is stale", evidence_classification: "fixture_unverified" }] } }));
   await page.route("**/api/projects/approved-1/drafts", (route) => route.fulfill({ json: { id: "draft-1", base_graph_version: 4 } }));
   await page.route("**/api/projects/approved-1/revisions", (route) => route.fulfill({ json: { drafts: [{ id: "draft-earlier", base_graph_version: 4 }] } }));
+  await page.route("**/api/projects/approved-1/scenarios", (route) => route.fulfill({ json: { scenarios: [] } }));
+  await page.route("**/api/projects/approved-1/ensembles", (route) => route.fulfill({ json: { ensembles: [] } }));
+  await page.route("**/api/projects/approved-1/ensemble-approvals", (route) => route.fulfill({ json: { approval_receipts: [] } }));
+  await page.route(/\/api\/graphs\/graph-1\/snapshots\?limit=10$/, (route) => route.fulfill({ json: { snapshots: [] } }));
   await page.route("**/api/graphs/graph-1", (route) => route.fulfill({ json: { nodes: {
     input_signal: { id: "input_signal", name: "Input signal", distribution_family: "Normal", parameters: { mu: 0, sigma: 1 }, depends_on: [] },
     process_stage: { id: "process_stage", name: "Process stage", distribution_family: "Gamma", parameters: { shape: 2, scale: 1 }, depends_on: ["input_signal"] },
@@ -97,6 +101,10 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByRole("heading", { name: "Monitor model" })).toBeVisible();
   await page.getByRole("button", { name: "Inspect event" }).click();
   await expect(page.getByLabel("Inspected monitoring event")).toContainText("Inspection does not change the approved model.");
+  await page.getByRole("button", { name: "Open immutable Run workspace" }).click();
+  await expect(page.getByRole("heading", { name: "Run approved model" })).toBeVisible();
+  await page.getByRole("button", { name: "Back to projects" }).click();
+  await page.getByRole("button", { name: "Monitor" }).click();
   await page.getByRole("button", { name: "Branch to edit" }).click();
   await expect(page.getByRole("heading", { name: "Edit model through a draft" })).toBeVisible();
   await expect(page.getByLabel("Approved model dependency graph")).toContainText("Approved graph — read-only");

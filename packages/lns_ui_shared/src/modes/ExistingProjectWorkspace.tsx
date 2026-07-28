@@ -59,7 +59,7 @@ function approvedGraphClaimIds(graph: JsonObject): string[] {
   return [...ids].sort();
 }
 
-export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBranchToEdit }: { mode: ExistingProjectMode; projectId: string; client: ExistingProjectClient; onBack: () => void; onBranchToEdit?: () => void }) {
+export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBranchToEdit, onOpenRun }: { mode: ExistingProjectMode; projectId: string; client: ExistingProjectClient; onBack: () => void; onBranchToEdit?: () => void; onOpenRun?: () => void }) {
   const [project, setProject] = useState<JsonObject | null>(null);
   const [target, setTarget] = useState<JsonObject | undefined>();
   const [approvedGraph, setApprovedGraph] = useState<JsonObject | undefined>();
@@ -109,7 +109,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
       await client.patchProject?.(projectId, { last_run: { snapshot_id: stringValue(snapshot?.id, "unknown"), graph_version: stringValue(snapshot?.graph_version, "unknown"), freshness: stringValue((result.sim_status as JsonObject | undefined)?.freshness, "unknown") } });
     }} />}
     {mode === "run" && typeof project.graph_id !== "string" && <p role="alert">This project has no approved graph to run yet.</p>}
-    {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} onBranchToEdit={onBranchToEdit} />}
+    {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} onBranchToEdit={onBranchToEdit} onOpenRun={onOpenRun} />}
     {mode === "edit" && <EditModel projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : null} client={client} />}
     {mode === "edit" && approvedGraph && <ApprovedGraphMap graph={approvedGraph} onEvidenceClaimIds={setSelectedGraphClaimIds} />}
     {mode === "edit" && approvedGraph && graphClaimIds.length > 0 && typeof project.target_id === "string" && client.getResearchReview && client.reviewResearchClaim && <EvidenceDrawer targetId={project.target_id} claimIds={graphClaimIds} client={{ getResearchReview: client.getResearchReview, reviewResearchClaim: client.reviewResearchClaim }} />}
