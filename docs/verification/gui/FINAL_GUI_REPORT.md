@@ -33,7 +33,7 @@
 | [P17] Material-number provenance | Partial | Distribution inspector/graph node tests. | Some legacy graph fields remain explicitly not recorded. |
 | [P18] Honest comparisons | Locally verified | Shadow/structural/revision comparison receipts and tests forbid improvement language. | No accuracy claim is made. |
 | [P19] State coverage | Fixture-only | Component coverage and both canonical Build viewports prove cancellation of an unsaved Vet action retains the surface without recording it, and provider routing shows an explicit permission-denied state until the operator confirms consent. | This covers those deterministic fixture UI states, not every long-running or external-provider failure mode. |
-| [P20] Automated accessibility | Partial | Axe Project Home scan: zero serious/critical; keyboard/reduced-motion tests. | Not a whole-application accessibility certification. |
+| [P20] Automated accessibility | Fixture-only | Axe scans report zero serious/critical violations for Project Home and both populated canonical Build viewports; keyboard/reduced-motion tests also cover the graph surface. | Not a whole-application accessibility certification or assistive-technology study. |
 | [P21] Fixture labels | Locally verified | Canonical E2E and fixture labels in candidate, monitoring, and receipt UI. | Labels do not turn fixtures into live evidence. |
 | [P22] URL/provider routing safety | Locally verified | Safe-fetch/server security tests and consent UI tests. | No provider content execution is claimed. |
 | [P23] Proposal cannot mutate early | Locally verified | Kernel/server approval tests and Edit browser receipts. | Applies to tested proposal contracts. |

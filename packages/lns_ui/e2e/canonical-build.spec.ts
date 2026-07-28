@@ -381,6 +381,8 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await expect(page.getByLabel("Fixture revision delta")).toContainText("Active graph unchanged: yes.");
   await page.getByRole("button", { name: "Replay fixture branch revision" }).click();
   await expect(page.getByText("Replayed fixture branch revision without changing an active graph.")).toBeVisible();
+  const accessibility = await new AxeBuilder({ page }).analyze();
+  expect(accessibility.violations.filter((violation) => violation.impact === "serious" || violation.impact === "critical")).toEqual([]);
   await page.screenshot({ path: `../../docs/verification/gui/canonical-fixture-build-${viewport.width}x${viewport.height}.png`, fullPage: true });
 });
 }
