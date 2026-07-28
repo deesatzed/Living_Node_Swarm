@@ -1,19 +1,18 @@
-# Living Node Swarm (v0.1–0.2 shell + Kalshi track)
+# Living Node Swarm Prediction Workspace
 
-Domain-agnostic **explicit probabilistic node graph** with **on-change ensemble Monte Carlo**, expert UI (inspect/edit + distribution views), honest **freshness** badges, transform **experiments**, **OpenRouter** AI node proposals (you choose the model), human **activate/reject**, and **wire-into-chain**.
+Local-first, domain-general prediction workspace for explicit probabilistic node graphs, reviewable distributions and relationships, version-bound candidate approval, reproducible Monte Carlo receipts, and a shared Gas preset.
 
-**Kalshi track:** project-only account (~$10) for real market mids, resolution scoring, and optional **micro-stakes** experiments. Not investment advice. See `docs/integrations/kalshi-mcp.md` and skill `kalshi-lns`.
+**Kalshi/Gas preset:** preview and dry-run controls remain available, while live buy, live auto-sell, and bulk factor activation are disabled in this build. Not investment advice.
 
-> **Current build vs active goal:** The code today is the verified v0.1–0.2 shell described below. The active goal is to turn the base app into a domain-general Prediction Workspace with resolution-grade targets, cited research, extensive multi-hop factor authoring, explicit distribution/relationship review, and a visual trust surface. Gas will become a shared preset rather than the product boundary. See `GOAL.md`, `TASK_QUEUE.md`, and `docs/plans/2026-07-27-domain-general-prediction-workspace-design.md`. These future capabilities are not yet implemented.
+> **Current evidence boundary:** The workspace implements typed targets, fixture-backed candidate research/map journeys, eight-family distribution review, persisted relationship metadata, candidate/structural review, and fixture browser proof. Live research, live monitoring, scientific evaluation, and full accessibility certification remain incomplete. See [GUI verification report](docs/verification/gui/FINAL_GUI_REPORT.md), `GOAL.md`, and `TASK_QUEUE.md`.
 
 ## Product acceptance path
 
-1. Load seed graph  
-2. Edit one node’s parameters  
-3. Watch freshness → `updating` / `stale` then `fresh`  
-4. Downstream predictive distributions change  
-5. (Optional) Propose → activate → wire a factor into the chain  
-6. (Kalshi) Freeze market mid → score vs resolution (Brier)
+1. Create or open a project through the shared workspace.
+2. Review targets, fixture-scoped candidate factors, evidence, distributions, and relationships.
+3. Stage reversible candidate changes and compare them in memory.
+4. Review an exact binding before structural or numeric approval.
+5. Run approved models without changing structure; inspect receipts and limitations.
 
 ## Non-goals (current shell)
 
@@ -68,13 +67,17 @@ export OPENROUTER_MODEL="<your-openrouter-model-id>"
 # http://127.0.0.1:5174
 ```
 
-**Gas demo flow:** Bootstrap + AI factors → activate/wire proposed nodes → refresh Kalshi mid → preview/confirm micro-stake → 20% auto-sell.
+**Gas preset flow:** bootstrap a local graph → inspect proposed factors → use previews/dry runs. Bulk activation, confirmed orders, and auto-sell are unavailable in this build.
 
 ## Tests
 
 ```bash
 cd packages/lns_kernel && PYTHONPATH=src pytest -v
 cd packages/lns_server && PYTHONPATH=src:../lns_kernel/src pytest -v
+cd ../lns_ui_shared && npm test -- --run && npm run build
+cd ../lns_ui && npm run build && npm run test:e2e
+cd ../lns_gas_demo && npm run build
+cd ../.. && ./scripts/verify_gui.sh && git diff --check
 ```
 
 ## Transform strategies
