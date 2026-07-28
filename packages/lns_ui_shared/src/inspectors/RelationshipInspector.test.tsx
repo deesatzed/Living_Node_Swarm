@@ -13,7 +13,7 @@ describe("RelationshipInspector", () => {
       id: "weather-to-freight",
       parentLabel: "Weather disruption",
       childLabel: "Freight capacity",
-      type: "affine",
+      type: "scenario_assumption",
       units: "capacity-index / disruption-index",
       lagSteps: 1,
       sign: "negative",
@@ -38,8 +38,10 @@ describe("RelationshipInspector", () => {
     expect(screen.getByText(/Draft-only changes/)).toBeVisible();
     await user.selectOptions(screen.getByLabelText("Relationship state"), "excluded");
     await user.selectOptions(screen.getByLabelText("Sign"), "positive");
+    await user.selectOptions(screen.getByLabelText("Relationship type"), "observed_relation");
 
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ state: "excluded" }));
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ sign: "positive" }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ type: "observed_relation" }));
   });
 });

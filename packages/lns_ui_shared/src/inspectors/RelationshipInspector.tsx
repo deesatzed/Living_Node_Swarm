@@ -2,7 +2,7 @@ export interface RelationshipReview {
   id: string;
   parentLabel: string;
   childLabel: string;
-  type: string;
+  type: "causal_hypothesis" | "accounting_identity" | "observed_relation" | "proxy_correlation" | "scenario_assumption";
   units: string;
   lagSteps: number;
   sign?: "positive" | "negative" | "unknown";
@@ -25,8 +25,8 @@ export function RelationshipInspector({ relationship, onChange }: { relationship
     <h2>{relationship.parentLabel} → {relationship.childLabel}</h2>
     {onChange && <p>Draft-only changes: active model structure is unchanged until separate review and approval.</p>}
     <label>Relationship type
-      <select value={relationship.type} disabled={!onChange} onChange={(event) => update({ type: event.target.value })}>
-        <option value="affine">affine</option><option value="sum">sum</option><option value="mean">mean</option><option value="custom">custom</option>
+      <select value={relationship.type} disabled={!onChange} onChange={(event) => update({ type: event.target.value as RelationshipReview["type"] })}>
+        <option value="causal_hypothesis">causal hypothesis</option><option value="accounting_identity">accounting identity</option><option value="observed_relation">observed relation</option><option value="proxy_correlation">proxy correlation</option><option value="scenario_assumption">scenario assumption</option>
       </select>
     </label>
     <label>Units<input value={relationship.units} disabled={!onChange} onChange={(event) => update({ units: event.target.value })} /></label>
