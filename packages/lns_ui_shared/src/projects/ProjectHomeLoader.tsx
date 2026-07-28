@@ -57,6 +57,7 @@ function toProjectHomeItem(project: JsonObject, target: JsonObject | undefined, 
 export function ProjectHomeLoader({ client, onAction }: { client: ProjectHomeClient; onAction: (action: ProjectAction, projectId?: string) => void }) {
   const [projects, setProjects] = useState<ProjectHomeItem[] | null>(null);
   const [error, setError] = useState("");
+  const [partial, setPartial] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -65,13 +66,23 @@ export function ProjectHomeLoader({ client, onAction }: { client: ProjectHomeCli
         const result = await client.listProjects();
         const targets = await Promise.all(result.projects.map(async (project) => {
           const targetId = project.target_id;
-          return typeof targetId === "string" ? client.getTarget(targetId).catch(() => undefined) : undefined;
+          if (typeof targetId !== "string") return { target: undefined, unavailable: false };
+          try { return { target: await client.getTarget(targetId), unavailable: false }; }
+          catch { return { target: undefined, unavailable: true }; }
         }));
         const monitoring = await Promise.all(result.projects.map(async (project) => {
           const projectId = project.id;
-          return typeof projectId === "string" && client.getMonitoring ? client.getMonitoring(projectId).catch(() => undefined) : undefined;
+          if (typeof projectId !== "string" || !client.getMonitoring) return { monitoring: undefined, unavailable: false };
+          try { return { monitoring: await client.getMonitoring(projectId), unavailable: false }; }
+          catch { return { monitoring: undefined, unavailable: true }; }
         }));
-        if (active) setProjects(result.projects.map((project, index) => toProjectHomeItem(project, targets[index], monitoring[index])));
+        if (active) {
+          const unavailableTargets = targets.filter((result) => result.unavailable).length;
+          const unavailableMonitoring = monitoring.filter((result) => result.unavailable).length;
+          const details = [unavailableTargets ? `${unavailableTargets} target record${unavailableTargets === 1 ? "" : "s"} could not be loaded.` : "", unavailableMonitoring ? `${unavailableMonitoring} monitoring record${unavailableMonitoring === 1 ? "" : "s"} could not be loaded.` : ""].filter(Boolean);
+          setPartial(details.length ? `Partial project data: ${details.join(" ")}` : "");
+          setProjects(result.projects.map((project, index) => toProjectHomeItem(project, targets[index].target, monitoring[index].monitoring)));
+        }
       } catch (reason) {
         if (active) setError(reason instanceof Error ? reason.message : "Unable to load prediction projects.");
       }
@@ -81,5 +92,5 @@ export function ProjectHomeLoader({ client, onAction }: { client: ProjectHomeCli
 
   if (error) return <section aria-label="Project Home"><p role="alert">{error}</p><button onClick={() => window.location.reload()}>Retry loading projects</button></section>;
   if (projects === null) return <section aria-label="Project Home"><p role="status">Loading projects…</p></section>;
-  return <ProjectHome projects={projects} onAction={onAction} />;
+  return <section aria-label="Loaded Project Home">{partial && <p role="status">{partial}</p>}<ProjectHome projects={projects} onAction={onAction} /></section>;
 }

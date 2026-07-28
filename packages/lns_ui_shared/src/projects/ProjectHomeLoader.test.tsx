@@ -40,4 +40,14 @@ describe("ProjectHomeLoader", () => {
     expect(await screen.findByText("Monitoring: Saved live preference — polling not running")).toBeVisible();
     expect(screen.getByText("1 unresolved warnings")).toBeVisible();
   });
+
+  it("marks Project Home as partial when a saved target cannot be loaded", async () => {
+    render(<ProjectHomeLoader client={{
+      listProjects: async () => ({ projects: [{ id: "project-1", name: "Neodymium", target_id: "missing-target" }] }),
+      getTarget: async () => { throw new Error("Target record unavailable"); },
+    }} onAction={() => undefined} />);
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Partial project data: 1 target record could not be loaded.");
+    expect(screen.getByText("missing-target")).toBeVisible();
+  });
 });
