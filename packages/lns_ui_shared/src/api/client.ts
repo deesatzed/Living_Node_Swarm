@@ -82,6 +82,11 @@ export interface WorkspaceClient {
     proposalId: string,
     body: CandidateApprovalInput,
   ): Promise<JsonObject>;
+  approveProjectStructuralProposal(
+    projectId: string,
+    proposalId: string,
+    body: CandidateApprovalInput,
+  ): Promise<JsonObject>;
   approveStructuralProposal(
     graphId: string,
     proposalId: string,
@@ -227,6 +232,11 @@ export function createWorkspaceClient({
     approveProjectCandidateProposal: (projectId, proposalId, body) =>
       request<JsonObject>(
         `/projects/${encodeURIComponent(projectId)}/candidate-proposals/${encodeURIComponent(proposalId)}/approve`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    approveProjectStructuralProposal: (projectId, proposalId, body) =>
+      request<JsonObject>(
+        `/projects/${encodeURIComponent(projectId)}/structural-proposals/${encodeURIComponent(proposalId)}/approve`,
         { method: "POST", body: JSON.stringify(body) },
       ),
     approveStructuralProposal: (graphId, proposalId, body) =>

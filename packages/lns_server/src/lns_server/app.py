@@ -690,6 +690,43 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except (ValidationError, ShadowSimulationError) as exc:
             raise HTTPException(400, str(exc)) from exc
 
+    @app.post("/projects/{project_id}/structural-proposals/{proposal_id}/approve")
+    def approve_project_structural_proposal(
+        project_id: str, proposal_id: str, body: ApproveCandidateBody
+    ) -> dict[str, Any]:
+        project = require_project(project_id)
+        if project.graph_id is None:
+            raise HTTPException(409, "project has no approved graph")
+        proposal = app.state.evidence_store.get_structural_graph_proposal(proposal_id)
+        if proposal is None or proposal.graph_id != project.graph_id:
+            raise HTTPException(404, "structural proposal not found for project graph")
+        if project.active_graph_version != proposal.graph_version:
+            raise HTTPException(409, "project active graph version does not match structural proposal")
+        try:
+            receipt = make_structural_approval_receipt(
+                proposal, approved_by=body.approved_by, binding_hash=body.binding_hash
+            )
+            graph, _ = store.apply_relationship_additions_atomically(
+                project.graph_id,
+                expected_graph_version=proposal.graph_version,
+                relationships=proposal.relationships,
+                actor=body.approved_by,
+                reason=f"approved structural proposal {proposal.id}",
+            )
+        except ValidationError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        updated = app.state.workspace_store.update_project(
+            project_id,
+            WorkspaceProjectPatch(stage="decide", active_graph_version=graph.graph_version),
+        )
+        return {
+            "approval_receipt": json.loads(receipt.model_dump_json()),
+            "graph": json.loads(graph.model_dump_json()),
+            "project": updated.model_dump(mode="json"),
+        }
+
     @app.post("/authoring/graphs/{graph_id}/shadow-simulate")
     def shadow_simulate(graph_id: str, body: ShadowSimulationBody) -> dict[str, Any]:
         graph = store.get_graph(graph_id)

@@ -202,6 +202,19 @@ describe("workspace API client", () => {
     await expect(client.approveProjectCandidateProposal("project-1", "proposal-1", { approved_by: "operator", binding_hash: "binding-123" })).resolves.toMatchObject({ project: { stage: "decide" } });
   });
 
+  it("approves a structural proposal through the project-scoped lifecycle endpoint", async () => {
+    const client = createWorkspaceClient({
+      baseUrl: "http://localhost:8787",
+      fetch: async (input, init) => {
+        expect(input).toBe("http://localhost:8787/projects/project-1/structural-proposals/proposal-1/approve");
+        expect(init?.method).toBe("POST");
+        return new Response(JSON.stringify({ project: { stage: "decide", active_graph_version: 5 } }));
+      },
+    });
+
+    await expect(client.approveProjectStructuralProposal("project-1", "proposal-1", { approved_by: "operator", binding_hash: "binding-123" })).resolves.toMatchObject({ project: { stage: "decide" } });
+  });
+
   it("saves and lists non-active candidate revisions through project-scoped endpoints", async () => {
     const calls: string[] = [];
     const client = createWorkspaceClient({
@@ -274,6 +287,7 @@ describe("workspace API client", () => {
       "approveCandidateProposal",
       "approveEnsemble",
       "approveProjectCandidateProposal",
+      "approveProjectStructuralProposal",
       "approveStructuralProposal",
       "createCandidateProposal",
       "createCandidateRevision",

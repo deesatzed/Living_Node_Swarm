@@ -218,9 +218,10 @@ describe("ShadowComparison", () => {
   it("reviews and approves a server-bound proposed relationship addition", async () => {
     const user = userEvent.setup();
     const createStructuralProposal = vi.fn(async () => ({ proposal: { id: "structural-1", graph_version: 4, binding_hash: "structural-hash", candidate_relationship_ids: ["proposal-input_signal-to-outcome"] } }));
-    const approveStructuralProposal = vi.fn(async () => ({ approval_receipt: { id: "structural-receipt", binding_hash: "structural-hash" }, graph: { graph_version: 5 } }));
+    const approveProjectStructuralProposal = vi.fn(async () => ({ approval_receipt: { id: "structural-receipt", binding_hash: "structural-hash" }, graph: { graph_version: 5 }, project: { stage: "decide", active_graph_version: 5 } }));
     const shadowStructuralProposal = vi.fn(async () => ({ active_graph_mutated: false, candidate_relationship_ids: ["proposal-input_signal-to-outcome"], active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 0.2, p50: 0.2 }, limitations: ["Candidate structural relationships are simulated only in memory and are not persisted or activated."] }));
-    render(<ShadowComparison graphId="graph-1" client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, process_stage: { name: "Process stage", parameters: { mu: 0 }, depends_on: ["input_signal"] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["process_stage"] } } }), shadowSimulate: async () => ({}), createStructuralProposal, approveStructuralProposal, shadowStructuralProposal } as never} />);
+    const onApproved = vi.fn();
+    render(<ShadowComparison graphId="graph-1" projectId="project-1" client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, process_stage: { name: "Process stage", parameters: { mu: 0 }, depends_on: ["input_signal"] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["process_stage"] } } }), shadowSimulate: async () => ({}), createStructuralProposal, approveProjectStructuralProposal, shadowStructuralProposal } as never} onApproved={onApproved} />);
     await screen.findByLabelText("Proposed relationship parent");
     await user.selectOptions(screen.getByLabelText("Proposed relationship parent"), "input_signal");
     await user.selectOptions(screen.getByLabelText("Proposed relationship child"), "outcome");
@@ -240,9 +241,10 @@ describe("ShadowComparison", () => {
     await user.click(screen.getByLabelText("I reviewed this structural binding"));
     await user.click(screen.getByRole("button", { name: "Approve structural proposal" }));
 
-    expect(approveStructuralProposal).toHaveBeenCalledWith("graph-1", "structural-1", { approved_by: "operator", binding_hash: "structural-hash" });
+    expect(approveProjectStructuralProposal).toHaveBeenCalledWith("project-1", "structural-1", { approved_by: "operator", binding_hash: "structural-hash" });
     expect(await screen.findByLabelText("Structural approval receipt")).toHaveTextContent("Approved graph version: 5");
     expect(screen.queryByLabelText("Structural comparison receipt")).not.toBeInTheDocument();
+    expect(onApproved).toHaveBeenCalledWith({ stage: "decide", active_graph_version: 5 });
   });
 
   it("loads a matching-base persisted revision back into local staging without activation", async () => {

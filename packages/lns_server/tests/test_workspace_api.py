@@ -211,6 +211,37 @@ def test_project_bound_approval_syncs_the_persisted_project_lifecycle(tmp_path: 
     assert restored.json()["active_graph_version"] == graph["graph_version"] + 1
 
 
+def test_project_bound_structural_approval_syncs_the_persisted_project_lifecycle(tmp_path: Path):
+    settings = _settings(tmp_path)
+    relationship = {
+        "id": "input-to-outcome-proposal", "parent_node_id": "input_signal", "child_node_id": "outcome",
+        "relationship_type": "scenario_assumption", "transform": "affine", "source_unit": "index",
+        "target_unit": "index", "sign": "positive", "lag_periods": 0, "coefficient_units": "1",
+        "coefficient_parameters": [{"id": "coefficient", "value": 0.2}], "state": "proposed",
+    }
+    with TestClient(create_app(settings)) as client:
+        graph = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        project = client.post("/projects", json={
+            **_project_payload(), "graph_id": graph["id"], "active_graph_version": graph["graph_version"], "stage": "refine",
+        })
+        proposal = client.post(
+            f"/authoring/graphs/{graph['id']}/structural-proposals", json={"relationships": [relationship]},
+        ).json()["proposal"]
+        approved = client.post(
+            f"/projects/nd-project/structural-proposals/{proposal['id']}/approve",
+            json={"approved_by": "operator", "binding_hash": proposal["binding_hash"]},
+        )
+        restored = client.get("/projects/nd-project")
+
+    assert project.status_code == 200, project.text
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["graph"]["graph_version"] == graph["graph_version"] + 1
+    assert approved.json()["project"]["stage"] == "decide"
+    assert approved.json()["project"]["active_graph_version"] == graph["graph_version"] + 1
+    assert restored.json()["stage"] == "decide"
+    assert restored.json()["active_graph_version"] == graph["graph_version"] + 1
+
+
 def test_candidate_revisions_persist_without_mutating_the_active_graph(tmp_path: Path):
     settings = _settings(tmp_path)
     with TestClient(create_app(settings)) as client:
