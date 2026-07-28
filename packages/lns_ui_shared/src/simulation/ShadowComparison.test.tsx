@@ -152,4 +152,15 @@ describe("ShadowComparison", () => {
     await user.click(screen.getByRole("button", { name: "Save durable candidate revision" }));
     expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({ candidate_relationship_state_overrides: { "input_signal:outcome": "excluded" } }));
   });
+
+  it("loads a matching-base persisted revision back into local staging without activation", async () => {
+    const user = userEvent.setup();
+    render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] } } }), shadowSimulate: async () => ({}), listCandidateRevisions: async () => ({ candidate_revisions: [{ id: "saved-1", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 5 } }, candidate_node_state_overrides: { input_signal: "excluded" }, candidate_relationship_state_overrides: { "input_signal:outcome": "excluded" } }] }) }} />);
+    await screen.findByRole("button", { name: "Load revision saved-1" });
+    await user.click(screen.getByRole("button", { name: "Load revision saved-1" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Revision saved-1 loaded into local staging. The active graph is unchanged.");
+    expect(screen.getByLabelText("Candidate change set")).toHaveTextContent("Input signal · mu: 5");
+    expect(screen.getByLabelText("Candidate structural change set")).toHaveTextContent("Input signal: excluded");
+    expect(screen.getByLabelText("Candidate relationship change set")).toHaveTextContent("input_signal:outcome: excluded");
+  });
 });
