@@ -54,19 +54,21 @@ function coefficientParameters(contract: JsonObject): string {
   return parameters.length ? parameters.join("; ") : "Not recorded";
 }
 
+function claimIds(value: unknown): string[] { return Array.isArray(value) ? value.filter((claim): claim is string => typeof claim === "string" && Boolean(claim.trim())) : []; }
 function evidenceClaims(contract: JsonObject, fallback: string): string {
   const claims = Array.isArray(contract.evidence_claim_ids) ? contract.evidence_claim_ids.filter((claim): claim is string => typeof claim === "string" && Boolean(claim.trim())) : [];
   return claims.length ? claims.join(", ") : contract.evidence_claim_ids ? "none recorded" : fallback;
 }
 
-export function ApprovedGraphMap({ graph }: { graph: JsonObject }) {
+export function ApprovedGraphMap({ graph, onEvidenceClaimIds }: { graph: JsonObject; onEvidenceClaimIds?: (claimIds: string[]) => void }) {
   const nodes = nodesFrom(graph);
   const targetNode = target(nodes);
   if (!targetNode) return <section aria-label="Approved model dependency graph"><p role="alert">The approved graph has no readable nodes.</p></section>;
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const persistedRelationships = relationshipsFrom(graph);
   const relationships = nodes.flatMap((node) => node.dependsOn.map((parent) => ({ parent_node_id: parent, child_node_id: node.id })));
-  return <section aria-label="Approved model dependency graph"><h2>Approved graph — read-only</h2><p>Trace the active dependencies before creating a separate draft. The approved graph itself is not edited here.</p><HopGraph factors={factors(nodes, targetNode.id)} targetId={targetNode.id} targetLabel={targetNode.name} relationships={relationships} /><section aria-label="Approved dependency details"><h3>Approved dependency details</h3>{relationships.length === 0 ? <p>No persisted dependency edges were recorded.</p> : <ul>{relationships.map((relationship) => {
+  const claimsForNode = (nodeId: string) => graph.nodes && typeof graph.nodes === "object" && !Array.isArray(graph.nodes) ? claimIds(((graph.nodes as Record<string, JsonObject>)[nodeId]?.distribution_spec as JsonObject | undefined)?.evidence_claim_ids) : [];
+  return <section aria-label="Approved model dependency graph"><h2>Approved graph — read-only</h2><p>Trace the active dependencies before creating a separate draft. The approved graph itself is not edited here.</p><HopGraph factors={factors(nodes, targetNode.id)} targetId={targetNode.id} targetLabel={targetNode.name} relationships={relationships} onSelect={(nodeId) => onEvidenceClaimIds?.(nodeId === targetNode.id ? [] : claimsForNode(nodeId))} /><section aria-label="Approved dependency details"><h3>Approved dependency details</h3>{relationships.length === 0 ? <p>No persisted dependency edges were recorded.</p> : <ul>{relationships.map((relationship) => {
     const persisted = persistedRelationships.get(`${relationship.parent_node_id}:${relationship.child_node_id}`)?.contract;
     const fallbackEvidence = byId.get(relationship.child_node_id)?.evidence ?? "unknown";
     return <li key={`${relationship.parent_node_id}:${relationship.child_node_id}`}>

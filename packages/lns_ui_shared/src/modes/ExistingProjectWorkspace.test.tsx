@@ -1,5 +1,6 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { ExistingProjectWorkspace } from "./ExistingProjectWorkspace";
 
 afterEach(cleanup);
@@ -25,6 +26,7 @@ describe("ExistingProjectWorkspace", () => {
   });
 
   it("shows the selected approved graph read-only before Edit creates a separate draft", async () => {
+    const user = userEvent.setup();
     render(<ExistingProjectWorkspace mode="edit" projectId="project-1" client={{
       getProject: async () => ({ id: "project-1", name: "Neodymium model", target_id: "target-1", graph_id: "graph-1", active_graph_version: 4, evidence_classification: "local_verified" }),
       getTarget: async () => ({ question: "What will neodymium cost?", forecast_origin: "2026-07-28T00:00:00Z", resolution_at: "2027-07-28T00:00:00Z" }),
@@ -40,5 +42,8 @@ describe("ExistingProjectWorkspace", () => {
     expect(screen.getByLabelText("Evidence review drawer")).toHaveTextContent("Node-linked evidence.");
     expect(screen.getByLabelText("Evidence review drawer")).toHaveTextContent("Edge-linked evidence.");
     expect(screen.getByLabelText("Evidence review drawer")).not.toHaveTextContent("Unlinked evidence.");
+    await user.click(within(screen.getByLabelText("Approved model dependency graph")).getByRole("button", { name: "Input signal" }));
+    expect(screen.getByLabelText("Evidence review drawer")).toHaveTextContent("Showing 1 claim linked to the approved graph.");
+    expect(screen.getByLabelText("Evidence review drawer")).not.toHaveTextContent("Edge-linked evidence.");
   });
 });

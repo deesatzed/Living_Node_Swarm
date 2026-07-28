@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { EvidenceClassification, JsonObject, VisibleNodeState } from "../api/types";
 import { WorkspaceShell } from "../workspace/WorkspaceShell";
 import { RunModel, type RunModelClient } from "./RunModel";
@@ -63,6 +63,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
   const [project, setProject] = useState<JsonObject | null>(null);
   const [target, setTarget] = useState<JsonObject | undefined>();
   const [approvedGraph, setApprovedGraph] = useState<JsonObject | undefined>();
+  const [selectedGraphClaimIds, setSelectedGraphClaimIds] = useState<string[] | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
     let active = true;
@@ -80,16 +81,18 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
   useEffect(() => {
     let active = true;
     if (mode !== "edit" || !project || typeof project.graph_id !== "string" || !client.getGraph) return;
-    void client.getGraph(project.graph_id).then((graph) => { if (active) setApprovedGraph(graph); }).catch((reason: unknown) => {
+    void client.getGraph(project.graph_id).then((graph) => { if (active) { setApprovedGraph(graph); setSelectedGraphClaimIds(null); } }).catch((reason: unknown) => {
       if (active) setError(reason instanceof Error ? reason.message : "Unable to load the approved dependency graph.");
     });
     return () => { active = false; };
   }, [client, mode, project]);
 
+  const shadowClient = useMemo(() => ({ getGraph: client.getGraph!, shadowSimulate: client.shadowSimulate!, shadowStructuralProposal: client.shadowStructuralProposal, createCandidateProposal: client.createCandidateProposal, approveCandidateProposal: client.approveCandidateProposal, approveProjectCandidateProposal: client.approveProjectCandidateProposal, createStructuralProposal: client.createStructuralProposal, approveStructuralProposal: client.approveStructuralProposal, approveProjectStructuralProposal: client.approveProjectStructuralProposal, createCandidateRevision: client.createCandidateRevision, listCandidateRevisions: client.listCandidateRevisions, elicitDistribution: client.elicitDistribution, deriveDistribution: client.deriveDistribution, validateRelationships: client.validateRelationships }), [client]);
+
   if (error) return <section aria-label="Existing project workspace"><p role="alert">{error}</p><button onClick={onBack}>Back to projects</button></section>;
   if (!project) return <section aria-label="Existing project workspace"><p role="status">Loading selected project…</p></section>;
   const copy = MODE_COPY[mode];
-  const graphClaimIds = approvedGraph ? approvedGraphClaimIds(approvedGraph) : [];
+  const graphClaimIds = selectedGraphClaimIds ?? (approvedGraph ? approvedGraphClaimIds(approvedGraph) : []);
   return <WorkspaceShell
     projectName={stringValue(project.name, "Untitled prediction project")}
     target={stringValue(target?.question, stringValue(project.target_id, "Target not yet specified"))}
@@ -108,9 +111,9 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
     {mode === "run" && typeof project.graph_id !== "string" && <p role="alert">This project has no approved graph to run yet.</p>}
     {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} onBranchToEdit={onBranchToEdit} />}
     {mode === "edit" && <EditModel projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : null} client={client} />}
-    {mode === "edit" && approvedGraph && <ApprovedGraphMap graph={approvedGraph} />}
+    {mode === "edit" && approvedGraph && <ApprovedGraphMap graph={approvedGraph} onEvidenceClaimIds={setSelectedGraphClaimIds} />}
     {mode === "edit" && approvedGraph && graphClaimIds.length > 0 && typeof project.target_id === "string" && client.getResearchReview && client.reviewResearchClaim && <EvidenceDrawer targetId={project.target_id} claimIds={graphClaimIds} client={{ getResearchReview: client.getResearchReview, reviewResearchClaim: client.reviewResearchClaim }} />}
-    {mode === "edit" && typeof project.graph_id === "string" && client.getGraph && client.shadowSimulate && <ShadowComparison graphId={project.graph_id} projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : undefined} client={{ getGraph: client.getGraph, shadowSimulate: client.shadowSimulate, shadowStructuralProposal: client.shadowStructuralProposal, createCandidateProposal: client.createCandidateProposal, approveCandidateProposal: client.approveCandidateProposal, approveProjectCandidateProposal: client.approveProjectCandidateProposal, createStructuralProposal: client.createStructuralProposal, approveStructuralProposal: client.approveStructuralProposal, approveProjectStructuralProposal: client.approveProjectStructuralProposal, createCandidateRevision: client.createCandidateRevision, listCandidateRevisions: client.listCandidateRevisions, elicitDistribution: client.elicitDistribution, deriveDistribution: client.deriveDistribution, validateRelationships: client.validateRelationships }} onApproved={setProject} />}
+    {mode === "edit" && typeof project.graph_id === "string" && client.getGraph && client.shadowSimulate && <ShadowComparison graphId={project.graph_id} projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : undefined} client={shadowClient} onApproved={setProject} />}
     <button onClick={onBack}>Back to projects</button>
   </WorkspaceShell>;
 }

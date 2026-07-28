@@ -27,11 +27,13 @@ export function HopGraph({
   targetLabel = "Target outcome",
   targetId = "target",
   relationships = [],
+  onSelect,
 }: {
   factors: CandidateFactor[];
   targetLabel?: string;
   targetId?: string;
   relationships?: GraphRelationship[];
+  onSelect?: (nodeId: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [stateFilter, setStateFilter] = useState<"all" | VisibleNodeState>("all");
@@ -56,9 +58,10 @@ export function HopGraph({
   const orderedIds = ["target", ...filtered.map((factor) => factor.id)];
   const selectedLabel = selected === "target" ? targetLabel : names.get(selected ?? "") ?? selected;
 
+  function select(nodeId: string) { setSelected(nodeId); onSelect?.(nodeId); }
   function navigate(direction: -1 | 1) {
     const current = selected ? Math.max(0, orderedIds.indexOf(selected)) : 0;
-    setSelected(orderedIds[(current + direction + orderedIds.length) % orderedIds.length]);
+    select(orderedIds[(current + direction + orderedIds.length) % orderedIds.length]);
   }
   function onGraphKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "ArrowRight" || event.key === "ArrowDown") { event.preventDefault(); navigate(1); }
@@ -99,8 +102,8 @@ export function HopGraph({
             return <line key={`${relationship.parent_node_id}:${relationship.child_node_id}`} data-highlighted={highlighted} x1={from.x + 80} y1={from.y + 16} x2={to.x} y2={to.y + 16} stroke={highlighted ? "#facc15" : "#64748b"} strokeWidth={highlighted ? 4 : 2} />;
           })}
         </svg>
-        <button type="button" aria-pressed={selected === "target"} onClick={() => setSelected("target")} style={{ position: "absolute", left: targetPoint.x, top: targetPoint.y }}>{targetLabel}</button>
-        {filtered.map((factor) => <button key={factor.id} type="button" aria-pressed={selected === factor.id} onClick={() => setSelected(factor.id)} style={{ position: "absolute", left: layout[factor.id]?.x, top: layout[factor.id]?.y, maxWidth: 190 }}>
+        <button type="button" aria-pressed={selected === "target"} onClick={() => select("target")} style={{ position: "absolute", left: targetPoint.x, top: targetPoint.y }}>{targetLabel}</button>
+        {filtered.map((factor) => <button key={factor.id} type="button" aria-pressed={selected === factor.id} onClick={() => select(factor.id)} style={{ position: "absolute", left: layout[factor.id]?.x, top: layout[factor.id]?.y, maxWidth: 190 }}>
           {factor.label}
         </button>)}
       </div>
