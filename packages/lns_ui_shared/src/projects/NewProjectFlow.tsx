@@ -2,8 +2,9 @@ import { useState } from "react";
 import type { JsonObject, WorkspaceProjectInput } from "../api/types";
 import { PersistedTargetIntake } from "../intake/PersistedTargetIntake";
 import type { TargetPersistenceClient } from "../intake/submitTarget";
+import { CandidateMap, type CandidateMapClient } from "../discovery/CandidateMap";
 
-export interface NewProjectClient extends TargetPersistenceClient {
+export interface NewProjectClient extends TargetPersistenceClient, CandidateMapClient {
   createProject(project: WorkspaceProjectInput): Promise<JsonObject>;
 }
 
@@ -16,6 +17,7 @@ function newId(): string {
 export function NewProjectFlow({ client, onCreated }: { client: NewProjectClient; onCreated: (projectId: string) => void }) {
   const [name, setName] = useState("New prediction project");
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [targetId, setTargetId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -34,7 +36,8 @@ export function NewProjectFlow({ client, onCreated }: { client: NewProjectClient
     }
   }
 
-  if (projectId) return <PersistedTargetIntake client={client} projectId={projectId} />;
+  if (projectId && targetId) return <section aria-label="Build candidate map"><h1>Map proposed factors</h1><p>Target contract saved. Continue through the explicitly labeled candidate map before any approval.</p><CandidateMap targetId={targetId} client={client} /></section>;
+  if (projectId) return <PersistedTargetIntake client={client} projectId={projectId} onSaved={setTargetId} />;
   return <section aria-labelledby="new-project-title">
     <h1 id="new-project-title">New prediction project</h1>
     <label>Project name<input value={name} onChange={(event) => setName(event.target.value)} /></label>

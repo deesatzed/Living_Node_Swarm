@@ -45,4 +45,13 @@ describe("PersistedTargetIntake", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("price_basis is required");
     expect(client.patchProject).not.toHaveBeenCalled();
   });
+
+  it("notifies the Build flow only after the target is fully persisted", async () => {
+    const onSaved = vi.fn();
+    render(<PersistedTargetIntake client={{ createTarget: vi.fn(async () => ({})), patchProject: vi.fn(async () => ({})) }} projectId="project-1" onSaved={onSaved} />);
+
+    await fillRequiredTargetFields();
+
+    expect(onSaved).toHaveBeenCalledWith("nd-retail-2027");
+  });
 });

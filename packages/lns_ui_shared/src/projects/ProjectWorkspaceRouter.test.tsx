@@ -10,7 +10,7 @@ describe("ProjectWorkspaceRouter", () => {
     const user = userEvent.setup();
     const client = {
       listProjects: vi.fn(async () => ({ projects: [] })),
-      getTarget: vi.fn(), getProject: vi.fn(), createProject: vi.fn(), createTarget: vi.fn(), patchProject: vi.fn(), runSimulation: vi.fn(), getMonitoring: vi.fn(), saveMonitoring: vi.fn(), createDraft: vi.fn(),
+      getTarget: vi.fn(), getProject: vi.fn(), createProject: vi.fn(), createTarget: vi.fn(), patchProject: vi.fn(), createFixtureCandidateProposal: vi.fn(), runSimulation: vi.fn(), getMonitoring: vi.fn(), saveMonitoring: vi.fn(), createDraft: vi.fn(),
     };
     render(<ProjectWorkspaceRouter client={client} />);
 

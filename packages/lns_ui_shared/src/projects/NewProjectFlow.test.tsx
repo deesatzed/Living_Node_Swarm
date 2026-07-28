@@ -2,6 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NewProjectFlow } from "./NewProjectFlow";
+import { createNeodymiumGraphFixture } from "../testing/graphFixture";
 
 afterEach(cleanup);
 
@@ -12,6 +13,7 @@ describe("NewProjectFlow", () => {
       createProject: vi.fn(async () => ({})),
       createTarget: vi.fn(async () => ({})),
       patchProject: vi.fn(async () => ({})),
+      createFixtureCandidateProposal: vi.fn(async () => createNeodymiumGraphFixture()),
     };
     render(<NewProjectFlow client={client} onCreated={() => undefined} />);
 
