@@ -157,25 +157,11 @@ export default function App() {
             <button disabled={busy || !graph} onClick={expandMore}>
               AI expand more
             </button>
-            <button
-              disabled={busy || !graph}
-              onClick={async () => {
-                if (!graph) return;
-                setBusy(true);
-                try {
-                  const res = await api.activateAll(graph.id);
-                  applyState(res.graph, res.snapshot, "fresh");
-                  setLog(`Activated: ${res.activated.join(", ")}`);
-                } catch (e) {
-                  setError(e instanceof Error ? e.message : String(e));
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              Activate all proposed + wire
+            <button disabled title="Bulk activation is unavailable: each proposed factor and relationship requires separate review and an exact approval binding.">
+              Bulk activation unavailable
             </button>
           </div>
+          <p className="muted">Proposed factors remain non-active. Review and approve exact graph structure in the shared Prediction Workspace; this preset cannot bulk-wire or bulk-activate suggestions.</p>
 
           <h2 style={{ marginTop: 18 }}>Living graph (dynamic nodes)</h2>
           <div className="canvas">
