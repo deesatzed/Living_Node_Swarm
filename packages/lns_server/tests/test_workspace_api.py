@@ -135,13 +135,13 @@ def test_version_bound_parameter_scenario_executes_without_mutating_active_graph
     assert active.json()["nodes"]["input_signal"]["parameters"] == graph["nodes"]["input_signal"]["parameters"]
 
 
-def test_project_ensemble_persists_exact_member_versions_without_activation(tmp_path: Path):
+def test_project_ensemble_persists_rationale_with_exact_member_versions_without_activation(tmp_path: Path):
     settings = _settings(tmp_path)
     with TestClient(create_app(settings)) as client:
         first = client.post("/graphs", json={"from_seed": True}).json()["graph"]
         second = client.post("/graphs", json={"from_seed": True}).json()["graph"]
         client.post("/projects", json={**_project_payload(), "graph_id": first["id"], "active_graph_version": first["graph_version"]})
-        saved = client.post("/projects/nd-project/ensembles", json={"id": "blend-1", "name": "Two-model blend", "members": [
+        saved = client.post("/projects/nd-project/ensembles", json={"id": "blend-1", "name": "Two-model blend", "rationale": "Keep both independently reviewed model versions visible while comparing their explicit mixture.", "members": [
             {"graph_id": first["id"], "graph_version": first["graph_version"], "target_node_id": "outcome", "weight": 1},
             {"graph_id": second["id"], "graph_version": second["graph_version"], "target_node_id": "outcome", "weight": 3},
         ]})
@@ -152,6 +152,7 @@ def test_project_ensemble_persists_exact_member_versions_without_activation(tmp_
 
     assert saved.status_code == 200, saved.text
     assert listed.json()["ensembles"][0]["members"][1]["graph_version"] == second["graph_version"]
+    assert listed.json()["ensembles"][0]["rationale"] == "Keep both independently reviewed model versions visible while comparing their explicit mixture."
     assert project.json()["active_graph_version"] == first["graph_version"]
 
 
@@ -161,7 +162,7 @@ def test_ensemble_approval_binds_saved_configuration_and_rejects_wrong_hash(tmp_
         graph = client.post("/graphs", json={"from_seed": True}).json()["graph"]
         other = client.post("/graphs", json={"from_seed": True}).json()["graph"]
         client.post("/projects", json={**_project_payload(), "graph_id": graph["id"], "active_graph_version": graph["graph_version"]})
-        ensemble = client.post("/projects/nd-project/ensembles", json={"id": "blend", "name": "Blend", "members": [
+        ensemble = client.post("/projects/nd-project/ensembles", json={"id": "blend", "name": "Blend", "rationale": "Operator reviewed both version-bound members before requesting this mixture.", "members": [
             {"graph_id": graph["id"], "graph_version": graph["graph_version"], "target_node_id": "outcome", "weight": 1},
             {"graph_id": other["id"], "graph_version": other["graph_version"], "target_node_id": "outcome", "weight": 1},
         ]}).json()

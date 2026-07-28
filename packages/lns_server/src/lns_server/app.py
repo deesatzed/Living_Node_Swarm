@@ -438,6 +438,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/projects/{project_id}/ensembles")
     def create_workspace_ensemble(project_id: str, ensemble: WorkspaceEnsemble) -> dict[str, Any]:
         require_project(project_id)
+        if ensemble.rationale == "Not recorded":
+            raise HTTPException(422, "ensemble rationale is required for a new configuration")
         for member in ensemble.members:
             graph = app.state.store.get_graph(member.graph_id)
             if graph is None:

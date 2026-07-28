@@ -139,3 +139,9 @@ This file records product and architecture decisions that future agents must pre
 # 2026-07-28 — Distribution material context is independently labeled
 
 The shared distribution inspector now receives units and evidence classification as typed, independently rendered fields rather than appending units to provenance prose. Support, units, as-of time, classification, and provenance each render `Not recorded` when the persisted record lacks that information. Server-returned statistics are explicitly labeled as derived from the server-owned distribution specification. This preserves legacy compatibility without inventing provenance or presenting a derived statistic as an elicited input.
+
+# 2026-07-28 — Saved ensemble decisions require a hash-bound rationale
+
+New weighted-mixture configurations require a nonblank operator rationale. The rationale persists with the version-bound members and contributes to the server-issued binding hash that approval verifies. Legacy records retain a `Not recorded` read fallback, but cannot be newly created without an explicit rationale.
+
+This records why the mixture was requested without treating either member as more accurate, activating an ensemble, or mutating an approved graph.

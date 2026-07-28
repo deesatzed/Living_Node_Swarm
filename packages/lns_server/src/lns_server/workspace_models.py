@@ -133,6 +133,7 @@ class WorkspaceEnsemble(BaseModel):
 
     id: str
     name: str
+    rationale: str = "Not recorded"
     members: list[WorkspaceEnsembleMember] = Field(min_length=2, max_length=8)
     combination_method: Literal["weighted_distribution_mixture"] = "weighted_distribution_mixture"
     created_at: datetime = Field(default_factory=utcnow)
@@ -144,6 +145,8 @@ class WorkspaceEnsemble(BaseModel):
             raise ValueError("ensemble members must have unique graph/version/target bindings")
         if sum(member.weight for member in self.members) <= 0:
             raise ValueError("ensemble member weights must sum to a positive value")
+        if not self.rationale.strip():
+            raise ValueError("ensemble rationale must not be blank")
         return self
 
     @property
