@@ -25,4 +25,19 @@ describe("ProjectHomeLoader", () => {
     render(<ProjectHomeLoader client={{ listProjects: async () => ({ projects: [{ id: "project-1", name: "Neodymium", active_graph_version: 5, draft_base_version: 5, stage: "refine" }] }), getTarget: async () => ({}) }} onAction={() => undefined} />);
     expect(await screen.findByText("Candidate status: Draft based on graph v5")).toBeVisible();
   });
+
+  it("shows saved monitoring truth and counts only unresolved warning events", async () => {
+    render(<ProjectHomeLoader client={{
+      listProjects: async () => ({ projects: [{ id: "project-1", name: "Neodymium" }] }),
+      getTarget: async () => ({}),
+      getMonitoring: async () => ({ config: { mode: "live" }, events: [
+        { id: "warning", severity: "warning", acknowledged_at: null },
+        { id: "acknowledged", severity: "warning", acknowledged_at: "2026-07-28T00:00:00Z" },
+        { id: "info", severity: "info", acknowledged_at: null },
+      ] }),
+    }} onAction={() => undefined} />);
+
+    expect(await screen.findByText("Monitoring: Saved live preference — polling not running")).toBeVisible();
+    expect(screen.getByText("1 unresolved warnings")).toBeVisible();
+  });
 });

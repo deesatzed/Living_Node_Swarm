@@ -15,6 +15,7 @@ export interface ProjectHomeItem {
   evidenceClassification: EvidenceClassification;
   lastRun: string;
   candidateStatus: string;
+  monitoringStatus: string;
 }
 
 export function ProjectHome({ projects, onAction }: { projects: ProjectHomeItem[]; onAction: (action: ProjectAction, projectId?: string) => void }) {
@@ -36,6 +37,7 @@ export function ProjectHome({ projects, onAction }: { projects: ProjectHomeItem[
         <p>Stage: {project.stage} · Graph v{project.activeGraphVersion ?? "—"} · {project.freshness}</p>
         <p>{project.evidenceClassification === "fixture_unverified" ? "Fixture evidence — not live research" : project.evidenceClassification}</p>
         <p>Candidate status: {project.candidateStatus}</p>
+        <p>Monitoring: {project.monitoringStatus}</p>
         <p><span>{project.warningCount} unresolved warnings</span> · Last run: {project.lastRun}</p>
       </li>)}
     </ul>}

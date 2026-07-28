@@ -22,6 +22,7 @@ describe("ProjectHome", () => {
             evidenceClassification: "fixture_unverified",
             lastRun: "Not yet run",
             candidateStatus: "Draft based on graph v3",
+            monitoringStatus: "Fixture only — no retrieval",
           },
         ]}
         onAction={vi.fn()}
@@ -35,6 +36,7 @@ describe("ProjectHome", () => {
     expect(screen.getByText("Fixture evidence — not live research")).toBeVisible();
     expect(screen.getByText("2 unresolved warnings")).toBeVisible();
     expect(screen.getByText("Candidate status: Draft based on graph v3")).toBeVisible();
+    expect(screen.getByText("Monitoring: Fixture only — no retrieval")).toBeVisible();
   });
 
   it("runs an existing selected project without treating it as a new build", async () => {
@@ -44,6 +46,7 @@ describe("ProjectHome", () => {
       id: "approved-1", name: "Approved model", target: "Target", horizon: "1 year", stage: "monitor",
       activeGraphVersion: 4, freshness: "active", warningCount: 0, evidenceClassification: "local_verified", lastRun: "2026-07-28",
       candidateStatus: "No saved draft",
+      monitoringStatus: "Not configured",
     }]} onAction={onAction} />);
 
     await user.click(screen.getByRole("button", { name: "Run model" }));
@@ -58,6 +61,7 @@ describe("ProjectHome", () => {
       id, name: `${id} model`, target: `${id} target`, horizon: "1 year", stage: "monitor",
       activeGraphVersion: 4, freshness: "active" as const, warningCount: 0, evidenceClassification: "local_verified" as const, lastRun: "2026-07-28",
       candidateStatus: "No saved draft",
+      monitoringStatus: "Not configured",
     }));
     render(<ProjectHome projects={projects} onAction={onAction} />);
 
