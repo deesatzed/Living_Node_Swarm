@@ -34,4 +34,5 @@ export { ProjectHome, type ProjectAction, type ProjectHomeItem } from "./project
 export { WorkspaceShell } from "./workspace/WorkspaceShell";
 export { canMoveToStage, type StageTransitionContext } from "./workflow/guards";
 export { TargetIntake } from "./intake/TargetIntake";
+export { submitTargetToProject, type TargetPersistenceClient } from "./intake/submitTarget";
 export { VettingConversation } from "./discovery/VettingConversation";
