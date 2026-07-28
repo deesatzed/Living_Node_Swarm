@@ -365,6 +365,7 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await expect(page.getByText("Fixture candidate map — not live research")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Warnings and limitations" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Visual target-centered graph" })).toBeVisible();
+  await expect(page.getByLabel("Textual model dependencies")).toContainText("Weather disruption → Freight capacity — proposed; fixture_unverified");
   await expect(page.getByText(/30 factors shown\. Use arrow keys while this graph is focused/)).toBeVisible();
   const coordinates = await page.getByLabel("Target-centered dependency graph").locator("li[data-x][data-y]").evaluateAll((items) => items.map((item) => `${item.getAttribute("data-x")}:${item.getAttribute("data-y")}`));
   expect(coordinates).toHaveLength(30);

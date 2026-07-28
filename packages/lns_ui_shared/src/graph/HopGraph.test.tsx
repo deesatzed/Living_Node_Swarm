@@ -8,10 +8,12 @@ afterEach(cleanup);
 
 describe("HopGraph", () => {
   it("renders a searchable textual alternative with non-color statuses", () => {
-    render(<HopGraph factors={createNeodymiumGraphFixture().factors} />);
+    const fixture = createNeodymiumGraphFixture();
+    render(<HopGraph factors={fixture.factors} relationships={fixture.relationships} targetId="nd_private_retail_price_usd_per_kg" />);
     expect(screen.getByRole("searchbox", { name: "Search factors" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Weather disruption" })).toBeVisible();
     expect(screen.getAllByText("proposed")[0]).toBeVisible();
+    expect(screen.getByLabelText("Textual model dependencies")).toHaveTextContent("Weather disruption → Freight capacity — proposed; fixture_unverified");
   });
 
   it("renders a target-centered visual map with keyboard-selectable nodes and state filters", async () => {

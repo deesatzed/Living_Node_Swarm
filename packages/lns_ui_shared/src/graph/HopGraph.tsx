@@ -5,6 +5,8 @@ import { layoutHopGraph } from "./layout";
 interface GraphRelationship {
   parent_node_id?: string;
   child_node_id?: string;
+  state?: string;
+  evidence_status?: string;
 }
 
 function tracedPath(selected: string | null, targetId: string, relationships: GraphRelationship[]): string[] {
@@ -110,5 +112,6 @@ export function HopGraph({
     </div>
     {selected && <p role="status">Selected {selectedLabel}{path.length > 0 && <>. Traced path: {path.map((id) => names.get(id) ?? id).join(" → ")}</>}</p>}
     <ul>{filtered.map((factor) => <li key={factor.id} data-x={layout[factor.id]?.x} data-y={layout[factor.id]?.y}><strong>{factor.label}</strong> — hop {factor.hop_distance}; <span>{factor.state}</span>; {factor.evidence_status}</li>)}</ul>
+    <section aria-label="Textual model dependencies"><h2>Textual model dependencies</h2>{relationships.length === 0 ? <p>No model dependencies recorded.</p> : <ul>{relationships.map((relationship, index) => <li key={`${relationship.parent_node_id}-${relationship.child_node_id}-${index}`}>{names.get(relationship.parent_node_id ?? "") ?? "Unknown factor"} → {names.get(relationship.child_node_id ?? "") ?? "Unknown factor"} — {relationship.state ?? "proposed"}; {relationship.evidence_status ?? "fixture_unverified"}</li>)}</ul>}</section>
   </section>;
 }
