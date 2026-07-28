@@ -54,7 +54,7 @@
 | Q3-01 | Add target-intake API | Q0-07 | valid target stored; missing basis/horizon rejected | Complete (Neodymium target create/get and rejection tests, 40 server tests, 2026-07-27) |
 | Q3-02 | Add research-review API | Q2-06 | user can accept/reject claims before model proposal | Complete (claim/source/conflict/review API test, 41 server tests, 2026-07-27) |
 | Q3-03 | Add ranked candidate-graph proposal | Q1-01, Q2-06 | deterministic fixture yields 15 distinct candidates and a three-hop path | Complete (15-factor/three-hop fixture API test, 42 server tests, 2026-07-28) |
-| Q3-04 | Add distribution elicitation/fit service | Q1-02 | quantiles map to valid family params with receipt | Pending |
+| Q3-04 | Add distribution elicitation/fit service | Q1-02 | quantiles map to valid family params with receipt | Complete (Normal/LogNormal median-P90 elicitation tests, 44 server tests, 2026-07-28) |
 | Q3-05 | Add relationship proposal/validation | Q1-05–07 | units, lags, duplicates, dependence warnings returned | Pending |
 | Q3-06 | Add shadow active-vs-candidate simulation | Q1-08, Q3-03–05 | candidate never mutates active graph; paired run IDs returned | Pending |
 | Q3-07 | Add version-bound approval workflow | Q0-05, Q3-06 | edit invalidates approval; approved graph becomes active atomically | Pending |
