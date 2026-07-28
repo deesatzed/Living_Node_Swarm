@@ -309,6 +309,7 @@ describe("workspace API client", () => {
       "runWeightedEnsemble",
       "saveMonitoring",
       "shadowSimulate",
+      "shadowStructuralProposal",
       "simulateScenario",
       "validateRelationships",
     ]);

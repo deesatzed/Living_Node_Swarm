@@ -10,6 +10,7 @@ import {
   type JsonObject,
   type MonitoringConfigInput,
   type ShadowSimulationInput,
+  type StructuralShadowSimulationInput,
   type StructuralProposalInput,
   type TargetContractInput,
   type WorkspaceProjectInput,
@@ -68,6 +69,7 @@ export interface WorkspaceClient {
   elicitDistribution(body: ElicitDistributionInput): Promise<JsonObject>;
   validateRelationships(body: JsonObject): Promise<JsonObject>;
   shadowSimulate(graphId: string, body: ShadowSimulationInput): Promise<JsonObject>;
+  shadowStructuralProposal(graphId: string, proposalId: string, body: StructuralShadowSimulationInput): Promise<JsonObject>;
   createCandidateProposal(graphId: string, body: CandidateProposalInput): Promise<JsonObject>;
   createStructuralProposal(graphId: string, body: StructuralProposalInput): Promise<JsonObject>;
   approveCandidateProposal(
@@ -199,6 +201,11 @@ export function createWorkspaceClient({
       request<JsonObject>("/authoring/relationships/validate", { method: "POST", body: JSON.stringify(body) }),
     shadowSimulate: (graphId, body) =>
       request<JsonObject>(`/authoring/graphs/${encodeURIComponent(graphId)}/shadow-simulate`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    shadowStructuralProposal: (graphId, proposalId, body) =>
+      request<JsonObject>(`/authoring/graphs/${encodeURIComponent(graphId)}/structural-proposals/${encodeURIComponent(proposalId)}/shadow-simulate`, {
         method: "POST",
         body: JSON.stringify(body),
       }),

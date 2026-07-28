@@ -137,5 +137,11 @@ export interface StructuralProposalInput {
   relationships: JsonObject[];
 }
 
+export interface StructuralShadowSimulationInput {
+  target_node_id: string;
+  seed?: number;
+  n_samples?: number;
+}
+
 export interface WeightedEnsembleMemberInput { graph_id: string; graph_version: number; target_node_id: string; weight: number; }
 export interface WorkspaceEnsembleInput { id: string; name: string; members: WeightedEnsembleMemberInput[]; combination_method?: "weighted_distribution_mixture"; }

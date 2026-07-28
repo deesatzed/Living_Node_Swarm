@@ -32,6 +32,7 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.route("**/api/authoring/relationships/validate", (route) => route.fulfill({ json: { dependence_warnings: [{ code: "unresolved_proxy_correlation", message: "Fixture shared cause remains unresolved." }], active_graph_mutated: false } }));
   await page.route("**/api/authoring/graphs/graph-1/structural-proposals", (route) => route.fulfill({ json: { proposal: { id: "structural-1", graph_version: 4, binding_hash: "structural-hash", candidate_relationship_ids: ["proposal-input_signal-to-outcome"] }, active_graph_mutated: false } }));
   await page.route("**/api/authoring/graphs/graph-1/structural-proposals/structural-1/approve", (route) => route.fulfill({ json: { approval_receipt: { id: "structural-receipt", binding_hash: "structural-hash" }, graph: { graph_version: 5 } } }));
+  await page.route("**/api/authoring/graphs/graph-1/structural-proposals/structural-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, candidate_relationship_ids: ["proposal-input_signal-to-outcome"], active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 0.25, p50: 0.25 }, limitations: ["Candidate structural relationships are simulated only in memory and are not persisted or activated."] } }));
   await page.route("**/api/authoring/graphs/graph-1/candidate-proposals", (route) => route.fulfill({ json: { proposal: { id: "proposal-1", graph_version: 4, binding_hash: "binding-123" } } }));
   await page.route("**/api/projects/approved-1/candidate-revisions", (route) => route.request().method() === "GET"
     ? route.fulfill({ json: { candidate_revisions: [] } })
@@ -58,6 +59,9 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByLabel("Relationship validation warnings")).toContainText("Fixture shared cause remains unresolved.");
   await page.getByRole("button", { name: "Create structural proposal for review" }).click();
   await expect(page.getByLabel("Structural proposal review")).toContainText("Binding hash: structural-hash");
+  await page.getByRole("button", { name: "Run structural in-memory comparison" }).click();
+  await expect(page.getByLabel("Structural comparison receipt")).toContainText("Candidate mean: 0.25");
+  await expect(page.getByLabel("Structural comparison receipt")).toContainText("Active graph unchanged: yes.");
   await page.getByLabel("Structural approver identity").fill("fixture-operator");
   await page.getByLabel("I reviewed this structural binding").check();
   await page.getByRole("button", { name: "Approve structural proposal" }).click();

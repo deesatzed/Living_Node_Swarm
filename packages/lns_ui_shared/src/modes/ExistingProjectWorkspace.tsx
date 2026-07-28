@@ -15,6 +15,7 @@ export interface ExistingProjectClient extends RunModelClient, MonitoringClient,
   getTarget(targetId: string): Promise<JsonObject>;
   getGraph?(graphId: string): Promise<JsonObject>;
   shadowSimulate?: ShadowComparisonClient["shadowSimulate"];
+  shadowStructuralProposal?: ShadowComparisonClient["shadowStructuralProposal"];
   createCandidateProposal?: ShadowComparisonClient["createCandidateProposal"];
   approveCandidateProposal?: ShadowComparisonClient["approveCandidateProposal"];
   approveProjectCandidateProposal?: ShadowComparisonClient["approveProjectCandidateProposal"];
@@ -91,7 +92,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
     {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} onBranchToEdit={onBranchToEdit} />}
     {mode === "edit" && <EditModel projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : null} client={client} />}
     {mode === "edit" && approvedGraph && <ApprovedGraphMap graph={approvedGraph} />}
-    {mode === "edit" && typeof project.graph_id === "string" && client.getGraph && client.shadowSimulate && <ShadowComparison graphId={project.graph_id} projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : undefined} client={{ getGraph: client.getGraph, shadowSimulate: client.shadowSimulate, createCandidateProposal: client.createCandidateProposal, approveCandidateProposal: client.approveCandidateProposal, approveProjectCandidateProposal: client.approveProjectCandidateProposal, createStructuralProposal: client.createStructuralProposal, approveStructuralProposal: client.approveStructuralProposal, createCandidateRevision: client.createCandidateRevision, listCandidateRevisions: client.listCandidateRevisions, validateRelationships: client.validateRelationships }} onApproved={setProject} />}
+    {mode === "edit" && typeof project.graph_id === "string" && client.getGraph && client.shadowSimulate && <ShadowComparison graphId={project.graph_id} projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : undefined} client={{ getGraph: client.getGraph, shadowSimulate: client.shadowSimulate, shadowStructuralProposal: client.shadowStructuralProposal, createCandidateProposal: client.createCandidateProposal, approveCandidateProposal: client.approveCandidateProposal, approveProjectCandidateProposal: client.approveProjectCandidateProposal, createStructuralProposal: client.createStructuralProposal, approveStructuralProposal: client.approveStructuralProposal, createCandidateRevision: client.createCandidateRevision, listCandidateRevisions: client.listCandidateRevisions, validateRelationships: client.validateRelationships }} onApproved={setProject} />}
     <button onClick={onBack}>Back to projects</button>
   </WorkspaceShell>;
 }
