@@ -30,7 +30,7 @@ function projectHorizon(target: JsonObject | undefined): string {
   return Number.isFinite(days) && days >= 0 ? `${days} days` : "Not yet specified";
 }
 
-export function ExistingProjectWorkspace({ mode, projectId, client, onBack }: { mode: ExistingProjectMode; projectId: string; client: ExistingProjectClient; onBack: () => void }) {
+export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBranchToEdit }: { mode: ExistingProjectMode; projectId: string; client: ExistingProjectClient; onBack: () => void; onBranchToEdit?: () => void }) {
   const [project, setProject] = useState<JsonObject | null>(null);
   const [target, setTarget] = useState<JsonObject | undefined>();
   const [error, setError] = useState("");
@@ -66,7 +66,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack }: { 
       await client.patchProject?.(projectId, { last_run: { snapshot_id: stringValue(snapshot?.id, "unknown"), graph_version: stringValue(snapshot?.graph_version, "unknown"), freshness: stringValue((result.sim_status as JsonObject | undefined)?.freshness, "unknown") } });
     }} />}
     {mode === "run" && typeof project.graph_id !== "string" && <p role="alert">This project has no approved graph to run yet.</p>}
-    {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} />}
+    {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} onBranchToEdit={onBranchToEdit} />}
     {mode === "edit" && <EditModel projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : null} client={client} />}
     <button onClick={onBack}>Back to projects</button>
   </WorkspaceShell>;

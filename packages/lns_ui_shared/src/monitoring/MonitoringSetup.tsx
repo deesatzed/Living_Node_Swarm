@@ -9,10 +9,11 @@ export interface MonitoringClient {
 
 const FALLBACK: MonitoringConfigInput = { cadence: "weekly", freshness_threshold_days: 7, mode: "fixture" };
 
-export function MonitoringSetup({ projectId, client }: { projectId: string; client: MonitoringClient }) {
+export function MonitoringSetup({ projectId, client, onBranchToEdit }: { projectId: string; client: MonitoringClient; onBranchToEdit?: () => void }) {
   const [config, setConfig] = useState<MonitoringConfigInput | null>(null);
   const [events, setEvents] = useState<JsonObject[]>([]);
   const [error, setError] = useState("");
+  const [inspectedEvent, setInspectedEvent] = useState<JsonObject | null>(null);
   useEffect(() => { void (async () => {
     try {
       const result = await client.getMonitoring(projectId);
@@ -41,6 +42,7 @@ export function MonitoringSetup({ projectId, client }: { projectId: string; clie
     <label>Monitoring mode<select value={config.mode} onChange={(event) => setConfig({ ...config, mode: event.target.value as MonitoringConfigInput["mode"] })}><option value="fixture">fixture</option><option value="local">local</option><option value="live">live</option></select></label>
     <button onClick={save}>Save monitoring configuration</button>
     <h2>Monitoring events</h2>
-    {events.length === 0 ? <p>No monitoring events yet.</p> : <ul>{events.map((event) => <li key={String(event.id)}><strong>{String(event.severity ?? "info")}</strong>: {String(event.message ?? "Unknown event")}<p>{event.evidence_classification === "fixture_unverified" ? "Fixture event — not live monitoring" : String(event.evidence_classification ?? "Unknown evidence state")}</p>{event.acknowledged_at ? <p>Acknowledged {String(event.acknowledged_at)}</p> : <button onClick={() => void acknowledge(String(event.id))}>Acknowledge event</button>}<button>Inspect event</button><button>Branch to edit</button></li>)}</ul>}
+    {inspectedEvent && <section aria-label="Inspected monitoring event"><h3>Event details</h3><p>{String(inspectedEvent.message ?? "Unknown event")}</p><p>Inspection does not change the approved model.</p></section>}
+    {events.length === 0 ? <p>No monitoring events yet.</p> : <ul>{events.map((event) => <li key={String(event.id)}><strong>{String(event.severity ?? "info")}</strong>: {String(event.message ?? "Unknown event")}<p>{event.evidence_classification === "fixture_unverified" ? "Fixture event — not live monitoring" : String(event.evidence_classification ?? "Unknown evidence state")}</p>{event.acknowledged_at ? <p>Acknowledged {String(event.acknowledged_at)}</p> : <button onClick={() => void acknowledge(String(event.id))}>Acknowledge event</button>}<button onClick={() => setInspectedEvent(event)}>Inspect event</button><button onClick={onBranchToEdit}>Branch to edit</button></li>)}</ul>}
   </section>;
 }
