@@ -12,6 +12,7 @@ describe("ExistingProjectWorkspace", () => {
       runSimulation: async () => ({}),
       getMonitoring: async () => ({ config: null, events: [] }),
       saveMonitoring: async () => ({}),
+      acknowledgeMonitoringEvent: async () => ({}),
       createDraft: async () => ({}),
       createScenario: async () => ({}),
       listScenarios: async () => ({ scenarios: [] }),

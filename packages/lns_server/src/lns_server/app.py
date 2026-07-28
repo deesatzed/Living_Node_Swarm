@@ -336,6 +336,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         require_project(project_id)
         return app.state.workspace_store.save_monitoring_event(project_id, event).model_dump(mode="json")
 
+    @app.post("/projects/{project_id}/monitoring/events/{event_id}/acknowledge")
+    def acknowledge_monitoring_event(project_id: str, event_id: str) -> dict[str, Any]:
+        require_project(project_id)
+        event = app.state.workspace_store.acknowledge_monitoring_event(project_id, event_id)
+        if event is None:
+            raise HTTPException(status_code=404, detail="Monitoring event not found")
+        return event.model_dump(mode="json")
+
     @app.get("/catalog/distributions")
     def list_distribution_catalog() -> dict[str, Any]:
         """Expose the frozen kernel registry for UI labels and field guidance."""

@@ -82,6 +82,7 @@ export interface WorkspaceClient {
   patchProject(projectId: string, patch: JsonObject): Promise<JsonObject>;
   getMonitoring(projectId: string): Promise<JsonObject>;
   saveMonitoring(projectId: string, config: MonitoringConfigInput): Promise<JsonObject>;
+  acknowledgeMonitoringEvent(projectId: string, eventId: string): Promise<JsonObject>;
 }
 
 function parseVisibleNodeState(value: unknown): VisibleNodeState {
@@ -200,5 +201,6 @@ export function createWorkspaceClient({
     patchProject: (projectId, patch) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "PATCH", body: JSON.stringify(patch) }),
     getMonitoring: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/monitoring`, { method: "GET" }),
     saveMonitoring: (projectId, config) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/monitoring`, { method: "PUT", body: JSON.stringify(config) }),
+    acknowledgeMonitoringEvent: (projectId, eventId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/monitoring/events/${encodeURIComponent(eventId)}/acknowledge`, { method: "POST" }),
   };
 }

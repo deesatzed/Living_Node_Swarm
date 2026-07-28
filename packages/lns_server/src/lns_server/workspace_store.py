@@ -96,3 +96,19 @@ class WorkspaceStore:
     def list_monitoring_events(self, project_id: str) -> list[MonitoringFixtureEvent]:
         rows = self._connection.execute("SELECT payload_json FROM workspace_monitoring_events WHERE project_id=? ORDER BY id", (project_id,)).fetchall()
         return [MonitoringFixtureEvent.model_validate_json(row["payload_json"]) for row in rows]
+
+    def acknowledge_monitoring_event(self, project_id: str, event_id: str) -> MonitoringFixtureEvent | None:
+        row = self._connection.execute(
+            "SELECT payload_json FROM workspace_monitoring_events WHERE project_id=? AND id=?",
+            (project_id, event_id),
+        ).fetchone()
+        if row is None:
+            return None
+        event = MonitoringFixtureEvent.model_validate_json(row["payload_json"])
+        acknowledged = event.model_copy(update={"acknowledged_at": event.acknowledged_at or utcnow()})
+        self._connection.execute(
+            "UPDATE workspace_monitoring_events SET payload_json=? WHERE project_id=? AND id=?",
+            (acknowledged.model_dump_json(), project_id, event_id),
+        )
+        self._connection.commit()
+        return acknowledged

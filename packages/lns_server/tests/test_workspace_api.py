@@ -43,12 +43,15 @@ def test_workspace_project_persists_lifecycle_ledger_scenario_and_monitoring_acr
             "/projects/nd-project/monitoring/fixture-events",
             json={"id": "fixture-stale-source", "severity": "warning", "message": "Source is stale."},
         )
+        acknowledged = client.post("/projects/nd-project/monitoring/events/fixture-stale-source/acknowledge")
 
     assert created.status_code == 200, created.text
     assert updated.status_code == 200, updated.text
     assert scenario.status_code == 200, scenario.text
     assert monitoring.status_code == 200, monitoring.text
     assert event.status_code == 200, event.text
+    assert acknowledged.status_code == 200, acknowledged.text
+    assert acknowledged.json()["acknowledged_at"] is not None
 
     with TestClient(create_app(settings)) as restarted:
         projects = restarted.get("/projects")
@@ -61,6 +64,7 @@ def test_workspace_project_persists_lifecycle_ledger_scenario_and_monitoring_acr
     assert restored.json()["discovery_ledger"] == [{"kind": "user_claim", "text": "Demand will rise."}]
     assert scenarios.json()["scenarios"][0]["name"] == "Conservative"
     assert restored_monitoring.json()["events"][0]["evidence_classification"] == "fixture_unverified"
+    assert restored_monitoring.json()["events"][0]["acknowledged_at"] is not None
 
 
 def test_workspace_rejects_unknown_project_and_stale_draft_base(tmp_path: Path):

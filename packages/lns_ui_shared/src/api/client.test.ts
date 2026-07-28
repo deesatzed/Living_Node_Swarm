@@ -100,10 +100,12 @@ describe("workspace API client", () => {
 
     await client.getMonitoring("project-1");
     await client.saveMonitoring("project-1", { cadence: "weekly", freshness_threshold_days: 7, mode: "fixture" });
+    await client.acknowledgeMonitoringEvent("project-1", "event-1");
 
     expect(calls).toEqual([
       { input: "http://localhost:8787/projects/project-1/monitoring", method: "GET" },
       { input: "http://localhost:8787/projects/project-1/monitoring", method: "PUT" },
+      { input: "http://localhost:8787/projects/project-1/monitoring/events/event-1/acknowledge", method: "POST" },
     ]);
   });
 
@@ -158,6 +160,7 @@ describe("workspace API client", () => {
   it("centralizes every existing authoring review request behind one injected client", () => {
     const client = createWorkspaceClient({ fetch: async () => new Response("{}") });
     expect(Object.keys(client).sort()).toEqual([
+      "acknowledgeMonitoringEvent",
       "approveCandidateProposal",
       "createCandidateProposal",
       "createDraft",

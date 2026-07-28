@@ -76,3 +76,4 @@ class MonitoringFixtureEvent(BaseModel):
     message: str
     evidence_classification: EvidenceClassification = "fixture_unverified"
     created_at: datetime = Field(default_factory=utcnow)
+    acknowledged_at: datetime | None = None
