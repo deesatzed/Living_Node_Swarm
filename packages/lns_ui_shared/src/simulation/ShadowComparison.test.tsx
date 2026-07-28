@@ -42,6 +42,7 @@ describe("ShadowComparison", () => {
     const user = userEvent.setup();
     const createCandidateProposal = vi.fn(async () => ({ proposal: { id: "proposal-1", graph_version: 4, binding_hash: "binding-123" } }));
     const approveProjectCandidateProposal = vi.fn(async () => ({ approval_receipt: { id: "receipt-1", binding_hash: "binding-123" }, graph: { graph_version: 5 }, project: { stage: "decide", active_graph_version: 5 } }));
+    const onApproved = vi.fn();
     render(<ShadowComparison graphId="graph-1" projectId="project-1" client={{
       getGraph: async () => ({ nodes: {
         input_signal: { id: "input_signal", name: "Input signal", parameters: { mu: 0 }, depends_on: [] },
@@ -50,7 +51,7 @@ describe("ShadowComparison", () => {
       shadowSimulate: async () => ({ active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 5, p50: 5 } }),
       createCandidateProposal,
       approveProjectCandidateProposal,
-    } as never} />);
+    } as never} onApproved={onApproved} />);
 
     await screen.findByLabelText("Candidate value");
     await user.clear(screen.getByLabelText("Candidate value"));
@@ -68,5 +69,6 @@ describe("ShadowComparison", () => {
     expect(await screen.findByText("Approval receipt: receipt-1")).toBeVisible();
     expect(screen.getByText("Approved graph version: 5")).toBeVisible();
     expect(screen.getByText("Project lifecycle: decide · active graph version 5")).toBeVisible();
+    expect(onApproved).toHaveBeenCalledWith({ stage: "decide", active_graph_version: 5 });
   });
 });

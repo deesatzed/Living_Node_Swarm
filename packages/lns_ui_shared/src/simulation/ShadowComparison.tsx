@@ -60,7 +60,7 @@ const SUPPORT: Record<string, string> = {
   NegativeBinomial: "non-negative integers", Gamma: "positive", StudentT: "real", Deterministic: "one value",
 };
 
-export function ShadowComparison({ graphId, projectId, client }: { graphId: string; projectId?: string; client: ShadowComparisonClient }) {
+export function ShadowComparison({ graphId, projectId, client, onApproved }: { graphId: string; projectId?: string; client: ShadowComparisonClient; onApproved?: (project: JsonObject) => void }) {
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [selectedTarget, setSelectedTarget] = useState("");
   const [selectedNode, setSelectedNode] = useState("");
@@ -146,9 +146,11 @@ export function ShadowComparison({ graphId, projectId, client }: { graphId: stri
     setError("");
     try {
       const body = { approved_by: approver.trim(), binding_hash: bindingHash };
-      setApproval(projectId && client.approveProjectCandidateProposal
+      const response = projectId && client.approveProjectCandidateProposal
         ? await client.approveProjectCandidateProposal(projectId, proposalId, body)
-        : await client.approveCandidateProposal!(graphId, proposalId, body));
+        : await client.approveCandidateProposal!(graphId, proposalId, body);
+      setApproval(response);
+      if (response.project && typeof response.project === "object" && !Array.isArray(response.project)) onApproved?.(response.project as JsonObject);
     }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to approve this candidate version."); }
   }
