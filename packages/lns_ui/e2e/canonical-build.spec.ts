@@ -43,7 +43,10 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.route("**/api/authoring/graphs/graph-1/structural-proposals/structural-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, candidate_relationship_ids: ["proposal-input_signal-to-outcome"], active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 0.25, p50: 0.25 }, limitations: ["Candidate structural relationships are simulated only in memory and are not persisted or activated."] } }));
   await page.route("**/api/authoring/graphs/graph-1/candidate-proposals", (route) => route.fulfill({ json: { proposal: { id: "proposal-1", graph_version: 4, binding_hash: "binding-123" } } }));
   await page.route("**/api/projects/approved-1/candidate-revisions", (route) => route.request().method() === "GET"
-    ? route.fulfill({ json: { candidate_revisions: [] } })
+    ? route.fulfill({ json: { candidate_revisions: [
+      { id: "revision-base", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 1 } } },
+      { id: "revision-alternative", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 3 } }, candidate_node_state_overrides: { process_stage: "excluded" } },
+    ] } })
     : route.fulfill({ json: { id: "revision-1", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 5 } } } }));
   await page.route("**/api/projects/approved-1/candidate-proposals/proposal-1/approve", (route) => route.fulfill({ json: { approval_receipt: { id: "receipt-1", binding_hash: "binding-123" }, graph: { graph_version: 5 }, project: { ...project, stage: "decide", active_graph_version: 5 } } }));
   await page.route("**/api/projects/approved-1", (route) => route.request().url().endsWith("/api/projects/approved-1") ? route.fulfill({ json: project }) : route.fallback());
@@ -59,6 +62,11 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByLabel("Approved model dependency graph").getByRole("status")).toContainText("Traced path: Input signal → Process stage → Outcome");
   await expect(page.getByRole("heading", { name: "Active versus candidate" })).toBeVisible();
   await expect(page.getByLabel("Candidate value")).toBeVisible();
+  await page.getByLabel("Baseline candidate revision").selectOption("revision-base");
+  await page.getByLabel("Compared candidate revision").selectOption("revision-alternative");
+  await page.getByRole("button", { name: "Compare durable revisions" }).click();
+  await expect(page.getByLabel("Candidate revision comparison")).toContainText("Changed parameter: input_signal.mu from 1 to 3.");
+  await expect(page.getByLabel("Candidate revision comparison")).toContainText("Active graph unchanged: yes.");
   await page.getByLabel("Candidate dependency").selectOption("process_stage:outcome");
   await page.getByRole("button", { name: "Exclude selected dependency in candidate" }).click();
   await page.getByRole("button", { name: "Create structural proposal for review" }).click();

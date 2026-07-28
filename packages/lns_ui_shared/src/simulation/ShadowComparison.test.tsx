@@ -134,6 +134,53 @@ describe("ShadowComparison", () => {
     expect(screen.getByText("Candidate revision saved without changing the active graph.")).toBeVisible();
   });
 
+  it("compares two durable same-base revisions without simulating or activating either one", async () => {
+    const user = userEvent.setup();
+    const shadowSimulate = vi.fn(async () => ({}));
+    render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{
+      getGraph: async () => ({ nodes: {
+        input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] },
+        process_stage: { name: "Process stage", parameters: { mu: 0 }, depends_on: ["input_signal"] },
+        outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["process_stage"] },
+      }}),
+      shadowSimulate,
+      listCandidateRevisions: async () => ({ candidate_revisions: [
+        { id: "revision-a", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 1 } }, candidate_node_state_overrides: {} },
+        { id: "revision-b", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 3 } }, candidate_node_state_overrides: { process_stage: "excluded" } },
+      ] }),
+    }} />);
+
+    await screen.findByLabelText("Baseline candidate revision");
+    await user.selectOptions(screen.getByLabelText("Baseline candidate revision"), "revision-a");
+    await user.selectOptions(screen.getByLabelText("Compared candidate revision"), "revision-b");
+    await user.click(screen.getByRole("button", { name: "Compare durable revisions" }));
+
+    expect(screen.getByLabelText("Candidate revision comparison")).toHaveTextContent("Comparing revision revision-a to revision revision-b on active graph version 4.");
+    expect(screen.getByLabelText("Candidate revision comparison")).toHaveTextContent("Changed parameter: input_signal.mu from 1 to 3.");
+    expect(screen.getByLabelText("Candidate revision comparison")).toHaveTextContent("Added node state: process_stage is excluded.");
+    expect(screen.getByLabelText("Candidate revision comparison")).toHaveTextContent("Active graph unchanged: yes.");
+    expect(shadowSimulate).not.toHaveBeenCalled();
+  });
+
+  it("refuses to compare durable revisions with different active graph bases", async () => {
+    const user = userEvent.setup();
+    render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{
+      getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] } } }),
+      shadowSimulate: async () => ({}),
+      listCandidateRevisions: async () => ({ candidate_revisions: [
+        { id: "revision-a", base_graph_version: 4, candidate_parameter_overrides: {} },
+        { id: "revision-old", base_graph_version: 3, candidate_parameter_overrides: {} },
+      ] }),
+    }} />);
+
+    await screen.findByLabelText("Baseline candidate revision");
+    await user.selectOptions(screen.getByLabelText("Baseline candidate revision"), "revision-a");
+    await user.selectOptions(screen.getByLabelText("Compared candidate revision"), "revision-old");
+    await user.click(screen.getByRole("button", { name: "Compare durable revisions" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("cannot be compared because their base graph versions differ");
+  });
+
   it("persists a staged node exclusion as a structural non-active revision", async () => {
     const user = userEvent.setup();
     const createCandidateRevision = vi.fn(async (_projectId, revision) => ({ ...revision, id: "exclude-input" }));
