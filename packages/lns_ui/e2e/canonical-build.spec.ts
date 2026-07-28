@@ -354,6 +354,16 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   expect(new Set(coordinates).size).toBe(30);
   await page.getByRole("button", { name: "Weather disruption" }).click();
   await expect(page.getByRole("status")).toContainText("Traced path: Weather disruption → Freight capacity → Rare-earth refining throughput → Private-investor retail neodymium price");
+  await page.getByLabel("Candidate factor for fixture refinement").selectOption("substitution_pressure");
+  await page.getByRole("button", { name: "Remove selected fixture factor" }).click();
+  await page.getByLabel("Candidate factor for fixture refinement").selectOption("freight_capacity");
+  await page.getByRole("button", { name: "Extend selected fixture branch" }).click();
+  await page.getByRole("button", { name: "Request fixture branch revision" }).click();
+  await expect(page.getByLabel("Fixture revision delta")).toContainText("Removed factor: Substitution pressure.");
+  await expect(page.getByLabel("Fixture revision delta")).toContainText("Added factor: Fixture branch extension for Freight capacity.");
+  await expect(page.getByLabel("Fixture revision delta")).toContainText("Active graph unchanged: yes.");
+  await page.getByRole("button", { name: "Replay fixture branch revision" }).click();
+  await expect(page.getByText("Replayed fixture branch revision without changing an active graph.")).toBeVisible();
   await page.screenshot({ path: `../../docs/verification/gui/canonical-fixture-build-${viewport.width}x${viewport.height}.png`, fullPage: true });
 });
 }
