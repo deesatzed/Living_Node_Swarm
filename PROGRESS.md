@@ -2,12 +2,14 @@
 
 ## Status Overview
 
-**Gate 4 in progress – Gates 0–3 complete; Prediction Workspace is under active verification**
+**Gate 4 in progress – Gates 0–3 complete; Prediction Workspace is implemented fixture-first and under active completion verification**
 
 The domain-general contracts, scientific kernel, safe-research primitives, and
 fixture-backed generalized authoring API are verified through Gate 3. The
-existing v0.1/v0.2 UI shell remains the visual baseline; the generalized
-Prediction Workspace has not been built yet.
+shared generalized Prediction Workspace now provides fixture-backed Build,
+Run, Edit, and Monitor journeys; remaining Gate 4 work is proof breadth,
+persisted/live boundaries, and accessibility coverage rather than initial UI
+construction.
 
 ## Current Baseline
 
@@ -20,7 +22,7 @@ Prediction Workspace has not been built yet.
 | Current families | Eight canonical registry families; legacy node payloads remain readable through explicit parameter normalization |
 | Current graph | Static DAG with affine/sum/mean transforms |
 | Current research/provenance | Local security, provenance, consent, and completeness primitives implemented; no live research/API journey yet |
-| Current generalized authoring UX | Both apps consume the shared lifecycle package; typed client/catalog and deterministic fixture groundwork exist, but workspace journeys are not yet implemented |
+| Current generalized authoring UX | Shared typed Build/Run/Edit/Monitor workspace with deterministic fixture journeys, target intake, candidate graph/refinement, approval/run receipts, scenario comparison, and monitoring controls; live research/polling and complete end-to-end approval coverage remain limited |
 
 ## Current Assumptions
 
@@ -104,10 +106,10 @@ Prediction Workspace has not been built yet.
 | Fixture workspace composition | Complete (fixture-only) | Codex | Shared fixture workspace composes target intake, graph, and warning surfaces inside the workspace shell (focused composition test and type build, 2026-07-28). It is not a substitute for the required persisted/live workflow. |
 | Clean-checkout CI foundation | In progress | Codex | A GitHub Actions workflow now installs Python and all three UI package dependencies from a clean Ubuntu checkout, runs kernel/server pytest, shared UI tests/build, Chromium-backed canonical UI build/E2E, Gas build, the GUI evidence gate, and `git diff --check`. It requires remote GitHub execution after push/PR; it does not claim Gate 4–6 completion. |
 | Truthful continuation handoff | In progress | Codex | `HANDOFF_LATEST.md` now replaces the obsolete “implementation not started” packet with the active GUI goal, current local evidence, explicit fixture/live limitations, unpushed branch state, safety boundaries, and exact verification commands. It is a continuation aid, not a completion declaration; Gate 5 evaluation and remote CI remain red. |
-| Gate 4 visual workspace | Pending | Unassigned | Depends on Gate 3 API/contracts |
-| Gate 5 Neodymium acceptance | Pending | Unassigned | Depends on Gates 1–4 |
-| Gate 6 gas adapter | Pending | Unassigned | Depends on shared workspace |
-| Gate 7 CI/handoff | Pending | Unassigned | Final gate |
+| Gate 4 visual workspace | In progress | Codex | Shared workspace and fixture journeys exist; completion proof breadth and live/persisted boundaries remain |
+| Gate 5 Neodymium acceptance | Pending | Unassigned | Requires consented target/research/evaluation evidence beyond fixtures |
+| Gate 6 gas adapter | In progress | Codex | Shared preset contract and safety boundary exist; full shared graph/inspector migration remains |
+| Gate 7 CI/handoff | In progress | Codex | Local CI workflow, README, and handoff exist; remote CI and reality audit remain |
 
 ## Decision Links
 
