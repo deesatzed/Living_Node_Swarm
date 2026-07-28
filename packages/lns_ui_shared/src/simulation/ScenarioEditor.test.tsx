@@ -40,4 +40,27 @@ describe("ScenarioEditor", () => {
     expect(await screen.findByLabelText("Scenario comparison receipt")).toHaveTextContent("Active mean: 10 · Scenario mean: 12");
     expect(screen.getByLabelText("Scenario comparison receipt")).toHaveTextContent("does not activate, approve, or persist a changed graph");
   });
+
+  it("compares two named in-memory scenarios side by side", async () => {
+    const user = userEvent.setup();
+    render(<ScenarioEditor projectId="project-1" activeGraphVersion={4} targetNodeId="outcome" client={{
+      createScenario: async () => ({}),
+      listScenarios: async () => ({ scenarios: [
+        { id: "upside", name: "Demand upside", target_node_id: "outcome", parameter_overrides: { demand: { mu: 5 } } },
+        { id: "downside", name: "Demand downside", target_node_id: "outcome", parameter_overrides: { demand: { mu: -3 } } },
+      ] }),
+      simulateScenario: async (_projectId, scenarioId) => scenarioId === "upside"
+        ? { scenario: { id: "upside", name: "Demand upside", target_node_id: "outcome", parameter_overrides: { demand: { mu: 5 } } }, comparison: { active_summary: { mean: 10, p05: 5, p95: 15 }, candidate_summary: { mean: 12, p05: 6, p95: 18 } }, active_graph_mutated: false }
+        : { scenario: { id: "downside", name: "Demand downside", target_node_id: "outcome", parameter_overrides: { demand: { mu: -3 } } }, comparison: { active_summary: { mean: 10, p05: 5, p95: 15 }, candidate_summary: { mean: 8, p05: 3, p95: 13 } }, active_graph_mutated: false },
+    }} />);
+
+    await user.click(await screen.findByRole("button", { name: "Run saved scenario Demand upside" }));
+    await user.click(screen.getByRole("button", { name: "Run saved scenario Demand downside" }));
+
+    expect(await screen.findByLabelText("Named scenario comparison")).toHaveTextContent("Demand upside");
+    expect(screen.getByLabelText("Named scenario comparison")).toHaveTextContent("Demand downside");
+    expect(screen.getByLabelText("Named scenario comparison")).toHaveTextContent("6–18");
+    expect(screen.getByLabelText("Named scenario comparison")).toHaveTextContent("demand → outcome");
+    expect(screen.getByLabelText("Named scenario comparison")).toHaveTextContent("does not activate, approve, or persist a changed graph");
+  });
 });

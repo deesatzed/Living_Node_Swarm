@@ -11,6 +11,11 @@ function scenarioId(): string {
   return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `scenario-${Date.now()}`;
 }
 
+function text(value: unknown, fallback = "not recorded"): string { return typeof value === "string" || typeof value === "number" ? String(value) : fallback; }
+function object(value: unknown): JsonObject | undefined { return value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : undefined; }
+
+interface ScenarioResult { scenario: JsonObject; comparison: JsonObject; }
+
 export function ScenarioEditor({ projectId, client, activeGraphVersion, targetNodeId }: { projectId: string; client: ScenarioClient; activeGraphVersion?: number; targetNodeId?: string }) {
   const [name, setName] = useState("");
   const [assumption, setAssumption] = useState("");
@@ -21,6 +26,7 @@ export function ScenarioEditor({ projectId, client, activeGraphVersion, targetNo
   const [overrideParameter, setOverrideParameter] = useState("");
   const [overrideValue, setOverrideValue] = useState("");
   const [comparison, setComparison] = useState<JsonObject | null>(null);
+  const [comparisonResults, setComparisonResults] = useState<Record<string, ScenarioResult>>({});
   useEffect(() => { void client.listScenarios(projectId).then((result) => setScenarios(result.scenarios)).catch(() => setError("Unable to load saved scenarios.")); }, [client, projectId]);
   async function save() {
     if (!name.trim() || !assumption.trim()) { setError("Scenario name and assumption are required."); return; }
@@ -35,9 +41,17 @@ export function ScenarioEditor({ projectId, client, activeGraphVersion, targetNo
   }
   async function runScenario(id: string) {
     if (!client.simulateScenario) return;
-    try { const result = await client.simulateScenario(projectId, id); setComparison(result); setError(""); }
+    try {
+      const result = await client.simulateScenario(projectId, id);
+      setComparison(result);
+      const scenario = object(result.scenario) ?? scenarios.find((item) => String(item.id) === id);
+      const scenarioComparison = object(result.comparison);
+      if (scenario && scenarioComparison) setComparisonResults((current) => ({ ...current, [id]: { scenario, comparison: scenarioComparison } }));
+      setError("");
+    }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to execute this scenario."); }
   }
+  const results = Object.values(comparisonResults);
   return <section aria-label="Scenario editor">
     <h2>Named scenario</h2><p>Scenario assumptions are separate from active graph structure.</p>
     <label>Scenario name<input value={name} onChange={(event) => setName(event.target.value)} /></label>
@@ -47,5 +61,6 @@ export function ScenarioEditor({ projectId, client, activeGraphVersion, targetNo
     {error && <p role="alert">{error}</p>}{status && <p role="status">{status}</p>}
     {scenarios.length > 0 && <section aria-label="Saved scenarios"><h3>Saved scenarios</h3><p>Narrative-only scenarios are not applied to the approved run. Executable scenarios run as in-memory comparisons only.</p><ul aria-label="Saved scenarios">{scenarios.map((scenario) => <li key={String(scenario.id)}>{String(scenario.name ?? scenario.id)}{Boolean(scenario.parameter_overrides) && client.simulateScenario && <button onClick={() => void runScenario(String(scenario.id))}>Run saved scenario {String(scenario.name ?? scenario.id)}</button>}</li>)}</ul></section>}
     {comparison && <section aria-label="Scenario comparison receipt"><h3>Scenario comparison receipt</h3><p>Active mean: {String(((comparison.comparison as JsonObject | undefined)?.active_summary as JsonObject | undefined)?.mean ?? "not recorded")} · Scenario mean: {String(((comparison.comparison as JsonObject | undefined)?.candidate_summary as JsonObject | undefined)?.mean ?? "not recorded")}</p><p>Scenario execution is in memory only; it does not activate, approve, or persist a changed graph.</p></section>}
+    {results.length >= 2 && <section aria-label="Named scenario comparison"><h3>Named scenario comparison</h3><p>Each row is an independent in-memory comparison against the same approved graph; this is not a recommendation or an approval.</p><table><thead><tr><th>Scenario</th><th>Outcome mean</th><th>Outcome range p05–p95</th><th>Affected binding</th></tr></thead><tbody>{results.map(({ scenario, comparison: result }) => { const candidate = object(result.candidate_summary); const overrides = object(scenario.parameter_overrides); const nodeId = Object.keys(overrides ?? {})[0] ?? "not recorded"; return <tr key={text(scenario.id)}><td>{text(scenario.name, text(scenario.id))}</td><td>{text(candidate?.mean)}</td><td>{text(candidate?.p05)}–{text(candidate?.p95)}</td><td>{nodeId} → {text(scenario.target_node_id)}</td></tr>; })}</tbody></table><p>Scenario execution does not activate, approve, or persist a changed graph.</p></section>}
   </section>;
 }
