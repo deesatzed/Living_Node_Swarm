@@ -33,6 +33,7 @@ export function RunModel({ graphId, client, projectId, scenarioClient, onReceipt
   const status = result?.sim_status as JsonObject | undefined;
   const predictives = object(snapshot?.node_predictives);
   const stability = object(snapshot?.stability_diagnostic);
+  const failed = snapshot?.status === "failed";
   return <section aria-label="Run approved model controls">
     <p>Run uses the approved graph exactly as selected; it does not create, activate, or edit structure.</p>
     <button onClick={run} disabled={running}>{running ? "Running approved version…" : "Run approved version"}</button>
@@ -41,8 +42,9 @@ export function RunModel({ graphId, client, projectId, scenarioClient, onReceipt
     {snapshot && <section aria-label="Run receipt">
       <h2>Run receipt: {text(snapshot.id, "unknown")}</h2>
       <p>Graph version {text(snapshot.graph_version, "unknown")} · seed {text(snapshot.seed, "unknown")} · {text(snapshot.n_samples, "unknown")} samples · {text(status?.freshness, "unknown")}</p>
-      {predictives && <section aria-label="Run outcome summaries"><h3>Outcome summaries</h3><ul>{Object.entries(predictives).map(([nodeId, raw]) => { const predictive = object(raw); const quantiles = object(predictive?.quantiles); return <li key={nodeId}>{nodeId} · mean {number(predictive?.derived_mean)} · median {number(predictive?.derived_median)} · p05 {number(quantiles?.p05)} · p95 {number(quantiles?.p95)} · standard deviation {number(predictive?.derived_std)}</li>; })}</ul></section>}
-      {stability && <section aria-label="Run stability diagnostic"><h3>Monte Carlo stability diagnostic</h3><p>Method: {text(stability.method, "not recorded")}</p><p>Seeds: {Array.isArray(stability.seeds) ? stability.seeds.map((value) => text(value, "unknown")).join(", ") : "not recorded"} · sample counts: {Array.isArray(stability.sample_counts) ? stability.sample_counts.map((value) => text(value, "unknown")).join(", ") : "not recorded"}</p><ul>{Object.entries(object(stability.node_metric_ranges) ?? {}).map(([nodeId, raw]) => { const ranges = object(raw); return <li key={nodeId}>{nodeId}: mean range {number(ranges?.mean)} · p50 range {number(ranges?.p50)}</li>; })}</ul><p>{text(stability.limitations, "No stability limitations were recorded.")}</p></section>}
+      {failed && <><p role="alert">Run {text(snapshot.id, "unknown")} failed: {text(snapshot.error, "No failure reason was recorded.")}</p><p>No successful outcome summary is available from this failed run.</p></>}
+      {!failed && predictives && <section aria-label="Run outcome summaries"><h3>Outcome summaries</h3><ul>{Object.entries(predictives).map(([nodeId, raw]) => { const predictive = object(raw); const quantiles = object(predictive?.quantiles); return <li key={nodeId}>{nodeId} · mean {number(predictive?.derived_mean)} · median {number(predictive?.derived_median)} · p05 {number(quantiles?.p05)} · p95 {number(quantiles?.p95)} · standard deviation {number(predictive?.derived_std)}</li>; })}</ul></section>}
+      {!failed && stability && <section aria-label="Run stability diagnostic"><h3>Monte Carlo stability diagnostic</h3><p>Method: {text(stability.method, "not recorded")}</p><p>Seeds: {Array.isArray(stability.seeds) ? stability.seeds.map((value) => text(value, "unknown")).join(", ") : "not recorded"} · sample counts: {Array.isArray(stability.sample_counts) ? stability.sample_counts.map((value) => text(value, "unknown")).join(", ") : "not recorded"}</p><ul>{Object.entries(object(stability.node_metric_ranges) ?? {}).map(([nodeId, raw]) => { const ranges = object(raw); return <li key={nodeId}>{nodeId}: mean range {number(ranges?.mean)} · p50 range {number(ranges?.p50)}</li>; })}</ul><p>{text(stability.limitations, "No stability limitations were recorded.")}</p></section>}
     </section>}
   </section>;
 }

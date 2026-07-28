@@ -46,4 +46,12 @@ describe("RunModel", () => {
     expect(screen.getByLabelText("Run stability diagnostic")).toHaveTextContent("target_price: mean range 0.4 · p50 range 0.3");
     expect(screen.getByText(/does not establish forecast accuracy/i)).toBeVisible();
   });
+
+  it("keeps a failed authoritative snapshot explicit instead of presenting it as a successful run", async () => {
+    const user = userEvent.setup();
+    render(<RunModel graphId="graph-1" client={{ runSimulation: async () => ({ snapshot: { id: "snapshot-failed", graph_version: 6, seed: 21, n_samples: 2000, status: "failed", error: "Node outcome has invalid transform parameters." }, sim_status: { freshness: "failed" } }) }} />);
+    await user.click(screen.getByRole("button", { name: "Run approved version" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Run snapshot-failed failed: Node outcome has invalid transform parameters.");
+    expect(screen.getByText("No successful outcome summary is available from this failed run.")).toBeVisible();
+  });
 });
