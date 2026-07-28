@@ -126,7 +126,7 @@ describe("ShadowComparison", () => {
       base_graph_version: 4,
       candidate_parameter_overrides: { input_signal: { mu: 5 } },
     }));
-    expect(await screen.findByText("Revision revision-1 · base graph version 4 · 1 parameter change · 0 node-state changes · 0 relationship-state changes")).toBeVisible();
+    expect(await screen.findByText("Revision revision-1 · base graph version 4 · 1 parameter change · 0 node-state changes · 0 relationship-state changes · 0 proposed new factors")).toBeVisible();
     expect(screen.getByText("Candidate revision saved without changing the active graph.")).toBeVisible();
   });
 
@@ -139,7 +139,7 @@ describe("ShadowComparison", () => {
     expect(screen.getByLabelText("Candidate structural change set")).toHaveTextContent("Input signal: excluded");
     await user.click(screen.getByRole("button", { name: "Save durable candidate revision" }));
     expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({ candidate_node_state_overrides: { input_signal: "excluded" } }));
-    expect(await screen.findByText("Revision exclude-input · base graph version 4 · 0 parameter changes · 1 node-state change · 0 relationship-state changes")).toBeVisible();
+    expect(await screen.findByText("Revision exclude-input · base graph version 4 · 0 parameter changes · 1 node-state change · 0 relationship-state changes · 0 proposed new factors")).toBeVisible();
   });
 
   it("persists a staged dependency exclusion as a structural non-active revision", async () => {
@@ -188,5 +188,6 @@ describe("ShadowComparison", () => {
     expect(screen.getByLabelText("Candidate new-factor set")).toHaveTextContent("Recycling signal · proposed Normal root factor");
     await user.click(screen.getByRole("button", { name: "Save durable candidate revision" }));
     expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({ candidate_new_nodes: [expect.objectContaining({ id: "recycling_signal", distribution_family: "Normal", status: "proposed", requires_human_approval: true })] }));
+    expect(await screen.findByText("Revision new-factor-revision · base graph version 4 · 0 parameter changes · 0 node-state changes · 0 relationship-state changes · 1 proposed new factor")).toBeVisible();
   });
 });
