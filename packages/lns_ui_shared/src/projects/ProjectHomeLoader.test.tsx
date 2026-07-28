@@ -5,6 +5,23 @@ import { ProjectHomeLoader } from "./ProjectHomeLoader";
 afterEach(cleanup);
 
 describe("ProjectHomeLoader", () => {
+  it("shows an actionable failure when the project list cannot load", async () => {
+    render(<ProjectHomeLoader client={{
+      listProjects: async () => { throw new Error("Workspace database is unavailable"); },
+      getTarget: async () => ({}),
+    }} onAction={() => undefined} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Workspace database is unavailable");
+    expect(screen.getByRole("button", { name: "Retry loading projects" })).toBeVisible();
+  });
+
+  it("shows the designed empty state when there are no saved projects", async () => {
+    render(<ProjectHomeLoader client={{ listProjects: async () => ({ projects: [] }), getTarget: async () => ({}) }} onAction={() => undefined} />);
+
+    expect(await screen.findByText("No projects yet. Start a new resolution-grade target.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Run model" })).toBeDisabled();
+  });
+
   it("loads the saved target contract so Project Home shows a real target and horizon", async () => {
     render(<ProjectHomeLoader client={{
       listProjects: async () => ({ projects: [{ id: "project-1", name: "Neodymium", target_id: "target-1", stage: "vet", evidence_classification: "fixture_unverified", active_graph_version: null }] }),
