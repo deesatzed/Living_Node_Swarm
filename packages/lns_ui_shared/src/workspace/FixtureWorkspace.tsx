@@ -8,7 +8,7 @@ import { WorkspaceShell } from "./WorkspaceShell";
 
 export function FixtureWorkspace() {
   const fixture = createNeodymiumGraphFixture();
-  return <WorkspaceShell projectName="Neodymium fixture" target="Private-investor retail neodymium price" horizon="1 year" graphVersion={1} freshness="stale" evidenceClassification="fixture_unverified">
+  return <WorkspaceShell projectName="Neodymium fixture" target="Private-investor retail neodymium price" horizon="1 year" graphVersion={1} freshness="stale" evidenceClassification="fixture_unverified" currentStage="map">
     <TargetIntake onSubmit={() => undefined} />
     <HopGraph factors={fixture.factors} targetLabel="Private-investor retail neodymium price" />
     <DistributionInspector family="LogNormal" parameters={{ log_loc: 4.6, log_scale: 0.2 }} support="positive" asOf="2026-07-28" provenance="fixture_unverified" />

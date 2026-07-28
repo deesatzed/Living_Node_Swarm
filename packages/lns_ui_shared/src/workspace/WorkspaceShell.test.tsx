@@ -12,6 +12,7 @@ describe("WorkspaceShell", () => {
         graphVersion={3}
         freshness="stale"
         evidenceClassification="fixture_unverified"
+        currentStage="quantify"
       >
         <p>Graph surface</p>
       </WorkspaceShell>,
@@ -21,6 +22,8 @@ describe("WorkspaceShell", () => {
     expect(screen.getByText("Graph v3")).toBeVisible();
     expect(screen.getByText("Fixture evidence — not live research")).toBeVisible();
     expect(screen.getByText("Graph surface")).toBeVisible();
+    expect(screen.getByText("Current stage: Quantify")).toBeVisible();
+    expect(screen.getByText("Quantify").closest("li")).toHaveAttribute("aria-current", "step");
     expect(screen.getAllByRole("listitem")).toHaveLength(8);
   });
 });

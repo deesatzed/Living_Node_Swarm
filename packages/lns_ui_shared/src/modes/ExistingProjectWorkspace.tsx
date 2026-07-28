@@ -58,6 +58,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
     graphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : 0}
     freshness={(project.active_graph_version ? "active" : "stale") as VisibleNodeState}
     evidenceClassification={stringValue(project.evidence_classification, "fixture_unverified") as EvidenceClassification}
+    currentStage={stringValue(project.stage, "")}
   >
     <h1>{copy.title}</h1>
     <p>{copy.summary}</p>
