@@ -27,6 +27,7 @@ export {
   type ElicitDistributionInput,
   type JsonObject,
   type ShadowSimulationInput,
+  type WorkspaceProjectInput,
   type VisibleNodeState,
 } from "./api/types";
 export { ProjectHome, type ProjectAction, type ProjectHomeItem } from "./projects/ProjectHome";

@@ -9,6 +9,7 @@ import {
   type JsonObject,
   type ShadowSimulationInput,
   type TargetContractInput,
+  type WorkspaceProjectInput,
   type VisibleNodeState,
 } from "./types";
 
@@ -68,6 +69,9 @@ export interface WorkspaceClient {
   getSimulationStatus(graphId: string): Promise<JsonObject>;
   getSnapshot(graphId: string): Promise<JsonObject>;
   listGraphEvents(graphId: string): Promise<JsonObject>;
+  createProject(project: WorkspaceProjectInput): Promise<JsonObject>;
+  getProject(projectId: string): Promise<JsonObject>;
+  patchProject(projectId: string, patch: JsonObject): Promise<JsonObject>;
 }
 
 function parseVisibleNodeState(value: unknown): VisibleNodeState {
@@ -176,5 +180,8 @@ export function createWorkspaceClient({
       request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/snapshot`, { method: "GET" }),
     listGraphEvents: (graphId) =>
       request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/events`, { method: "GET" }),
+    createProject: (project) => request<JsonObject>("/projects", { method: "POST", body: JSON.stringify(project) }),
+    getProject: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "GET" }),
+    patchProject: (projectId, patch) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "PATCH", body: JSON.stringify(patch) }),
   };
 }
