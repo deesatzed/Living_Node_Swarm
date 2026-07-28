@@ -42,6 +42,8 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByLabel("Candidate value")).toBeVisible();
   await expect(page.getByLabel("Distribution inspector")).toContainText("As of: Not recorded on graph node");
   await page.getByLabel("Candidate value").fill("5");
+  await page.getByRole("button", { name: "Add selected candidate change" }).click();
+  await expect(page.getByLabel("Candidate change set")).toContainText("Input signal · mu: 5");
   await page.getByRole("button", { name: "Run in-memory comparison" }).click();
   await expect(page.getByText("Affected path: Input signal → Outcome")).toBeVisible();
   await page.getByRole("button", { name: "Save candidate for review" }).click();

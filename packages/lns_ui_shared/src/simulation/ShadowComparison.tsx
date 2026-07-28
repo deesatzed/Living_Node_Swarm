@@ -66,6 +66,7 @@ export function ShadowComparison({ graphId, projectId, client, onApproved }: { g
   const [selectedNode, setSelectedNode] = useState("");
   const [selectedParameter, setSelectedParameter] = useState("");
   const [candidateValue, setCandidateValue] = useState("");
+  const [stagedOverrides, setStagedOverrides] = useState<Record<string, Record<string, number>>>({});
   const [result, setResult] = useState<JsonObject | null>(null);
   const [comparedOverrides, setComparedOverrides] = useState<Record<string, Record<string, number>> | null>(null);
   const [comparedTarget, setComparedTarget] = useState("");
@@ -106,6 +107,23 @@ export function ShadowComparison({ graphId, projectId, client, onApproved }: { g
     setSelectedParameter(parameter);
     setCandidateValue(selected ? String(selected.parameters[parameter]) : "");
   }
+  function addSelectedChange() {
+    const value = Number(candidateValue);
+    if (!selectedNode || !selectedParameter || !Number.isFinite(value)) {
+      setError("Choose a numeric factor parameter before adding a candidate change.");
+      return;
+    }
+    setError("");
+    setStagedOverrides((current) => ({ ...current, [selectedNode]: { ...current[selectedNode], [selectedParameter]: value } }));
+  }
+  function removeStagedChange(nodeId: string, parameter: string) {
+    setStagedOverrides((current) => {
+      const next = { ...current, [nodeId]: { ...current[nodeId] } };
+      delete next[nodeId][parameter];
+      if (Object.keys(next[nodeId]).length === 0) delete next[nodeId];
+      return next;
+    });
+  }
   async function runComparison() {
     const value = Number(candidateValue);
     if (!selectedTarget || !selectedNode || !selectedParameter || !Number.isFinite(value)) {
@@ -114,7 +132,7 @@ export function ShadowComparison({ graphId, projectId, client, onApproved }: { g
     }
     setRunning(true); setError("");
     try {
-      const overrides = { [selectedNode]: { [selectedParameter]: value } };
+      const overrides = Object.keys(stagedOverrides).length > 0 ? stagedOverrides : { [selectedNode]: { [selectedParameter]: value } };
       setResult(await client.shadowSimulate(graphId, { target_node_id: selectedTarget, candidate_parameter_overrides: overrides }));
       setComparedOverrides(overrides); setComparedTarget(selectedTarget); setProposal(null); setApproval(null); setReviewed(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to run in-memory comparison."); }
@@ -125,6 +143,7 @@ export function ShadowComparison({ graphId, projectId, client, onApproved }: { g
   const limitations = Array.isArray(result?.limitations) ? result.limitations.filter((item): item is string => typeof item === "string") : [];
   const comparedNode = comparedOverrides ? Object.keys(comparedOverrides)[0] ?? "" : "";
   const path = comparedNode && comparedTarget ? affectedPath(nodes, comparedNode, comparedTarget) : [];
+  const stagedChanges = Object.entries(stagedOverrides).flatMap(([nodeId, parameters]) => Object.entries(parameters).map(([parameter, value]) => ({ nodeId, parameter, value, name: nodes.find((node) => node.id === nodeId)?.name ?? nodeId })));
   const proposalId = typeof proposal?.id === "string" ? proposal.id : "";
   const bindingHash = typeof proposal?.binding_hash === "string" ? proposal.binding_hash : "";
   const approvedProject = approval?.project && typeof approval.project === "object" && !Array.isArray(approval.project)
@@ -162,7 +181,9 @@ export function ShadowComparison({ graphId, projectId, client, onApproved }: { g
       <label>Candidate factor<select aria-label="Candidate factor" value={selectedNode} onChange={(event) => chooseNode(event.target.value)}>{nodes.filter((node) => Object.keys(node.parameters).length > 0).map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}</select></label>
       <label>Parameter<select aria-label="Candidate parameter" value={selectedParameter} onChange={(event) => chooseParameter(event.target.value)}>{Object.keys(selected?.parameters ?? {}).map((parameter) => <option key={parameter} value={parameter}>{parameter}</option>)}</select></label>
       <label>Candidate value<input aria-label="Candidate value" type="number" value={candidateValue} onChange={(event) => setCandidateValue(event.target.value)} /></label>
+      <button onClick={addSelectedChange}>Add selected candidate change</button>
       <button onClick={runComparison} disabled={running}>{running ? "Comparing in memory…" : "Run in-memory comparison"}</button>
+      <section aria-label="Candidate change set"><h3>Candidate change set</h3>{stagedChanges.length === 0 ? <p>No local candidate changes staged.</p> : <ul>{stagedChanges.map((change) => <li key={`${change.nodeId}-${change.parameter}`}>{change.name} · {change.parameter}: {change.value} <button onClick={() => removeStagedChange(change.nodeId, change.parameter)}>Remove {change.name} {change.parameter}</button></li>)}</ul>}</section>
       {selected?.family && <DistributionInspector family={selected.family} parameters={selected.parameters} support={SUPPORT[selected.family] ?? "not recorded"} asOf="Not recorded on graph node" provenance={selected.provenance} />}
     </>}
     {nodes.length === 0 && !error && <p role="alert">This graph has no editable numeric node parameters.</p>}

@@ -6,6 +6,37 @@ import { ShadowComparison } from "./ShadowComparison";
 afterEach(cleanup);
 
 describe("ShadowComparison", () => {
+  it("stages multiple reversible parameter changes before comparing them", async () => {
+    const user = userEvent.setup();
+    const shadowSimulate = vi.fn(async () => ({ active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 7, p50: 7 } }));
+    render(<ShadowComparison graphId="graph-1" client={{
+      getGraph: async () => ({ nodes: {
+        input_signal: { id: "input_signal", name: "Input signal", parameters: { mu: 0, sigma: 1 }, depends_on: [] },
+        outcome: { id: "outcome", name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] },
+      }}),
+      shadowSimulate,
+    }} />);
+
+    await screen.findByLabelText("Candidate value");
+    await user.clear(screen.getByLabelText("Candidate value"));
+    await user.type(screen.getByLabelText("Candidate value"), "5");
+    await user.click(screen.getByRole("button", { name: "Add selected candidate change" }));
+    await user.selectOptions(screen.getByLabelText("Candidate parameter"), "sigma");
+    await user.clear(screen.getByLabelText("Candidate value"));
+    await user.type(screen.getByLabelText("Candidate value"), "2");
+    await user.click(screen.getByRole("button", { name: "Add selected candidate change" }));
+
+    expect(screen.getByLabelText("Candidate change set")).toHaveTextContent("Input signal · mu: 5");
+    expect(screen.getByLabelText("Candidate change set")).toHaveTextContent("Input signal · sigma: 2");
+    await user.click(screen.getByRole("button", { name: "Run in-memory comparison" }));
+    expect(shadowSimulate).toHaveBeenCalledWith("graph-1", {
+      target_node_id: "outcome",
+      candidate_parameter_overrides: { input_signal: { mu: 5, sigma: 2 } },
+    });
+    await user.click(screen.getByRole("button", { name: "Remove Input signal mu" }));
+    expect(screen.getByLabelText("Candidate change set")).not.toHaveTextContent("Input signal · mu: 5");
+  });
+
   it("runs an explicitly in-memory parameter comparison without activating the candidate", async () => {
     const user = userEvent.setup();
     const shadowSimulate = vi.fn(async () => ({
