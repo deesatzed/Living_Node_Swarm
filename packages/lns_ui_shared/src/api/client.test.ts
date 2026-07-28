@@ -107,6 +107,19 @@ describe("workspace API client", () => {
     ]);
   });
 
+  it("creates a draft bound to the selected active graph version", async () => {
+    const client = createWorkspaceClient({
+      baseUrl: "http://localhost:8787",
+      fetch: async (input, init) => {
+        expect(input).toBe("http://localhost:8787/projects/project-1/drafts");
+        expect(init?.method).toBe("POST");
+        return new Response(JSON.stringify({ id: "draft-1", base_graph_version: 4 }));
+      },
+    });
+
+    await expect(client.createDraft("project-1", { id: "draft-1", base_graph_version: 4 })).resolves.toMatchObject({ id: "draft-1" });
+  });
+
   it("rejects candidate fixtures with an unrecognized visible state", () => {
     expect(() =>
       parseCandidateGraphFixture({
@@ -132,6 +145,7 @@ describe("workspace API client", () => {
     expect(Object.keys(client).sort()).toEqual([
       "approveCandidateProposal",
       "createCandidateProposal",
+      "createDraft",
       "createFixtureCandidateProposal",
       "createProject",
       "createTarget",

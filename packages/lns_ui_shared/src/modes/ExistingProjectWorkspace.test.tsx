@@ -12,6 +12,7 @@ describe("ExistingProjectWorkspace", () => {
       runSimulation: async () => ({}),
       getMonitoring: async () => ({ config: null, events: [] }),
       saveMonitoring: async () => ({}),
+      createDraft: async () => ({}),
     }} onBack={() => undefined} />);
 
     expect(await screen.findByRole("heading", { name: "Run approved model" })).toBeVisible();

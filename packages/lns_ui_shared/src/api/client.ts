@@ -11,6 +11,7 @@ import {
   type ShadowSimulationInput,
   type TargetContractInput,
   type WorkspaceProjectInput,
+  type WorkspaceDraftInput,
   type VisibleNodeState,
 } from "./types";
 
@@ -73,6 +74,7 @@ export interface WorkspaceClient {
   listGraphEvents(graphId: string): Promise<JsonObject>;
   listProjects(): Promise<{ projects: JsonObject[] }>;
   createProject(project: WorkspaceProjectInput): Promise<JsonObject>;
+  createDraft(projectId: string, draft: WorkspaceDraftInput): Promise<JsonObject>;
   getProject(projectId: string): Promise<JsonObject>;
   patchProject(projectId: string, patch: JsonObject): Promise<JsonObject>;
   getMonitoring(projectId: string): Promise<JsonObject>;
@@ -188,6 +190,7 @@ export function createWorkspaceClient({
       request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/events`, { method: "GET" }),
     listProjects: () => request<{ projects: JsonObject[] }>("/projects", { method: "GET" }),
     createProject: (project) => request<JsonObject>("/projects", { method: "POST", body: JSON.stringify(project) }),
+    createDraft: (projectId, draft) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/drafts`, { method: "POST", body: JSON.stringify(draft) }),
     getProject: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "GET" }),
     patchProject: (projectId, patch) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "PATCH", body: JSON.stringify(patch) }),
     getMonitoring: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/monitoring`, { method: "GET" }),

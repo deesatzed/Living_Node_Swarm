@@ -28,6 +28,7 @@ export {
   type JsonObject,
   type ShadowSimulationInput,
   type WorkspaceProjectInput,
+  type WorkspaceDraftInput,
   type MonitoringConfigInput,
   type VisibleNodeState,
 } from "./api/types";
@@ -37,6 +38,7 @@ export { NewProjectFlow, type NewProjectClient } from "./projects/NewProjectFlow
 export { ProjectWorkspaceRouter, type ProjectWorkspaceClient } from "./projects/ProjectWorkspaceRouter";
 export { ExistingProjectWorkspace, type ExistingProjectClient, type ExistingProjectMode } from "./modes/ExistingProjectWorkspace";
 export { RunModel, type RunModelClient } from "./modes/RunModel";
+export { EditModel, type EditModelClient } from "./modes/EditModel";
 export { MonitoringSetup, type MonitoringClient } from "./monitoring/MonitoringSetup";
 export { WorkspaceShell } from "./workspace/WorkspaceShell";
 export { FixtureWorkspace } from "./workspace/FixtureWorkspace";

@@ -82,6 +82,7 @@ export interface TargetContractInput {
 export type JsonObject = Record<string, unknown>;
 export interface WorkspaceProjectInput { id: string; name: string; stage: string; evidence_classification: "fixture_unverified" | "local_verified" | "live_provider_verified"; }
 export interface MonitoringConfigInput { cadence: string; freshness_threshold_days: number; mode: "fixture" | "local" | "live"; }
+export interface WorkspaceDraftInput { id: string; base_graph_version: number; }
 
 export interface ClaimReviewInput {
   decision: "include" | "exclude";
