@@ -5,6 +5,7 @@ import { WarningCenter } from "../inspectors/WarningCenter";
 
 export interface CandidateMapClient {
   createFixtureCandidateProposal(targetId: string): Promise<CandidateGraphFixture>;
+  materializeFixtureCandidateProposal?(targetId: string): Promise<{ graph?: { id?: string }; active_graph_mutated?: boolean }>;
 }
 
 type FixtureCandidateRevision = Pick<CandidateGraphFixture, "factors" | "relationships">;
@@ -20,6 +21,7 @@ export function CandidateMap({ targetId, client }: { targetId: string; client: C
   const [selectedFactorId, setSelectedFactorId] = useState("");
   const [revisionStatus, setRevisionStatus] = useState("");
   const [error, setError] = useState("");
+  const [materializedGraphId, setMaterializedGraphId] = useState("");
   const [loading, setLoading] = useState(false);
   async function load() {
     setLoading(true); setError("");
@@ -83,6 +85,11 @@ export function CandidateMap({ targetId, client }: { targetId: string; client: C
     setSelectedFactorId(savedRevision.factors[0]?.id ?? "");
     setRevisionStatus("Replayed fixture branch revision without changing an active graph.");
   }
+  async function materialize() {
+    if (!client.materializeFixtureCandidateProposal) return;
+    try { const result = await client.materializeFixtureCandidateProposal(targetId); setMaterializedGraphId(result.graph?.id ?? "unknown"); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to materialize fixture candidate graph."); }
+  }
 
   return <section aria-label="Candidate map">
     <p>Candidate breadth is proposal-only. It never activates factors or declares live research.</p>
@@ -93,6 +100,8 @@ export function CandidateMap({ targetId, client }: { targetId: string; client: C
         <h2>Fixture branch refinement</h2><p>These controls change only the displayed fixture candidate in this browser session. They do not persist, approve, or alter an active graph.</p>
         <label>Candidate factor for fixture refinement<select aria-label="Candidate factor for fixture refinement" value={selectedFactorId} onChange={(event) => setSelectedFactorId(event.target.value)}>{factors.map((factor) => <option key={factor.id} value={factor.id}>{factor.label}</option>)}</select></label>
         <button onClick={removeSelectedFactor} disabled={!selectedFactor}>Remove selected fixture factor</button><button onClick={extendSelectedBranch} disabled={!selectedFactor}>Extend selected fixture branch</button><button onClick={saveFixtureRevision} disabled={!revision}>Request fixture branch revision</button><button onClick={replayFixtureRevision} disabled={!savedRevision}>Replay fixture branch revision</button>
+        {client.materializeFixtureCandidateProposal && <button onClick={() => void materialize()}>Materialize fixture proposal for review</button>}
+        {materializedGraphId && <p role="status">Fixture candidate graph {materializedGraphId} persisted for separate review; no factor is active.</p>}
         {revisionStatus && <p role="status">{revisionStatus}</p>}
         <section aria-label="Fixture revision delta"><h3>Fixture revision delta</h3>{removedFactors.length === 0 && addedFactors.length === 0 ? <p>No fixture candidate changes staged.</p> : <>{removedFactors.map((factor) => <p key={`removed-${factor.id}`}>Removed factor: {factor.label}.</p>)}{addedFactors.map((factor) => <p key={`added-${factor.id}`}>Added factor: {factor.label}.</p>)}{addedEdges.map((edge) => <p key={`edge-${String(edge.parent_node_id)}-${String(edge.child_node_id)}`}>Added model dependency: {String(edge.parent_node_id)} → {String(edge.child_node_id)}.</p>)}</>}<p>Active graph unchanged: yes.</p></section>
       </section>
