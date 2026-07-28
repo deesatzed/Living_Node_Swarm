@@ -76,11 +76,12 @@ def make_structural_approval_receipt(
     )
 
 
-def make_structural_proposal(graph: Graph, body: StructuralProposalBody) -> StructuralGraphProposal:
-    """Validate a structural delta against a copy of the exact active graph."""
-
+def materialize_structural_trial(
+    graph: Graph, relationships: tuple[RelationshipContract, ...]
+) -> Graph:
+    """Return a validated in-memory graph with proposed relationship additions active."""
     trial = graph.model_copy(deep=True)
-    for relationship in body.relationships:
+    for relationship in relationships:
         if relationship.transform == "affine" and not relationship.coefficient_parameters:
             raise ValidationError(
                 f"structural affine relationship {relationship.id} requires coefficient_parameters"
@@ -123,6 +124,13 @@ def make_structural_proposal(graph: Graph, body: StructuralProposalBody) -> Stru
         )
     validate_graph_nodes(trial.nodes)
     assert_acyclic(trial.nodes)
+    return trial
+
+
+def make_structural_proposal(graph: Graph, body: StructuralProposalBody) -> StructuralGraphProposal:
+    """Validate a structural delta against a copy of the exact active graph."""
+
+    trial = materialize_structural_trial(graph, body.relationships)
     return StructuralGraphProposal(
         id=str(uuid.uuid4()),
         graph_id=graph.id,

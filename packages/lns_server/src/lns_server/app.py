@@ -37,10 +37,11 @@ from lns_server.distribution_elicitation import ElicitDistributionBody, elicit_f
 from lns_server.relationship_authoring import RelationshipValidationBody, validate_proposed_relationships
 from lns_server.structural_proposals import (
     StructuralProposalBody,
+    materialize_structural_trial,
     make_structural_approval_receipt,
     make_structural_proposal,
 )
-from lns_server.shadow_simulation import ShadowSimulationBody, ShadowSimulationError, run_local_sensitivity, run_shadow_simulation
+from lns_server.shadow_simulation import StructuralShadowSimulationBody, ShadowSimulationBody, ShadowSimulationError, run_local_sensitivity, run_shadow_simulation, run_structural_shadow_simulation
 from lns_server.candidate_approval import (
     ApproveCandidateBody,
     CandidateProposalBody,
@@ -668,6 +669,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "approval_receipt": json.loads(receipt.model_dump_json()),
             "graph": json.loads(graph.model_dump_json()),
         }
+
+    @app.post("/authoring/graphs/{graph_id}/structural-proposals/{proposal_id}/shadow-simulate")
+    def shadow_simulate_structural_proposal(
+        graph_id: str, proposal_id: str, body: StructuralShadowSimulationBody
+    ) -> dict[str, Any]:
+        graph = store.get_graph(graph_id)
+        proposal = app.state.evidence_store.get_structural_graph_proposal(proposal_id)
+        if graph is None:
+            raise HTTPException(404, "graph not found")
+        if proposal is None or proposal.graph_id != graph_id:
+            raise HTTPException(404, "structural proposal not found")
+        if graph.graph_version != proposal.graph_version:
+            raise HTTPException(409, "structural proposal invalidated by graph version change")
+        try:
+            trial = materialize_structural_trial(graph, proposal.relationships)
+            return run_structural_shadow_simulation(
+                graph, trial, body, candidate_relationship_ids=proposal.candidate_relationship_ids
+            )
+        except (ValidationError, ShadowSimulationError) as exc:
+            raise HTTPException(400, str(exc)) from exc
 
     @app.post("/authoring/graphs/{graph_id}/shadow-simulate")
     def shadow_simulate(graph_id: str, body: ShadowSimulationBody) -> dict[str, Any]:

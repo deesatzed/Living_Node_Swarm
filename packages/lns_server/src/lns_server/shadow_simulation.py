@@ -24,6 +24,14 @@ class ShadowSimulationError(ValueError):
     pass
 
 
+class StructuralShadowSimulationBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_node_id: str
+    seed: int = Field(default=42, ge=0)
+    n_samples: int = Field(default=2_000, gt=0)
+
+
 def run_local_sensitivity(
     graph: Graph,
     *,
@@ -113,6 +121,41 @@ def run_shadow_simulation(graph: Graph, body: ShadowSimulationBody) -> dict[str,
         "candidate_summary": {"mean": candidate.derived_mean, **candidate.quantiles},
         "limitations": [
             "Candidate changes are simulated in memory and are not persisted or activated.",
+            "A distribution shift is structural impact, not evidence of improved forecast accuracy.",
+        ],
+    }
+
+
+def run_structural_shadow_simulation(
+    active_graph: Graph,
+    candidate_graph: Graph,
+    body: StructuralShadowSimulationBody,
+    *,
+    candidate_relationship_ids: tuple[str, ...],
+) -> dict[str, object]:
+    """Compare an exact in-memory structural trial with its active base graph."""
+
+    if body.target_node_id not in active_graph.nodes:
+        raise ShadowSimulationError("target node not found in graph")
+    active_predictives, _, _ = run_ensemble(
+        active_graph.nodes, seed=body.seed, n_samples=body.n_samples
+    )
+    candidate_predictives, _, _ = run_ensemble(
+        candidate_graph.nodes, seed=body.seed, n_samples=body.n_samples
+    )
+    active = active_predictives.get(body.target_node_id)
+    candidate = candidate_predictives.get(body.target_node_id)
+    if active is None or candidate is None:
+        raise ShadowSimulationError("target node is not active in the simulation")
+    return {
+        "active_run_id": str(uuid.uuid4()),
+        "candidate_run_id": str(uuid.uuid4()),
+        "candidate_relationship_ids": list(candidate_relationship_ids),
+        "active_graph_mutated": False,
+        "active_summary": {"mean": active.derived_mean, **active.quantiles},
+        "candidate_summary": {"mean": candidate.derived_mean, **candidate.quantiles},
+        "limitations": [
+            "Candidate structural relationships are simulated only in memory and are not persisted or activated.",
             "A distribution shift is structural impact, not evidence of improved forecast accuracy.",
         ],
     }

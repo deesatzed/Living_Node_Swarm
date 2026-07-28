@@ -102,3 +102,25 @@ def test_structural_proposal_is_invalidated_by_an_intervening_graph_edit(tmp_pat
     assert rejected.status_code == 409
     assert "invalidated" in rejected.json()["detail"]
     assert "input-to-outcome-proposal" not in unchanged["relationships"]
+
+
+def test_structural_proposal_shadow_simulates_its_exact_trial_without_activation(tmp_path):
+    with TestClient(create_app(Settings(db_path=str(tmp_path / "graph.db")))) as client:
+        active = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        proposal = client.post(
+            f"/authoring/graphs/{active['id']}/structural-proposals",
+            json={"relationships": [structural_relationship()]},
+        ).json()["proposal"]
+        comparison = client.post(
+            f"/authoring/graphs/{active['id']}/structural-proposals/{proposal['id']}/shadow-simulate",
+            json={"target_node_id": "outcome", "seed": 42, "n_samples": 1000},
+        )
+        unchanged = client.get(f"/graphs/{active['id']}").json()
+
+    assert comparison.status_code == 200, comparison.text
+    payload = comparison.json()
+    assert payload["active_graph_mutated"] is False
+    assert payload["candidate_relationship_ids"] == ["input-to-outcome-proposal"]
+    assert payload["active_summary"]["mean"] != payload["candidate_summary"]["mean"]
+    assert unchanged["graph_version"] == active["graph_version"]
+    assert unchanged["nodes"]["outcome"]["depends_on"] == ["process_stage"]
