@@ -263,23 +263,8 @@ export default function App() {
                 </button>
                 {selected.status === "proposed" && (
                   <>
-                    <button
-                      className="primary"
-                      disabled={busy || !graph}
-                      onClick={async () => {
-                        if (!graph) return;
-                        setBusy(true);
-                        try {
-                          const res = await api.activateOne(graph.id, selected.id);
-                          applyState(res.graph, res.snapshot, "fresh");
-                        } catch (e) {
-                          setError(e instanceof Error ? e.message : String(e));
-                        } finally {
-                          setBusy(false);
-                        }
-                      }}
-                    >
-                      Activate
+                    <button className="primary" disabled title="Activation requires an exact reviewed graph proposal in the shared Prediction Workspace.">
+                      Activation requires review
                     </button>
                     <button
                       className="danger"
