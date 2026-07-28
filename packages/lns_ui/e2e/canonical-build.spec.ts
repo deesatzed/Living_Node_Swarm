@@ -78,6 +78,7 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await page.getByRole("button", { name: "Proceed now" }).click();
   await page.getByRole("button", { name: "Load labeled fixture candidate map" }).click();
   await expect(page.getByText("Fixture candidate map — not live research")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Warnings and limitations" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Visual target-centered graph" })).toBeVisible();
   await expect(page.getByText("15 factors shown. Textual graph alternative:")).toBeVisible();
   await page.getByRole("button", { name: "Weather disruption" }).click();

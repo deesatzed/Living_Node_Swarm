@@ -17,5 +17,6 @@ describe("CandidateMap", () => {
     expect(createFixtureCandidateProposal).toHaveBeenCalledWith("fixture-nd-retail-2027");
     expect(await screen.findByText("Fixture candidate map — not live research")).toBeVisible();
     expect(screen.getByRole("group", { name: "Visual target-centered graph" })).toBeVisible();
+    expect(screen.getByLabelText("Warnings and limitations")).toHaveTextContent("Fixture data demonstrates GUI mechanics");
   });
 });

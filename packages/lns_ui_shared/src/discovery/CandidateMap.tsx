@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { CandidateGraphFixture } from "../api/types";
 import { HopGraph } from "../graph/HopGraph";
+import { WarningCenter } from "../inspectors/WarningCenter";
 
 export interface CandidateMapClient {
   createFixtureCandidateProposal(targetId: string): Promise<CandidateGraphFixture>;
@@ -20,6 +21,6 @@ export function CandidateMap({ targetId, client }: { targetId: string; client: C
     <p>Candidate breadth is proposal-only. It never activates factors or declares live research.</p>
     {!fixture && <button onClick={load} disabled={loading}>{loading ? "Loading fixture candidate map…" : "Load labeled fixture candidate map"}</button>}
     {error && <p role="alert">{error}</p>}
-    {fixture && <><p>Fixture candidate map — not live research</p><HopGraph factors={fixture.factors} relationships={fixture.relationships} targetId={typeof fixture.graph_proposal.target_node_id === "string" ? fixture.graph_proposal.target_node_id : "target"} targetLabel="Private-investor retail neodymium price" /></>}
+    {fixture && <><p>Fixture candidate map — not live research</p><WarningCenter warnings={fixture.limitations.map((message, index) => ({ id: `fixture-limitation-${index}`, severity: "warning" as const, message }))} /><HopGraph factors={fixture.factors} relationships={fixture.relationships} targetId={typeof fixture.graph_proposal.target_node_id === "string" ? fixture.graph_proposal.target_node_id : "target"} targetLabel="Private-investor retail neodymium price" /></>}
   </section>;
 }
