@@ -75,4 +75,17 @@ describe("VettingConversation", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Research brief categories saved: supply, substitution.");
     expect(screen.getByText(/not retrieved evidence/i)).toBeVisible();
   });
+
+  it("retains the Vet surface after cancelling an unsaved action and makes missing routing permission explicit", async () => {
+    const user = userEvent.setup();
+    render(<VettingConversation provider="No provider selected" model="No model selected" dataScope="No content leaves this Mac." onRecordProviderRouting={async () => undefined} />);
+
+    await user.click(screen.getByRole("button", { name: "Add source" }));
+    await user.type(screen.getByLabelText("Source or known fact"), "Unsaved source");
+    await user.click(screen.getByRole("button", { name: "Cancel discovery action" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Discovery action cancelled. No entry was saved.");
+    expect(screen.queryByLabelText("Source or known fact")).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Research routing provider"), "openrouter");
+    expect(screen.getByRole("alert")).toHaveTextContent("Permission denied: provider routing requires explicit confirmation. No research content was sent.");
+  });
 });

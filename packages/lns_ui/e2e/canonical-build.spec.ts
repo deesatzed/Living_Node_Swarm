@@ -351,7 +351,12 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await page.getByLabel("Substitution").check();
   await page.getByRole("button", { name: "Save research categories" }).click();
   await expect(page.getByRole("status")).toContainText("Research brief categories saved: supply, substitution.");
+  await page.getByRole("button", { name: "Add source" }).click();
+  await page.getByLabel("Source or known fact").fill("Unsaved fixture source");
+  await page.getByRole("button", { name: "Cancel discovery action" }).click();
+  await expect(page.getByRole("status")).toContainText("Discovery action cancelled. No entry was saved.");
   await page.getByLabel("Research routing provider").selectOption("openrouter");
+  await expect(page.getByRole("alert")).toContainText("Permission denied: provider routing requires explicit confirmation. No research content was sent.");
   await page.getByLabel("I authorize this routing receipt").check();
   await page.getByRole("button", { name: "Record provider-routing consent" }).click();
   await expect(page.getByRole("status")).toContainText("Provider-routing consent saved. No research content was sent.");
