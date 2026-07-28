@@ -88,6 +88,25 @@ describe("workspace API client", () => {
     await expect(client.getTarget("target/1")).resolves.toMatchObject({ question: "What will neodymium cost?" });
   });
 
+  it("loads and saves monitoring configuration through project-scoped endpoints", async () => {
+    const calls: Array<{ input: string; method: string }> = [];
+    const client = createWorkspaceClient({
+      baseUrl: "http://localhost:8787",
+      fetch: async (input, init) => {
+        calls.push({ input: String(input), method: init?.method ?? "GET" });
+        return new Response(JSON.stringify({ config: { cadence: "weekly", freshness_threshold_days: 7, mode: "fixture" }, events: [] }));
+      },
+    });
+
+    await client.getMonitoring("project-1");
+    await client.saveMonitoring("project-1", { cadence: "weekly", freshness_threshold_days: 7, mode: "fixture" });
+
+    expect(calls).toEqual([
+      { input: "http://localhost:8787/projects/project-1/monitoring", method: "GET" },
+      { input: "http://localhost:8787/projects/project-1/monitoring", method: "PUT" },
+    ]);
+  });
+
   it("rejects candidate fixtures with an unrecognized visible state", () => {
     expect(() =>
       parseCandidateGraphFixture({
@@ -119,6 +138,7 @@ describe("workspace API client", () => {
       "elicitDistribution",
       "getDistributionCatalog",
       "getGraph",
+      "getMonitoring",
       "getProject",
       "getResearchReview",
       "getSimulationStatus",
@@ -129,6 +149,7 @@ describe("workspace API client", () => {
       "patchProject",
       "reviewResearchClaim",
       "runSimulation",
+      "saveMonitoring",
       "shadowSimulate",
       "validateRelationships",
     ]);

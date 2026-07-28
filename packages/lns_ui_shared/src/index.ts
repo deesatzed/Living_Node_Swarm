@@ -28,6 +28,7 @@ export {
   type JsonObject,
   type ShadowSimulationInput,
   type WorkspaceProjectInput,
+  type MonitoringConfigInput,
   type VisibleNodeState,
 } from "./api/types";
 export { ProjectHome, type ProjectAction, type ProjectHomeItem } from "./projects/ProjectHome";
@@ -36,6 +37,7 @@ export { NewProjectFlow, type NewProjectClient } from "./projects/NewProjectFlow
 export { ProjectWorkspaceRouter, type ProjectWorkspaceClient } from "./projects/ProjectWorkspaceRouter";
 export { ExistingProjectWorkspace, type ExistingProjectClient, type ExistingProjectMode } from "./modes/ExistingProjectWorkspace";
 export { RunModel, type RunModelClient } from "./modes/RunModel";
+export { MonitoringSetup, type MonitoringClient } from "./monitoring/MonitoringSetup";
 export { WorkspaceShell } from "./workspace/WorkspaceShell";
 export { FixtureWorkspace } from "./workspace/FixtureWorkspace";
 export { canMoveToStage, type StageTransitionContext } from "./workflow/guards";

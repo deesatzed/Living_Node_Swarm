@@ -7,6 +7,7 @@ import {
   type DistributionCatalog,
   type ElicitDistributionInput,
   type JsonObject,
+  type MonitoringConfigInput,
   type ShadowSimulationInput,
   type TargetContractInput,
   type WorkspaceProjectInput,
@@ -74,6 +75,8 @@ export interface WorkspaceClient {
   createProject(project: WorkspaceProjectInput): Promise<JsonObject>;
   getProject(projectId: string): Promise<JsonObject>;
   patchProject(projectId: string, patch: JsonObject): Promise<JsonObject>;
+  getMonitoring(projectId: string): Promise<JsonObject>;
+  saveMonitoring(projectId: string, config: MonitoringConfigInput): Promise<JsonObject>;
 }
 
 function parseVisibleNodeState(value: unknown): VisibleNodeState {
@@ -187,5 +190,7 @@ export function createWorkspaceClient({
     createProject: (project) => request<JsonObject>("/projects", { method: "POST", body: JSON.stringify(project) }),
     getProject: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "GET" }),
     patchProject: (projectId, patch) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "PATCH", body: JSON.stringify(patch) }),
+    getMonitoring: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/monitoring`, { method: "GET" }),
+    saveMonitoring: (projectId, config) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/monitoring`, { method: "PUT", body: JSON.stringify(config) }),
   };
 }

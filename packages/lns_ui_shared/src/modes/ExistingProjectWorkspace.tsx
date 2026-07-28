@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import type { EvidenceClassification, JsonObject, VisibleNodeState } from "../api/types";
 import { WorkspaceShell } from "../workspace/WorkspaceShell";
 import { RunModel, type RunModelClient } from "./RunModel";
+import { MonitoringSetup, type MonitoringClient } from "../monitoring/MonitoringSetup";
 
 export type ExistingProjectMode = "run" | "edit" | "monitor";
 
-export interface ExistingProjectClient extends RunModelClient {
+export interface ExistingProjectClient extends RunModelClient, MonitoringClient {
   getProject(projectId: string): Promise<JsonObject>;
   getTarget(targetId: string): Promise<JsonObject>;
 }
@@ -59,6 +60,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack }: { 
     <p>{copy.summary}</p>
     {mode === "run" && typeof project.graph_id === "string" && <RunModel graphId={project.graph_id} client={client} />}
     {mode === "run" && typeof project.graph_id !== "string" && <p role="alert">This project has no approved graph to run yet.</p>}
+    {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} />}
     <button onClick={onBack}>Back to projects</button>
   </WorkspaceShell>;
 }
