@@ -31,6 +31,8 @@ export {
   type VisibleNodeState,
 } from "./api/types";
 export { ProjectHome, type ProjectAction, type ProjectHomeItem } from "./projects/ProjectHome";
+export { ProjectHomeLoader, type ProjectHomeClient } from "./projects/ProjectHomeLoader";
+export { NewProjectFlow, type NewProjectClient } from "./projects/NewProjectFlow";
 export { WorkspaceShell } from "./workspace/WorkspaceShell";
 export { FixtureWorkspace } from "./workspace/FixtureWorkspace";
 export { canMoveToStage, type StageTransitionContext } from "./workflow/guards";

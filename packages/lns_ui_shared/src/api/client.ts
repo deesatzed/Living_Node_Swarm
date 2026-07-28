@@ -51,6 +51,7 @@ export interface WorkspaceClientOptions {
 
 export interface WorkspaceClient {
   createTarget(target: Partial<TargetContractInput>): Promise<JsonObject>;
+  getTarget(targetId: string): Promise<JsonObject>;
   getDistributionCatalog(): Promise<DistributionCatalog>;
   getResearchReview(targetId: string): Promise<JsonObject>;
   reviewResearchClaim(targetId: string, claimId: string, body: ClaimReviewInput): Promise<JsonObject>;
@@ -138,6 +139,7 @@ export function createWorkspaceClient({
         method: "POST",
         body: JSON.stringify(target),
       }),
+    getTarget: (targetId) => request<JsonObject>(`/targets/${encodeURIComponent(targetId)}`, { method: "GET" }),
     getDistributionCatalog: () => request<DistributionCatalog>("/catalog/distributions", { method: "GET" }),
     getResearchReview: (targetId) =>
       request<JsonObject>(`/research/targets/${encodeURIComponent(targetId)}/review`, { method: "GET" }),

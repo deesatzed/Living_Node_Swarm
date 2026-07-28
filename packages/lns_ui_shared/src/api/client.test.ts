@@ -76,6 +76,18 @@ describe("workspace API client", () => {
     await expect(client.listProjects()).resolves.toEqual({ projects: [{ id: "project-1", name: "Neodymium" }] });
   });
 
+  it("retrieves a persisted target contract for Project Home summaries", async () => {
+    const client = createWorkspaceClient({
+      baseUrl: "http://localhost:8787",
+      fetch: async (input) => {
+        expect(input).toBe("http://localhost:8787/targets/target%2F1");
+        return new Response(JSON.stringify({ id: "target/1", question: "What will neodymium cost?" }));
+      },
+    });
+
+    await expect(client.getTarget("target/1")).resolves.toMatchObject({ question: "What will neodymium cost?" });
+  });
+
   it("rejects candidate fixtures with an unrecognized visible state", () => {
     expect(() =>
       parseCandidateGraphFixture({
@@ -111,6 +123,7 @@ describe("workspace API client", () => {
       "getResearchReview",
       "getSimulationStatus",
       "getSnapshot",
+      "getTarget",
       "listGraphEvents",
       "listProjects",
       "patchProject",
