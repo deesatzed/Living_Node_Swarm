@@ -53,6 +53,7 @@ export { PersistedTargetIntake } from "./intake/PersistedTargetIntake";
 export { RelationshipInspector, type RelationshipReview } from "./inspectors/RelationshipInspector";
 export { layoutHopGraph, type GraphPoint } from "./graph/layout";
 export { HopGraph } from "./graph/HopGraph";
+export { ApprovedGraphMap } from "./graph/ApprovedGraphMap";
 export { WarningCenter, type WorkspaceWarning } from "./inspectors/WarningCenter";
 export { DistributionInspector } from "./inspectors/DistributionInspector";
 export { EvidenceDrawer, type EvidenceDrawerClient } from "./inspectors/EvidenceDrawer";

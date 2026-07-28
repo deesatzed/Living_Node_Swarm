@@ -6,6 +6,7 @@ import { MonitoringSetup, type MonitoringClient } from "../monitoring/Monitoring
 import { EditModel, type EditModelClient } from "./EditModel";
 import type { ScenarioClient } from "../simulation/ScenarioEditor";
 import { ShadowComparison, type ShadowComparisonClient } from "../simulation/ShadowComparison";
+import { ApprovedGraphMap } from "../graph/ApprovedGraphMap";
 
 export type ExistingProjectMode = "run" | "edit" | "monitor";
 
@@ -41,6 +42,7 @@ function projectHorizon(target: JsonObject | undefined): string {
 export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBranchToEdit }: { mode: ExistingProjectMode; projectId: string; client: ExistingProjectClient; onBack: () => void; onBranchToEdit?: () => void }) {
   const [project, setProject] = useState<JsonObject | null>(null);
   const [target, setTarget] = useState<JsonObject | undefined>();
+  const [approvedGraph, setApprovedGraph] = useState<JsonObject | undefined>();
   const [error, setError] = useState("");
   useEffect(() => {
     let active = true;
@@ -55,6 +57,14 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
     })();
     return () => { active = false; };
   }, [client, projectId]);
+  useEffect(() => {
+    let active = true;
+    if (mode !== "edit" || !project || typeof project.graph_id !== "string" || !client.getGraph) return;
+    void client.getGraph(project.graph_id).then((graph) => { if (active) setApprovedGraph(graph); }).catch((reason: unknown) => {
+      if (active) setError(reason instanceof Error ? reason.message : "Unable to load the approved dependency graph.");
+    });
+    return () => { active = false; };
+  }, [client, mode, project]);
 
   if (error) return <section aria-label="Existing project workspace"><p role="alert">{error}</p><button onClick={onBack}>Back to projects</button></section>;
   if (!project) return <section aria-label="Existing project workspace"><p role="status">Loading selected project…</p></section>;
@@ -77,6 +87,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
     {mode === "run" && typeof project.graph_id !== "string" && <p role="alert">This project has no approved graph to run yet.</p>}
     {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} onBranchToEdit={onBranchToEdit} />}
     {mode === "edit" && <EditModel projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : null} client={client} />}
+    {mode === "edit" && approvedGraph && <ApprovedGraphMap graph={approvedGraph} />}
     {mode === "edit" && typeof project.graph_id === "string" && client.getGraph && client.shadowSimulate && <ShadowComparison graphId={project.graph_id} projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : undefined} client={{ getGraph: client.getGraph, shadowSimulate: client.shadowSimulate, createCandidateProposal: client.createCandidateProposal, approveCandidateProposal: client.approveCandidateProposal, approveProjectCandidateProposal: client.approveProjectCandidateProposal, createCandidateRevision: client.createCandidateRevision, listCandidateRevisions: client.listCandidateRevisions }} onApproved={setProject} />}
     <button onClick={onBack}>Back to projects</button>
   </WorkspaceShell>;

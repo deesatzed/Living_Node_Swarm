@@ -41,6 +41,9 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByLabel("Inspected monitoring event")).toContainText("Inspection does not change the approved model.");
   await page.getByRole("button", { name: "Branch to edit" }).click();
   await expect(page.getByRole("heading", { name: "Edit model through a draft" })).toBeVisible();
+  await expect(page.getByLabel("Approved model dependency graph")).toContainText("Approved graph — read-only");
+  await page.getByLabel("Approved model dependency graph").getByRole("button", { name: "Input signal" }).click();
+  await expect(page.getByLabel("Approved model dependency graph").getByRole("status")).toContainText("Traced path: Input signal → Outcome");
   await expect(page.getByRole("heading", { name: "Active versus candidate" })).toBeVisible();
   await expect(page.getByLabel("Candidate value")).toBeVisible();
   await expect(page.getByLabel("Distribution inspector")).toContainText("As of: Not recorded on graph node");
@@ -61,7 +64,7 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByText("Project lifecycle: decide · active graph version 5")).toBeVisible();
   await expect(page.getByText("Current stage: Decide")).toBeVisible();
   await page.getByRole("button", { name: "Create version-bound draft" }).click();
-  await expect(page.getByRole("status")).toContainText("Draft draft-1 is ready");
+  await expect(page.getByText("Draft draft-1 is ready for proposed changes.")).toBeVisible();
 });
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800 }]) {
