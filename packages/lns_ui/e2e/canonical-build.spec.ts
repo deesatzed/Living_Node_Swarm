@@ -67,6 +67,31 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByText("Draft draft-1 is ready for proposed changes.")).toBeVisible();
 });
 
+test("canonical Run renders an authoritative successful simulation receipt without editing structure", async ({ page }) => {
+  const project = { id: "run-1", name: "Approved neodymium model", target_id: "target-1", graph_id: "graph-1", active_graph_version: 4, stage: "simulate", evidence_classification: "local_verified" };
+  const runResponse = {
+    snapshot: {
+      id: "snapshot-1", graph_version: 4, seed: 42, n_samples: 2000, status: "complete",
+      node_predictives: { outcome: { derived_mean: 48.2, derived_median: 47.8, derived_std: 5.1, quantiles: { p05: 40.1, p50: 47.8, p95: 56.4 } } },
+      stability_diagnostic: { method: "multi_seed_multi_sample_quantile_range", seeds: [42, 43], sample_counts: [1000, 2000], node_metric_ranges: { outcome: { mean: 0.4, p50: 0.3 } }, limitations: "This measures Monte Carlo stability only; it does not establish forecast accuracy or model calibration." },
+    },
+    sim_status: { freshness: "fresh" },
+  };
+  await page.route("**/api/projects", (route) => route.fulfill({ json: { projects: [project] } }));
+  await page.route("**/api/targets/target-1", (route) => route.fulfill({ json: { question: "What will neodymium cost?", forecast_origin: "2026-07-28T00:00:00Z", resolution_at: "2027-07-28T00:00:00Z" } }));
+  await page.route("**/api/projects/run-1/scenarios", (route) => route.fulfill({ json: { scenarios: [] } }));
+  await page.route("**/api/graphs/graph-1/sim/run", (route) => route.fulfill({ json: runResponse }));
+  await page.route("**/api/projects/run-1", (route) => route.request().method() === "GET" ? route.fulfill({ json: project }) : route.fulfill({ json: project }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Run model" }).click();
+  await expect(page.getByRole("heading", { name: "Run approved model" })).toBeVisible();
+  await page.getByRole("button", { name: "Run approved version" }).click();
+  await expect(page.getByText("Run receipt: snapshot-1")).toBeVisible();
+  await expect(page.getByLabel("Run outcome summaries")).toContainText("outcome · mean 48.2 · median 47.8 · p05 40.1 · p95 56.4");
+  await expect(page.getByLabel("Run stability diagnostic")).toContainText("does not establish forecast accuracy or model calibration");
+  await expect(page.getByText(/does not create, activate, or edit structure/i)).toBeVisible();
+});
+
 for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800 }]) {
 test(`canonical fixture Build advances from a persisted target through Vet to a proposal-only map at ${viewport.width}x${viewport.height}`, async ({ page }) => {
   await page.setViewportSize(viewport);
