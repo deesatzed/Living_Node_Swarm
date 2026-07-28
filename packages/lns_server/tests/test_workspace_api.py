@@ -175,3 +175,24 @@ def test_candidate_revisions_persist_without_mutating_the_active_graph(tmp_path:
     assert active.json()["nodes"]["input_signal"]["parameters"] == graph["nodes"]["input_signal"]["parameters"]
     assert revisions.json()["candidate_revisions"][0]["id"] == "revision-1"
     assert revisions.json()["candidate_revisions"][0]["candidate_parameter_overrides"]["input_signal"]["sigma"] == 2.0
+
+
+def test_candidate_revision_persists_node_state_delta_without_mutating_active_graph(tmp_path: Path):
+    settings = _settings(tmp_path)
+    with TestClient(create_app(settings)) as client:
+        graph = client.post("/graphs", json={"from_seed": True}).json()["graph"]
+        client.post("/projects", json={**_project_payload(), "graph_id": graph["id"], "active_graph_version": graph["graph_version"], "stage": "refine"})
+        saved = client.post("/projects/nd-project/candidate-revisions", json={
+            "id": "exclude-input", "base_graph_version": graph["graph_version"],
+            "candidate_node_state_overrides": {"input_signal": "excluded"},
+        })
+        invalid = client.post("/projects/nd-project/candidate-revisions", json={
+            "id": "unknown-node", "base_graph_version": graph["graph_version"],
+            "candidate_node_state_overrides": {"not-a-node": "excluded"},
+        })
+        active = client.get(f"/graphs/{graph['id']}")
+
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["candidate_node_state_overrides"] == {"input_signal": "excluded"}
+    assert invalid.status_code == 422
+    assert active.json()["nodes"]["input_signal"]["status"] == graph["nodes"]["input_signal"]["status"]

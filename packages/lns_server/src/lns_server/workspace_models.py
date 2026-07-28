@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 WorkflowStage = Literal["idea", "vet", "map", "refine", "quantify", "simulate", "decide", "monitor"]
@@ -60,8 +60,15 @@ class WorkspaceCandidateRevision(BaseModel):
 
     id: str
     base_graph_version: int = Field(ge=1)
-    candidate_parameter_overrides: dict[str, dict[str, float]] = Field(min_length=1)
+    candidate_parameter_overrides: dict[str, dict[str, float]] = Field(default_factory=dict)
+    candidate_node_state_overrides: dict[str, Literal["active", "excluded"]] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=utcnow)
+
+    @model_validator(mode="after")
+    def require_a_candidate_delta(self) -> "WorkspaceCandidateRevision":
+        if not self.candidate_parameter_overrides and not self.candidate_node_state_overrides:
+            raise ValueError("candidate revision requires a parameter or node-state override")
+        return self
 
 
 class WorkspaceScenario(BaseModel):
