@@ -42,7 +42,7 @@ export function NewProjectFlow({ client, onCreated }: { client: NewProjectClient
     }
   }
 
-  if (projectId && targetId && buildStage === "map") return <section aria-label="Build candidate map"><h1>Map proposed factors</h1><p>Target contract saved. Continue through the explicitly labeled candidate map before any approval.</p><CandidateMap targetId={targetId} client={client} /></section>;
+  if (projectId && targetId && buildStage === "map") return <section aria-label="Build candidate map"><h1>Map proposed factors</h1><p>Target contract saved. Continue through the explicitly labeled candidate map before any approval.</p><CandidateMap targetId={targetId} client={client} onMaterialized={async (graphId) => { await client.patchProject(projectId, { graph_id: graphId, stage: "map" }); }} /></section>;
   async function recordVetEntry(entry: VettingEntry) {
     if (!projectId) return;
     const next = [...vetEntries, entry];

@@ -153,3 +153,11 @@ The Gas preset supplies its selected node family, canonical parameters, and retu
 # 2026-07-28 — Gas dependencies reuse read-only shared relationship inspection
 
 Gas dependency edges now use the shared relationship inspector in read-only form. The adapter can supply parent/child direction and the child transform only; all unavailable relationship-contract fields are explicit rather than inferred. Editing or approving those edges remains unavailable until the Gas adapter persists the generalized relationship contract.
+
+# 2026-07-28 — Fixture candidate materialization is review-only, not a proxy for approval
+
+**Decision:** Permit the deterministic Neodymium fixture to be persisted as a separate graph with its target active and its 15 candidate factors explicitly proposed, but do not synthesize dependencies, a structural shadow result, or an approval proposal from that fixture.
+
+**Why:** Persisted review gives the Map a durable handoff without treating browser-session fixture state as model structure. The existing exact-binding approval paths only cover numeric overrides and separately supported relationship deltas; using either to activate an entire fixture graph would misrepresent what was reviewed and validated.
+
+**Consequence:** The fixture materialization receipt states that no active graph changed. A complete Build workflow still needs a first-class, version-bound new-node-and-relationship proposal that validates, shadow-simulates, and atomically applies the exact reviewed candidate structure.

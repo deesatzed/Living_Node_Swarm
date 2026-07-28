@@ -14,7 +14,7 @@ function copyRevision(revision: FixtureCandidateRevision): FixtureCandidateRevis
   return { factors: revision.factors.map((factor) => ({ ...factor })), relationships: revision.relationships.map((relationship) => ({ ...relationship })) };
 }
 
-export function CandidateMap({ targetId, client }: { targetId: string; client: CandidateMapClient }) {
+export function CandidateMap({ targetId, client, onMaterialized }: { targetId: string; client: CandidateMapClient; onMaterialized?: (graphId: string) => Promise<void> | void }) {
   const [fixture, setFixture] = useState<CandidateGraphFixture | null>(null);
   const [revision, setRevision] = useState<FixtureCandidateRevision | null>(null);
   const [savedRevision, setSavedRevision] = useState<FixtureCandidateRevision | null>(null);
@@ -87,7 +87,16 @@ export function CandidateMap({ targetId, client }: { targetId: string; client: C
   }
   async function materialize() {
     if (!client.materializeFixtureCandidateProposal) return;
-    try { const result = await client.materializeFixtureCandidateProposal(targetId); setMaterializedGraphId(result.graph?.id ?? "unknown"); }
+    try {
+      const result = await client.materializeFixtureCandidateProposal(targetId);
+      const graphId = result.graph?.id ?? "unknown";
+      setMaterializedGraphId(graphId);
+      try { await onMaterialized?.(graphId); }
+      catch (reason) {
+        const detail = reason instanceof Error ? reason.message : "unknown workspace error";
+        setError(`Fixture candidate graph ${graphId} persisted, but this Build workspace could not retain its graph ID: ${detail}`);
+      }
+    }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to materialize fixture candidate graph."); }
   }
 

@@ -49,4 +49,33 @@ describe("CandidateMap", () => {
     expect(materializeFixtureCandidateProposal).toHaveBeenCalledWith("fixture-nd-retail-2027");
     expect(await screen.findByRole("status")).toHaveTextContent("Fixture candidate graph fixture-graph-1 persisted for separate review; no factor is active.");
   });
+
+  it("reports the persisted review graph to its Build workspace without treating it as approved", async () => {
+    const user = userEvent.setup();
+    const onMaterialized = vi.fn(async () => undefined);
+    render(<CandidateMap targetId="fixture-nd-retail-2027" client={{
+      createFixtureCandidateProposal: async () => createNeodymiumGraphFixture(),
+      materializeFixtureCandidateProposal: async () => ({ graph: { id: "fixture-graph-2" }, active_graph_mutated: false }),
+    }} onMaterialized={onMaterialized} />);
+
+    await user.click(screen.getByRole("button", { name: "Load labeled fixture candidate map" }));
+    await user.click(await screen.findByRole("button", { name: "Materialize fixture proposal for review" }));
+
+    expect(onMaterialized).toHaveBeenCalledWith("fixture-graph-2");
+    expect(await screen.findByRole("status")).toHaveTextContent("persisted for separate review; no factor is active");
+  });
+
+  it("keeps the persisted graph ID visible if the Build workspace handoff fails", async () => {
+    const user = userEvent.setup();
+    render(<CandidateMap targetId="fixture-nd-retail-2027" client={{
+      createFixtureCandidateProposal: async () => createNeodymiumGraphFixture(),
+      materializeFixtureCandidateProposal: async () => ({ graph: { id: "fixture-graph-3" }, active_graph_mutated: false }),
+    }} onMaterialized={async () => { throw new Error("workspace unavailable"); }} />);
+
+    await user.click(screen.getByRole("button", { name: "Load labeled fixture candidate map" }));
+    await user.click(await screen.findByRole("button", { name: "Materialize fixture proposal for review" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Fixture candidate graph fixture-graph-3 persisted for separate review");
+    expect(screen.getByRole("alert")).toHaveTextContent("persisted, but this Build workspace could not retain its graph ID");
+  });
 });
