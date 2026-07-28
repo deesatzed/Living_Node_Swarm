@@ -36,6 +36,7 @@ export { FixtureWorkspace } from "./workspace/FixtureWorkspace";
 export { canMoveToStage, type StageTransitionContext } from "./workflow/guards";
 export { TargetIntake } from "./intake/TargetIntake";
 export { submitTargetToProject, type TargetPersistenceClient } from "./intake/submitTarget";
+export { PersistedTargetIntake } from "./intake/PersistedTargetIntake";
 export { layoutHopGraph, type GraphPoint } from "./graph/layout";
 export { HopGraph } from "./graph/HopGraph";
 export { WarningCenter, type WorkspaceWarning } from "./inspectors/WarningCenter";
