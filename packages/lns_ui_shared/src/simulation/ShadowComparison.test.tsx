@@ -176,4 +176,17 @@ describe("ShadowComparison", () => {
     expect(screen.getByLabelText("Candidate structural change set")).toHaveTextContent("Input signal: excluded");
     expect(screen.getByText(/does not persist, activate, or overwrite the approved graph/i)).toBeVisible();
   });
+
+  it("stages a proposed typed Normal factor as a non-active revision delta", async () => {
+    const user = userEvent.setup();
+    const createCandidateRevision = vi.fn(async (_projectId, revision) => ({ ...revision, id: "new-factor-revision" }));
+    render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] } } }), shadowSimulate: async () => ({}), createCandidateRevision }} />);
+    await screen.findByLabelText("New factor ID");
+    await user.type(screen.getByLabelText("New factor ID"), "recycling_signal");
+    await user.type(screen.getByLabelText("New factor name"), "Recycling signal");
+    await user.click(screen.getByRole("button", { name: "Stage proposed Normal factor" }));
+    expect(screen.getByLabelText("Candidate new-factor set")).toHaveTextContent("Recycling signal · proposed Normal root factor");
+    await user.click(screen.getByRole("button", { name: "Save durable candidate revision" }));
+    expect(createCandidateRevision).toHaveBeenCalledWith("project-1", expect.objectContaining({ candidate_new_nodes: [expect.objectContaining({ id: "recycling_signal", distribution_family: "Normal", status: "proposed", requires_human_approval: true })] }));
+  });
 });

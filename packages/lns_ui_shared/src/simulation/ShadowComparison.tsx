@@ -20,10 +20,10 @@ interface GraphNode {
   parameters: Record<string, number>;
   dependsOn: string[];
 }
-interface StagingSnapshot { overrides: Record<string, Record<string, number>>; nodeStates: Record<string, "active" | "excluded">; relationshipStates: Record<string, "active" | "excluded">; }
+interface StagingSnapshot { overrides: Record<string, Record<string, number>>; nodeStates: Record<string, "active" | "excluded">; relationshipStates: Record<string, "active" | "excluded">; newNodes: JsonObject[]; }
 
-function snapshot(overrides: Record<string, Record<string, number>>, nodeStates: Record<string, "active" | "excluded">, relationshipStates: Record<string, "active" | "excluded">): StagingSnapshot {
-  return { overrides: Object.fromEntries(Object.entries(overrides).map(([nodeId, parameters]) => [nodeId, { ...parameters }])), nodeStates: { ...nodeStates }, relationshipStates: { ...relationshipStates } };
+function snapshot(overrides: Record<string, Record<string, number>>, nodeStates: Record<string, "active" | "excluded">, relationshipStates: Record<string, "active" | "excluded">, newNodes: JsonObject[]): StagingSnapshot {
+  return { overrides: Object.fromEntries(Object.entries(overrides).map(([nodeId, parameters]) => [nodeId, { ...parameters }])), nodeStates: { ...nodeStates }, relationshipStates: { ...relationshipStates }, newNodes: newNodes.map((node) => ({ ...node, parameters: node.parameters && typeof node.parameters === "object" ? { ...(node.parameters as JsonObject) } : node.parameters })) };
 }
 
 function graphNodes(graph: JsonObject): GraphNode[] {
@@ -77,6 +77,11 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   const [stagedNodeStates, setStagedNodeStates] = useState<Record<string, "active" | "excluded">>({});
   const [selectedRelationship, setSelectedRelationship] = useState("");
   const [stagedRelationshipStates, setStagedRelationshipStates] = useState<Record<string, "active" | "excluded">>({});
+  const [stagedNewNodes, setStagedNewNodes] = useState<JsonObject[]>([]);
+  const [newNodeId, setNewNodeId] = useState("");
+  const [newNodeName, setNewNodeName] = useState("");
+  const [newNodeLocation, setNewNodeLocation] = useState("0");
+  const [newNodeScale, setNewNodeScale] = useState("1");
   const [stagingHistory, setStagingHistory] = useState<StagingSnapshot[]>([]);
   const [stagingRedo, setStagingRedo] = useState<StagingSnapshot[]>([]);
   const [result, setResult] = useState<JsonObject | null>(null);
@@ -122,10 +127,10 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   }, [client, projectId]);
 
   const selected = nodes.find((node) => node.id === selectedNode);
-  function captureStaging() { setStagingHistory((current) => [...current, snapshot(stagedOverrides, stagedNodeStates, stagedRelationshipStates)]); setStagingRedo([]); }
-  function restoreStaging(next: StagingSnapshot) { setStagedOverrides(next.overrides); setStagedNodeStates(next.nodeStates); setStagedRelationshipStates(next.relationshipStates); }
-  function undoStaging() { const previous = stagingHistory.at(-1); if (!previous) return; setStagingHistory((current) => current.slice(0, -1)); setStagingRedo((current) => [...current, snapshot(stagedOverrides, stagedNodeStates, stagedRelationshipStates)]); restoreStaging(previous); }
-  function redoStaging() { const next = stagingRedo.at(-1); if (!next) return; setStagingRedo((current) => current.slice(0, -1)); setStagingHistory((current) => [...current, snapshot(stagedOverrides, stagedNodeStates, stagedRelationshipStates)]); restoreStaging(next); }
+  function captureStaging() { setStagingHistory((current) => [...current, snapshot(stagedOverrides, stagedNodeStates, stagedRelationshipStates, stagedNewNodes)]); setStagingRedo([]); }
+  function restoreStaging(next: StagingSnapshot) { setStagedOverrides(next.overrides); setStagedNodeStates(next.nodeStates); setStagedRelationshipStates(next.relationshipStates); setStagedNewNodes(next.newNodes); }
+  function undoStaging() { const previous = stagingHistory.at(-1); if (!previous) return; setStagingHistory((current) => current.slice(0, -1)); setStagingRedo((current) => [...current, snapshot(stagedOverrides, stagedNodeStates, stagedRelationshipStates, stagedNewNodes)]); restoreStaging(previous); }
+  function redoStaging() { const next = stagingRedo.at(-1); if (!next) return; setStagingRedo((current) => current.slice(0, -1)); setStagingHistory((current) => [...current, snapshot(stagedOverrides, stagedNodeStates, stagedRelationshipStates, stagedNewNodes)]); restoreStaging(next); }
   function chooseNode(id: string) {
     const node = nodes.find((item) => item.id === id);
     const parameter = node ? Object.keys(node.parameters)[0] ?? "" : "";
@@ -167,6 +172,12 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   }
   function stageSelectedRelationshipState(state: "active" | "excluded") { if (selectedRelationship) { captureStaging(); setStagedRelationshipStates((current) => ({ ...current, [selectedRelationship]: state })); } }
   function removeStagedRelationshipState(relationship: string) { captureStaging(); setStagedRelationshipStates((current) => { const next = { ...current }; delete next[relationship]; return next; }); }
+  function stageNewNode() {
+    const location = Number(newNodeLocation); const scale = Number(newNodeScale); const id = newNodeId.trim(); const name = newNodeName.trim();
+    if (!id || !name || !/^[a-z][a-z0-9_]*$/.test(id) || !Number.isFinite(location) || !Number.isFinite(scale) || scale <= 0 || nodes.some((node) => node.id === id) || stagedNewNodes.some((node) => node.id === id)) { setError("Use a unique snake_case factor ID, a name, a finite location, and a positive scale."); return; }
+    captureStaging(); setStagedNewNodes((current) => [...current, { id, name, description: "Operator-staged proposed factor.", distribution_family: "Normal", parameters: { mu: location, sigma: scale }, depends_on: [], transform: "none", status: "proposed", requires_human_approval: true, created_by: "operator_candidate", last_updated_by: "operator_candidate", discovery_rationale: "Added in Edit as a proposed factor." }]); setNewNodeId(""); setNewNodeName(""); setError("");
+  }
+  function removeStagedNewNode(id: string) { captureStaging(); setStagedNewNodes((current) => current.filter((node) => node.id !== id)); }
   async function runComparison() {
     const value = Number(candidateValue);
     if (!selectedTarget || !selectedNode || !selectedParameter || !Number.isFinite(value)) {
@@ -204,7 +215,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   }
   async function saveCandidateRevision() {
     const parameterOverrides = comparedOverrides ?? stagedOverrides;
-    if (!projectId || !activeGraphVersion || !client.createCandidateRevision || (!Object.keys(parameterOverrides).length && !Object.keys(stagedNodeStates).length && !Object.keys(stagedRelationshipStates).length)) return;
+    if (!projectId || !activeGraphVersion || !client.createCandidateRevision || (!Object.keys(parameterOverrides).length && !Object.keys(stagedNodeStates).length && !Object.keys(stagedRelationshipStates).length && !stagedNewNodes.length)) return;
     setError("");
     try {
       const revision = await client.createCandidateRevision(projectId, {
@@ -213,6 +224,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
         candidate_parameter_overrides: parameterOverrides,
         candidate_node_state_overrides: stagedNodeStates,
         candidate_relationship_state_overrides: stagedRelationshipStates,
+        candidate_new_nodes: stagedNewNodes,
       });
       setCandidateRevisions((current) => [...current, revision]);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save durable candidate revision."); }
@@ -222,7 +234,8 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
     const parameterOverrides = revision.candidate_parameter_overrides && typeof revision.candidate_parameter_overrides === "object" && !Array.isArray(revision.candidate_parameter_overrides) ? revision.candidate_parameter_overrides as Record<string, Record<string, number>> : {};
     const nodeStates = revision.candidate_node_state_overrides && typeof revision.candidate_node_state_overrides === "object" && !Array.isArray(revision.candidate_node_state_overrides) ? revision.candidate_node_state_overrides as Record<string, "active" | "excluded"> : {};
     const relationshipStates = revision.candidate_relationship_state_overrides && typeof revision.candidate_relationship_state_overrides === "object" && !Array.isArray(revision.candidate_relationship_state_overrides) ? revision.candidate_relationship_state_overrides as Record<string, "active" | "excluded"> : {};
-    setStagedOverrides(parameterOverrides); setStagedNodeStates(nodeStates); setStagedRelationshipStates(relationshipStates); setStagingHistory([]); setStagingRedo([]); setResult(null); setComparedOverrides(null); setProposal(null); setApproval(null); setReviewed(false); setError(""); setRevisionStatus(`Revision ${numeric(revision.id)} loaded into local staging. The active graph is unchanged.`);
+    const newNodes = Array.isArray(revision.candidate_new_nodes) ? revision.candidate_new_nodes.filter((node): node is JsonObject => Boolean(node && typeof node === "object" && !Array.isArray(node))) : [];
+    setStagedOverrides(parameterOverrides); setStagedNodeStates(nodeStates); setStagedRelationshipStates(relationshipStates); setStagedNewNodes(newNodes); setStagingHistory([]); setStagingRedo([]); setResult(null); setComparedOverrides(null); setProposal(null); setApproval(null); setReviewed(false); setError(""); setRevisionStatus(`Revision ${numeric(revision.id)} loaded into local staging. The active graph is unchanged.`);
   }
   async function approveCandidate() {
     if ((!projectId || !client.approveProjectCandidateProposal) && !client.approveCandidateProposal) return;
@@ -254,12 +267,13 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
       <section aria-label="Candidate change set"><h3>Candidate change set</h3>{stagedChanges.length === 0 ? <p>No local candidate changes staged.</p> : <ul>{stagedChanges.map((change) => <li key={`${change.nodeId}-${change.parameter}`}>{change.name} · {change.parameter}: {change.value} <button onClick={() => removeStagedChange(change.nodeId, change.parameter)}>Remove {change.name} {change.parameter}</button></li>)}</ul>}</section>
       <section aria-label="Candidate structural change set"><h3>Candidate structural change set</h3>{Object.keys(stagedNodeStates).length === 0 ? <p>No local candidate node-state changes staged.</p> : <ul>{Object.entries(stagedNodeStates).map(([nodeId, state]) => <li key={nodeId}>{nodes.find((node) => node.id === nodeId)?.name ?? nodeId}: {state} <button onClick={() => removeStagedNodeState(nodeId)}>Remove {nodes.find((node) => node.id === nodeId)?.name ?? nodeId} state change</button></li>)}</ul>}<p>Node-state changes are revision-only and cannot be shadow-simulated or approved until a structural proposal contract exists.</p></section>
       <section aria-label="Candidate relationship change set"><h3>Candidate relationship change set</h3><label>Candidate dependency<select aria-label="Candidate dependency" value={selectedRelationship} onChange={(event) => setSelectedRelationship(event.target.value)}>{nodes.flatMap((node) => node.dependsOn.map((parent) => <option key={`${parent}:${node.id}`} value={`${parent}:${node.id}`}>{nodes.find((item) => item.id === parent)?.name ?? parent} → {node.name}</option>))}</select></label><button onClick={() => stageSelectedRelationshipState("excluded")}>Exclude selected dependency in candidate</button><button onClick={() => stageSelectedRelationshipState("active")}>Include selected dependency in candidate</button>{Object.keys(stagedRelationshipStates).length === 0 ? <p>No local candidate relationship-state changes staged.</p> : <ul>{Object.entries(stagedRelationshipStates).map(([relationship, state]) => <li key={relationship}>{relationship}: {state} <button onClick={() => removeStagedRelationshipState(relationship)}>Remove {relationship} state change</button></li>)}</ul>}<p>Relationship-state changes are revision-only and cannot be shadow-simulated or approved until a structural proposal contract exists.</p></section>
+      <section aria-label="Candidate new-factor set"><h3>Candidate new-factor set</h3><label>New factor ID<input aria-label="New factor ID" value={newNodeId} onChange={(event) => setNewNodeId(event.target.value)} /></label><label>New factor name<input aria-label="New factor name" value={newNodeName} onChange={(event) => setNewNodeName(event.target.value)} /></label><label>New factor location<input aria-label="New factor location" type="number" value={newNodeLocation} onChange={(event) => setNewNodeLocation(event.target.value)} /></label><label>New factor scale<input aria-label="New factor scale" type="number" min="0" value={newNodeScale} onChange={(event) => setNewNodeScale(event.target.value)} /></label><button onClick={stageNewNode}>Stage proposed Normal factor</button>{stagedNewNodes.length === 0 ? <p>No proposed new factors staged.</p> : <ul>{stagedNewNodes.map((node) => <li key={numeric(node.id)}>{numeric(node.name)} · proposed Normal root factor <button onClick={() => removeStagedNewNode(numeric(node.id))}>Remove proposed factor {numeric(node.id)}</button></li>)}</ul>}<p>New factors are proposed-only, require human approval, and cannot be simulated or approved until a complete structural proposal exists.</p></section>
       {selected?.family && <DistributionInspector family={selected.family} parameters={selected.parameters} support={SUPPORT[selected.family] ?? "not recorded"} asOf="Not recorded on graph node" provenance={selected.provenance} />}
     </>}
     {nodes.length === 0 && !error && <p role="alert">This graph has no editable numeric node parameters.</p>}
     {error && <p role="alert">{error}</p>}{revisionStatus && <p role="status">{revisionStatus}</p>}
     {active && candidate && <section aria-label="Comparison receipt"><h3>Comparison receipt</h3><p>Active median: {numeric(active.p50)}</p><p>Candidate median: {numeric(candidate.p50)}</p><p>Active mean: {numeric(active.mean)} · Candidate mean: {numeric(candidate.mean)}</p>{path.length > 0 ? <p>Affected path: {path.map((node) => node.name).join(" → ")}</p> : <p>No directed path from the selected factor to the selected target was found.</p>}{result?.active_graph_mutated === false && <p>Active graph unchanged.</p>}</section>}
-    {(comparedOverrides || Object.keys(stagedNodeStates).length > 0 || Object.keys(stagedRelationshipStates).length > 0) && projectId && activeGraphVersion && client.createCandidateRevision && <button onClick={saveCandidateRevision}>Save durable candidate revision</button>}
+    {(comparedOverrides || Object.keys(stagedNodeStates).length > 0 || Object.keys(stagedRelationshipStates).length > 0 || stagedNewNodes.length > 0) && projectId && activeGraphVersion && client.createCandidateRevision && <button onClick={saveCandidateRevision}>Save durable candidate revision</button>}
     {candidateRevisions.length > 0 && <section aria-label="Persisted candidate revisions"><h3>Persisted candidate revisions</h3><ul>{candidateRevisions.map((revision) => { const overrides = revision.candidate_parameter_overrides as Record<string, Record<string, number>> | undefined; const nodeStates = revision.candidate_node_state_overrides as Record<string, string> | undefined; const relationshipStates = revision.candidate_relationship_state_overrides as Record<string, string> | undefined; const changes = Object.values(overrides ?? {}).reduce((count, parameters) => count + Object.keys(parameters).length, 0); const nodeChanges = Object.keys(nodeStates ?? {}).length; const relationshipChanges = Object.keys(relationshipStates ?? {}).length; const baseMatches = revision.base_graph_version === activeGraphVersion; return <li key={numeric(revision.id)}>Revision {numeric(revision.id)} · base graph version {numeric(revision.base_graph_version)} · {changes} parameter change{changes === 1 ? "" : "s"} · {nodeChanges} node-state change{nodeChanges === 1 ? "" : "s"} · {relationshipChanges} relationship-state change{relationshipChanges === 1 ? "" : "s"} <button onClick={() => loadCandidateRevision(revision)} disabled={!baseMatches}>Load revision {numeric(revision.id)}</button>{!baseMatches && <span> (base version is stale)</span>}</li>; })}</ul><p>Candidate revision saved without changing the active graph.</p></section>}
     {result && client.createCandidateProposal && !proposal && <button onClick={saveCandidate}>Save candidate for review</button>}
     {proposal && <section aria-label="Candidate approval"><h3>Candidate approval</h3><p>Proposal {proposalId} · graph version {numeric(proposal.graph_version)}</p><p>Binding hash: {bindingHash || "unavailable"}</p><p>Approval applies this exact proposal to the active graph. Review the binding before continuing.</p><label>Approver identity<input aria-label="Approver identity" value={approver} onChange={(event) => setApprover(event.target.value)} /></label><label><input aria-label="I reviewed this exact binding" type="checkbox" checked={reviewed} onChange={(event) => setReviewed(event.target.checked)} />I reviewed this exact binding</label>{(client.approveCandidateProposal || (projectId && client.approveProjectCandidateProposal)) && <button onClick={approveCandidate} disabled={!approver.trim() || !reviewed || !bindingHash}>Approve candidate version</button>}</section>}
