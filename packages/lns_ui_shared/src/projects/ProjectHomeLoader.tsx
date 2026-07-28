@@ -32,6 +32,7 @@ function toProjectHomeItem(project: JsonObject, target: JsonObject | undefined):
     warningCount: 0,
     evidenceClassification: evidence,
     lastRun: typeof project.last_run === "object" && project.last_run !== null ? `Snapshot ${text((project.last_run as JsonObject).snapshot_id, "unknown")}` : "Not yet run",
+    candidateStatus: typeof project.draft_base_version === "number" ? `Draft based on graph v${project.draft_base_version}` : "No saved draft",
   };
 }
 

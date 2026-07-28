@@ -20,4 +20,9 @@ describe("ProjectHomeLoader", () => {
     render(<ProjectHomeLoader client={{ listProjects: async () => ({ projects: [{ id: "project-1", name: "Neodymium", last_run: { snapshot_id: "snapshot-9" } }] }), getTarget: async () => ({}) }} onAction={() => undefined} />);
     expect(await screen.findByRole("listitem")).toHaveTextContent("Snapshot snapshot-9");
   });
+
+  it("shows the persisted draft base instead of implying a candidate is active", async () => {
+    render(<ProjectHomeLoader client={{ listProjects: async () => ({ projects: [{ id: "project-1", name: "Neodymium", active_graph_version: 5, draft_base_version: 5, stage: "refine" }] }), getTarget: async () => ({}) }} onAction={() => undefined} />);
+    expect(await screen.findByText("Candidate status: Draft based on graph v5")).toBeVisible();
+  });
 });

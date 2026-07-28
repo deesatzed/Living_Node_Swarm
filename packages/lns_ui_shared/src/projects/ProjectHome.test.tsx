@@ -21,6 +21,7 @@ describe("ProjectHome", () => {
             warningCount: 2,
             evidenceClassification: "fixture_unverified",
             lastRun: "Not yet run",
+            candidateStatus: "Draft based on graph v3",
           },
         ]}
         onAction={vi.fn()}
@@ -33,6 +34,7 @@ describe("ProjectHome", () => {
     expect(screen.getByText("Private-investor retail neodymium price")).toBeVisible();
     expect(screen.getByText("Fixture evidence — not live research")).toBeVisible();
     expect(screen.getByText("2 unresolved warnings")).toBeVisible();
+    expect(screen.getByText("Candidate status: Draft based on graph v3")).toBeVisible();
   });
 
   it("runs an existing selected project without treating it as a new build", async () => {
@@ -41,6 +43,7 @@ describe("ProjectHome", () => {
     render(<ProjectHome projects={[{
       id: "approved-1", name: "Approved model", target: "Target", horizon: "1 year", stage: "monitor",
       activeGraphVersion: 4, freshness: "active", warningCount: 0, evidenceClassification: "local_verified", lastRun: "2026-07-28",
+      candidateStatus: "No saved draft",
     }]} onAction={onAction} />);
 
     await user.click(screen.getByRole("button", { name: "Run model" }));
@@ -54,6 +57,7 @@ describe("ProjectHome", () => {
     const projects = ["first", "second"].map((id) => ({
       id, name: `${id} model`, target: `${id} target`, horizon: "1 year", stage: "monitor",
       activeGraphVersion: 4, freshness: "active" as const, warningCount: 0, evidenceClassification: "local_verified" as const, lastRun: "2026-07-28",
+      candidateStatus: "No saved draft",
     }));
     render(<ProjectHome projects={projects} onAction={onAction} />);
 
