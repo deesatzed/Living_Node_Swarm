@@ -20,6 +20,11 @@ interface GraphNode {
   parameters: Record<string, number>;
   dependsOn: string[];
 }
+interface StagingSnapshot { overrides: Record<string, Record<string, number>>; nodeStates: Record<string, "active" | "excluded">; relationshipStates: Record<string, "active" | "excluded">; }
+
+function snapshot(overrides: Record<string, Record<string, number>>, nodeStates: Record<string, "active" | "excluded">, relationshipStates: Record<string, "active" | "excluded">): StagingSnapshot {
+  return { overrides: Object.fromEntries(Object.entries(overrides).map(([nodeId, parameters]) => [nodeId, { ...parameters }])), nodeStates: { ...nodeStates }, relationshipStates: { ...relationshipStates } };
+}
 
 function graphNodes(graph: JsonObject): GraphNode[] {
   if (!graph.nodes || typeof graph.nodes !== "object" || Array.isArray(graph.nodes)) return [];
@@ -72,6 +77,8 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   const [stagedNodeStates, setStagedNodeStates] = useState<Record<string, "active" | "excluded">>({});
   const [selectedRelationship, setSelectedRelationship] = useState("");
   const [stagedRelationshipStates, setStagedRelationshipStates] = useState<Record<string, "active" | "excluded">>({});
+  const [stagingHistory, setStagingHistory] = useState<StagingSnapshot[]>([]);
+  const [stagingRedo, setStagingRedo] = useState<StagingSnapshot[]>([]);
   const [result, setResult] = useState<JsonObject | null>(null);
   const [comparedOverrides, setComparedOverrides] = useState<Record<string, Record<string, number>> | null>(null);
   const [comparedTarget, setComparedTarget] = useState("");
@@ -115,6 +122,10 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   }, [client, projectId]);
 
   const selected = nodes.find((node) => node.id === selectedNode);
+  function captureStaging() { setStagingHistory((current) => [...current, snapshot(stagedOverrides, stagedNodeStates, stagedRelationshipStates)]); setStagingRedo([]); }
+  function restoreStaging(next: StagingSnapshot) { setStagedOverrides(next.overrides); setStagedNodeStates(next.nodeStates); setStagedRelationshipStates(next.relationshipStates); }
+  function undoStaging() { const previous = stagingHistory.at(-1); if (!previous) return; setStagingHistory((current) => current.slice(0, -1)); setStagingRedo((current) => [...current, snapshot(stagedOverrides, stagedNodeStates, stagedRelationshipStates)]); restoreStaging(previous); }
+  function redoStaging() { const next = stagingRedo.at(-1); if (!next) return; setStagingRedo((current) => current.slice(0, -1)); setStagingHistory((current) => [...current, snapshot(stagedOverrides, stagedNodeStates, stagedRelationshipStates)]); restoreStaging(next); }
   function chooseNode(id: string) {
     const node = nodes.find((item) => item.id === id);
     const parameter = node ? Object.keys(node.parameters)[0] ?? "" : "";
@@ -133,9 +144,11 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
       return;
     }
     setError("");
+    captureStaging();
     setStagedOverrides((current) => ({ ...current, [selectedNode]: { ...current[selectedNode], [selectedParameter]: value } }));
   }
   function removeStagedChange(nodeId: string, parameter: string) {
+    captureStaging();
     setStagedOverrides((current) => {
       const next = { ...current, [nodeId]: { ...current[nodeId] } };
       delete next[nodeId][parameter];
@@ -145,13 +158,15 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   }
   function stageSelectedNodeState(state: "active" | "excluded") {
     if (!selectedNode) return;
+    captureStaging();
     setStagedNodeStates((current) => ({ ...current, [selectedNode]: state }));
   }
   function removeStagedNodeState(nodeId: string) {
+    captureStaging();
     setStagedNodeStates((current) => { const next = { ...current }; delete next[nodeId]; return next; });
   }
-  function stageSelectedRelationshipState(state: "active" | "excluded") { if (selectedRelationship) setStagedRelationshipStates((current) => ({ ...current, [selectedRelationship]: state })); }
-  function removeStagedRelationshipState(relationship: string) { setStagedRelationshipStates((current) => { const next = { ...current }; delete next[relationship]; return next; }); }
+  function stageSelectedRelationshipState(state: "active" | "excluded") { if (selectedRelationship) { captureStaging(); setStagedRelationshipStates((current) => ({ ...current, [selectedRelationship]: state })); } }
+  function removeStagedRelationshipState(relationship: string) { captureStaging(); setStagedRelationshipStates((current) => { const next = { ...current }; delete next[relationship]; return next; }); }
   async function runComparison() {
     const value = Number(candidateValue);
     if (!selectedTarget || !selectedNode || !selectedParameter || !Number.isFinite(value)) {
@@ -207,7 +222,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
     const parameterOverrides = revision.candidate_parameter_overrides && typeof revision.candidate_parameter_overrides === "object" && !Array.isArray(revision.candidate_parameter_overrides) ? revision.candidate_parameter_overrides as Record<string, Record<string, number>> : {};
     const nodeStates = revision.candidate_node_state_overrides && typeof revision.candidate_node_state_overrides === "object" && !Array.isArray(revision.candidate_node_state_overrides) ? revision.candidate_node_state_overrides as Record<string, "active" | "excluded"> : {};
     const relationshipStates = revision.candidate_relationship_state_overrides && typeof revision.candidate_relationship_state_overrides === "object" && !Array.isArray(revision.candidate_relationship_state_overrides) ? revision.candidate_relationship_state_overrides as Record<string, "active" | "excluded"> : {};
-    setStagedOverrides(parameterOverrides); setStagedNodeStates(nodeStates); setStagedRelationshipStates(relationshipStates); setResult(null); setComparedOverrides(null); setProposal(null); setApproval(null); setReviewed(false); setError(""); setRevisionStatus(`Revision ${numeric(revision.id)} loaded into local staging. The active graph is unchanged.`);
+    setStagedOverrides(parameterOverrides); setStagedNodeStates(nodeStates); setStagedRelationshipStates(relationshipStates); setStagingHistory([]); setStagingRedo([]); setResult(null); setComparedOverrides(null); setProposal(null); setApproval(null); setReviewed(false); setError(""); setRevisionStatus(`Revision ${numeric(revision.id)} loaded into local staging. The active graph is unchanged.`);
   }
   async function approveCandidate() {
     if ((!projectId || !client.approveProjectCandidateProposal) && !client.approveCandidateProposal) return;
@@ -232,6 +247,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
       <label>Parameter<select aria-label="Candidate parameter" value={selectedParameter} onChange={(event) => chooseParameter(event.target.value)}>{Object.keys(selected?.parameters ?? {}).map((parameter) => <option key={parameter} value={parameter}>{parameter}</option>)}</select></label>
       <label>Candidate value<input aria-label="Candidate value" type="number" value={candidateValue} onChange={(event) => setCandidateValue(event.target.value)} /></label>
       <button onClick={addSelectedChange}>Add selected candidate change</button>
+      <button onClick={undoStaging} disabled={stagingHistory.length === 0}>Undo staged change</button><button onClick={redoStaging} disabled={stagingRedo.length === 0}>Redo staged change</button>
       <button onClick={() => stageSelectedNodeState("excluded")}>Exclude selected factor in candidate</button>
       <button onClick={() => stageSelectedNodeState("active")}>Include selected factor in candidate</button>
       <button onClick={runComparison} disabled={running}>{running ? "Comparing in memory…" : "Run in-memory comparison"}</button>

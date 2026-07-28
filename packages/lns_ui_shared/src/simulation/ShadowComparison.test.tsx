@@ -163,4 +163,17 @@ describe("ShadowComparison", () => {
     expect(screen.getByLabelText("Candidate structural change set")).toHaveTextContent("Input signal: excluded");
     expect(screen.getByLabelText("Candidate relationship change set")).toHaveTextContent("input_signal:outcome: excluded");
   });
+
+  it("undoes and redoes local staged structural changes without touching the active graph", async () => {
+    const user = userEvent.setup();
+    render(<ShadowComparison graphId="graph-1" client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] } } }), shadowSimulate: async () => ({}) }} />);
+    await screen.findByLabelText("Candidate factor");
+    await user.click(screen.getByRole("button", { name: "Exclude selected factor in candidate" }));
+    expect(screen.getByLabelText("Candidate structural change set")).toHaveTextContent("Input signal: excluded");
+    await user.click(screen.getByRole("button", { name: "Undo staged change" }));
+    expect(screen.getByLabelText("Candidate structural change set")).toHaveTextContent("No local candidate node-state changes staged.");
+    await user.click(screen.getByRole("button", { name: "Redo staged change" }));
+    expect(screen.getByLabelText("Candidate structural change set")).toHaveTextContent("Input signal: excluded");
+    expect(screen.getByText(/does not persist, activate, or overwrite the approved graph/i)).toBeVisible();
+  });
 });
