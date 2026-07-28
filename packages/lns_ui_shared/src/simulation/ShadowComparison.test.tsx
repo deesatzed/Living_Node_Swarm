@@ -215,6 +215,29 @@ describe("ShadowComparison", () => {
     expect(screen.queryByText("Active graph unchanged: yes.")).not.toBeInTheDocument();
   });
 
+  it("reviews and approves a server-bound proposed relationship addition", async () => {
+    const user = userEvent.setup();
+    const createStructuralProposal = vi.fn(async () => ({ proposal: { id: "structural-1", graph_version: 4, binding_hash: "structural-hash", candidate_relationship_ids: ["proposal-input_signal-to-outcome"] } }));
+    const approveStructuralProposal = vi.fn(async () => ({ approval_receipt: { id: "structural-receipt", binding_hash: "structural-hash" }, graph: { graph_version: 5 } }));
+    render(<ShadowComparison graphId="graph-1" client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, process_stage: { name: "Process stage", parameters: { mu: 0 }, depends_on: ["input_signal"] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["process_stage"] } } }), shadowSimulate: async () => ({}), createStructuralProposal, approveStructuralProposal } as never} />);
+    await screen.findByLabelText("Proposed relationship parent");
+    await user.selectOptions(screen.getByLabelText("Proposed relationship parent"), "input_signal");
+    await user.selectOptions(screen.getByLabelText("Proposed relationship child"), "outcome");
+    await user.clear(screen.getByLabelText("Proposed relationship coefficient"));
+    await user.type(screen.getByLabelText("Proposed relationship coefficient"), "0.25");
+    await user.click(screen.getByRole("button", { name: "Stage proposed relationship contract" }));
+    await user.click(screen.getByRole("button", { name: "Create structural proposal for review" }));
+
+    expect(createStructuralProposal).toHaveBeenCalledWith("graph-1", { relationships: [expect.objectContaining({ parent_node_id: "input_signal", child_node_id: "outcome", coefficient_parameters: [{ id: "coefficient", value: 0.25 }] })] });
+    expect(await screen.findByLabelText("Structural proposal review")).toHaveTextContent("Binding hash: structural-hash");
+    await user.type(screen.getByLabelText("Structural approver identity"), "operator");
+    await user.click(screen.getByLabelText("I reviewed this structural binding"));
+    await user.click(screen.getByRole("button", { name: "Approve structural proposal" }));
+
+    expect(approveStructuralProposal).toHaveBeenCalledWith("graph-1", "structural-1", { approved_by: "operator", binding_hash: "structural-hash" });
+    expect(await screen.findByLabelText("Structural approval receipt")).toHaveTextContent("Approved graph version: 5");
+  });
+
   it("loads a matching-base persisted revision back into local staging without activation", async () => {
     const user = userEvent.setup();
     render(<ShadowComparison graphId="graph-1" projectId="project-1" activeGraphVersion={4} client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] } } }), shadowSimulate: async () => ({}), listCandidateRevisions: async () => ({ candidate_revisions: [{ id: "saved-1", base_graph_version: 4, candidate_parameter_overrides: { input_signal: { mu: 5 } }, candidate_node_state_overrides: { input_signal: "excluded" }, candidate_relationship_state_overrides: { "input_signal:outcome": "excluded" } }] }) }} />);
