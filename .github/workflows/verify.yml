@@ -1,0 +1,60 @@
+name: Verify prediction workspace
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            packages/lns_ui_shared/package-lock.json
+            packages/lns_ui/package-lock.json
+            packages/lns_gas_demo/package-lock.json
+
+      - name: Install Python test dependencies
+        run: python -m pip install --upgrade pip && python -m pip install "./packages/lns_kernel[dev]" "./packages/lns_server[dev]"
+
+      - name: Kernel tests
+        working-directory: packages/lns_kernel
+        run: PYTHONPATH=src pytest -q
+
+      - name: Server tests
+        working-directory: packages/lns_server
+        run: PYTHONPATH=src:../lns_kernel/src pytest -q
+
+      - name: Install UI dependencies
+        run: |
+          npm ci --prefix packages/lns_ui_shared
+          npm ci --prefix packages/lns_ui
+          npm ci --prefix packages/lns_gas_demo
+
+      - name: Shared UI tests and build
+        working-directory: packages/lns_ui_shared
+        run: npm test -- --run && npm run build
+
+      - name: Install browser for canonical UI checks
+        working-directory: packages/lns_ui
+        run: npx playwright install --with-deps chromium
+
+      - name: Canonical UI build and browser checks
+        working-directory: packages/lns_ui
+        run: npm run build && npm run test:e2e
+
+      - name: Gas preset build
+        working-directory: packages/lns_gas_demo
+        run: npm run build
+
+      - name: GUI evidence gate and diff check
+        run: ./scripts/verify_gui.sh && git diff --check

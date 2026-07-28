@@ -101,7 +101,7 @@
 
 | ID | Task | Depends on | Acceptance | Status |
 |---|---|---|---|---|
-| Q7-01 | Add CI workflows | Q1–Q6 complete | Python/UI/E2E/diff checks run from clean checkout | Pending |
+| Q7-01 | Add CI workflows | Q1–Q6 complete | Python/UI/E2E/diff checks run from clean checkout | In progress — `.github/workflows/verify.yml` defines a clean Ubuntu checkout job for kernel/server pytest, shared UI tests/build, Chromium-backed canonical UI E2E, Gas build, GUI evidence gate, and diff check. It will be verified by GitHub on the next push/PR; Gates 4–6 remain incomplete. |
 | Q7-02 | Run release/reality audit | Q7-01 | claims match code and evidence | Pending |
 | Q7-03 | Update README and handoff | Q7-02 | verified/current/limited/deferred states explicit | Pending |
 | Q7-04 | Final completion review | Q7-01–03 | every `GOAL.md` proof item has current evidence | Pending |
