@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { JsonObject, WorkspaceScenarioInput } from "../api/types";
 
 export interface ScenarioClient {
@@ -15,10 +15,13 @@ export function ScenarioEditor({ projectId, client }: { projectId: string; clien
   const [assumption, setAssumption] = useState("");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [scenarios, setScenarios] = useState<JsonObject[]>([]);
+  useEffect(() => { void client.listScenarios(projectId).then((result) => setScenarios(result.scenarios)).catch(() => setError("Unable to load saved scenarios.")); }, [client, projectId]);
   async function save() {
     if (!name.trim() || !assumption.trim()) { setError("Scenario name and assumption are required."); return; }
     try {
-      await client.createScenario(projectId, { id: scenarioId(), name: name.trim(), assumptions: { note: assumption.trim() } });
+      const saved = await client.createScenario(projectId, { id: scenarioId(), name: name.trim(), assumptions: { note: assumption.trim() } });
+      setScenarios((current) => [...current, saved]);
       setStatus(`Scenario ${name.trim()} saved without changing the active graph.`); setError("");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save scenario."); }
   }
@@ -28,5 +31,6 @@ export function ScenarioEditor({ projectId, client }: { projectId: string; clien
     <label>Assumption<input value={assumption} onChange={(event) => setAssumption(event.target.value)} /></label>
     <button onClick={save}>Save named scenario</button>
     {error && <p role="alert">{error}</p>}{status && <p role="status">{status}</p>}
+    {scenarios.length > 0 && <section aria-label="Saved scenarios"><h3>Saved scenarios</h3><p>These assumptions are not applied to the approved run until scenario simulation is available.</p><ul aria-label="Saved scenarios">{scenarios.map((scenario) => <li key={String(scenario.id)}>{String(scenario.name ?? scenario.id)}</li>)}</ul></section>}
   </section>;
 }
