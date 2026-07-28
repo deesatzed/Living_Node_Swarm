@@ -16,8 +16,16 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800
   });
 }
 
-test("canonical fixture Build advances from a persisted target through Vet to a proposal-only map", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
+for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800 }]) {
+test(`canonical fixture Build advances from a persisted target through Vet to a proposal-only map at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  await page.setViewportSize(viewport);
+  const factors = [
+    ["weather_disruption", "Weather disruption", 3], ["freight_capacity", "Freight capacity", 2], ["refining_throughput", "Rare-earth refining throughput", 1],
+    ["china_export_controls", "Export-control regime", 2], ["mining_supply", "Primary mine supply", 1], ["recycling_rate", "Magnet recycling rate", 1],
+    ["ev_demand", "Electric-vehicle demand", 1], ["wind_turbine_demand", "Wind-turbine demand", 1], ["chip_demand", "Semiconductor demand", 2],
+    ["substitution_pressure", "Substitution pressure", 1], ["magnet_efficiency", "Magnet efficiency", 2], ["energy_prices", "Industrial energy prices", 2],
+    ["fx_usd_cny", "USD/CNY exchange-rate regime", 1], ["geopolitical_risk", "Geopolitical disruption risk", 2], ["inventory_policy", "Downstream inventory policy", 1],
+  ].map(([id, label, hop_distance], index) => ({ id, label, hop_distance, rank: index + 1, state: "proposed", evidence_status: "fixture_unverified" }));
   await page.route("**/api/projects", async (route) => {
     if (route.request().method() === "GET") return route.fulfill({ json: { projects: [] } });
     return route.fulfill({ json: { id: "fixture-project" } });
@@ -27,8 +35,12 @@ test("canonical fixture Build advances from a persisted target through Vet to a 
   await page.route("**/api/authoring/targets/*/candidate-proposals/fixture", (route) =>
     route.fulfill({ json: {
       evidence_classification: "fixture_unverified", generation_basis: "deterministic_fixture", active_graph_mutated: false,
-      limitations: ["Fixture only"], graph_proposal: {}, relationships: [],
-      factors: [{ id: "weather", label: "Weather disruption", rank: 1, hop_distance: 3, state: "proposed", evidence_status: "fixture_unverified" }],
+      limitations: ["Fixture only"], graph_proposal: { target_node_id: "fixture_target" },
+      relationships: [
+        { parent_node_id: "weather_disruption", child_node_id: "freight_capacity" },
+        { parent_node_id: "freight_capacity", child_node_id: "refining_throughput" },
+        { parent_node_id: "refining_throughput", child_node_id: "fixture_target" },
+      ], factors,
     }}),
   );
   await page.goto("/");
@@ -49,5 +61,9 @@ test("canonical fixture Build advances from a persisted target through Vet to a 
   await page.getByRole("button", { name: "Load labeled fixture candidate map" }).click();
   await expect(page.getByText("Fixture candidate map — not live research")).toBeVisible();
   await expect(page.getByRole("group", { name: "Visual target-centered graph" })).toBeVisible();
-  await page.screenshot({ path: "../../docs/verification/gui/canonical-fixture-build-1440x900.png", fullPage: true });
+  await expect(page.getByText("15 factors shown. Textual graph alternative:")).toBeVisible();
+  await page.getByRole("button", { name: "Weather disruption" }).click();
+  await expect(page.getByRole("status")).toContainText("Traced path: Weather disruption → Freight capacity → Rare-earth refining throughput → Private-investor retail neodymium price");
+  await page.screenshot({ path: `../../docs/verification/gui/canonical-fixture-build-${viewport.width}x${viewport.height}.png`, fullPage: true });
 });
+}
