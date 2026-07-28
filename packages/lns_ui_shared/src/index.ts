@@ -32,3 +32,5 @@ export {
 export { ProjectHome, type ProjectAction, type ProjectHomeItem } from "./projects/ProjectHome";
 export { WorkspaceShell } from "./workspace/WorkspaceShell";
 export { canMoveToStage, type StageTransitionContext } from "./workflow/guards";
+export { TargetIntake } from "./intake/TargetIntake";
+export { VettingConversation } from "./discovery/VettingConversation";

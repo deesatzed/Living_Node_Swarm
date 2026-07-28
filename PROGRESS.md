@@ -77,6 +77,7 @@ Prediction Workspace has not been built yet.
 | Q4-01 shared UI package | Complete | Codex | `@lns/ui-shared` exports typed lifecycle/client boundaries and deterministic fixtures; both apps consume the shared lifecycle; its 8-test Vitest 4 suite/type build, zero-vulnerability package audit, 52-server-test catalog check, and both consumer production builds passed on 2026-07-28 |
 | Workspace project persistence | Complete | Codex | Typed SQLite project, draft, scenario, and fixture-monitoring metadata persists across restart; stale bases return 409 and scenario operations preserve active graph state (3 focused tests; 55 server tests, 2026-07-28) |
 | Shared Project Home and workspace shell | Complete | Codex | Accessible New/Run/Edit/Monitor actions, project truth cards, lifecycle guard, and visible target/version/freshness/fixture state are implemented in shared components (3 focused tests and shared type build, 2026-07-28) |
+| Idea/Vet component foundation | In progress | Codex | Accessible target form distinguishes the Neodymium private-investor retail series and blocks incomplete contracts; vetting surface shows discovery controls and routing scope before consent (2 focused tests and shared type build, 2026-07-28). Server submission, ledger persistence, and complete consent flow remain. |
 | Gate 4 visual workspace | Pending | Unassigned | Depends on Gate 3 API/contracts |
 | Gate 5 Neodymium acceptance | Pending | Unassigned | Depends on Gates 1–4 |
 | Gate 6 gas adapter | Pending | Unassigned | Depends on shared workspace |
