@@ -5,12 +5,15 @@ import { RunModel, type RunModelClient } from "./RunModel";
 import { MonitoringSetup, type MonitoringClient } from "../monitoring/MonitoringSetup";
 import { EditModel, type EditModelClient } from "./EditModel";
 import type { ScenarioClient } from "../simulation/ScenarioEditor";
+import { ShadowComparison, type ShadowComparisonClient } from "../simulation/ShadowComparison";
 
 export type ExistingProjectMode = "run" | "edit" | "monitor";
 
 export interface ExistingProjectClient extends RunModelClient, MonitoringClient, EditModelClient, ScenarioClient {
   getProject(projectId: string): Promise<JsonObject>;
   getTarget(targetId: string): Promise<JsonObject>;
+  getGraph?(graphId: string): Promise<JsonObject>;
+  shadowSimulate?: ShadowComparisonClient["shadowSimulate"];
   patchProject?(projectId: string, patch: JsonObject): Promise<JsonObject>;
 }
 
@@ -69,6 +72,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
     {mode === "run" && typeof project.graph_id !== "string" && <p role="alert">This project has no approved graph to run yet.</p>}
     {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} onBranchToEdit={onBranchToEdit} />}
     {mode === "edit" && <EditModel projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : null} client={client} />}
+    {mode === "edit" && typeof project.graph_id === "string" && client.getGraph && client.shadowSimulate && <ShadowComparison graphId={project.graph_id} client={{ getGraph: client.getGraph, shadowSimulate: client.shadowSimulate }} />}
     <button onClick={onBack}>Back to projects</button>
   </WorkspaceShell>;
 }

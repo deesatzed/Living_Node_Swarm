@@ -42,6 +42,7 @@ export { RunModel, type RunModelClient } from "./modes/RunModel";
 export { EditModel, type EditModelClient } from "./modes/EditModel";
 export { MonitoringSetup, type MonitoringClient } from "./monitoring/MonitoringSetup";
 export { ScenarioEditor, type ScenarioClient } from "./simulation/ScenarioEditor";
+export { ShadowComparison, type ShadowComparisonClient } from "./simulation/ShadowComparison";
 export { WorkspaceShell } from "./workspace/WorkspaceShell";
 export { FixtureWorkspace } from "./workspace/FixtureWorkspace";
 export { canMoveToStage, type StageTransitionContext } from "./workflow/guards";

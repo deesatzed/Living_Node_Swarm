@@ -22,6 +22,11 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await page.route("**/api/targets/target-1", (route) => route.fulfill({ json: { question: "What will neodymium cost?", forecast_origin: "2026-07-28T00:00:00Z", resolution_at: "2027-07-28T00:00:00Z" } }));
   await page.route("**/api/projects/approved-1/monitoring", (route) => route.fulfill({ json: { config: { cadence: "weekly", freshness_threshold_days: 7, mode: "fixture" }, events: [{ id: "stale-source", severity: "warning", message: "Fixture source is stale", evidence_classification: "fixture_unverified" }] } }));
   await page.route("**/api/projects/approved-1/drafts", (route) => route.fulfill({ json: { id: "draft-1", base_graph_version: 4 } }));
+  await page.route("**/api/projects/approved-1/revisions", (route) => route.fulfill({ json: { drafts: [{ id: "draft-earlier", base_graph_version: 4 }] } }));
+  await page.route("**/api/graphs/graph-1", (route) => route.fulfill({ json: { nodes: {
+    input_signal: { id: "input_signal", name: "Input signal", parameters: { mu: 0, sigma: 1 }, depends_on: [] },
+    outcome: { id: "outcome", name: "Outcome", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["input_signal"] },
+  } } }));
   await page.route("**/api/projects/approved-1", (route) => route.fulfill({ json: project }));
   await page.goto("/");
   await page.getByRole("button", { name: "Monitor" }).click();
@@ -30,6 +35,8 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByLabel("Inspected monitoring event")).toContainText("Inspection does not change the approved model.");
   await page.getByRole("button", { name: "Branch to edit" }).click();
   await expect(page.getByRole("heading", { name: "Edit model through a draft" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Active versus candidate" })).toBeVisible();
+  await expect(page.getByLabel("Candidate value")).toBeVisible();
   await page.getByRole("button", { name: "Create version-bound draft" }).click();
   await expect(page.getByRole("status")).toContainText("Draft draft-1 is ready");
 });
