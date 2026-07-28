@@ -133,5 +133,9 @@ export interface CandidateApprovalInput {
   binding_hash: string;
 }
 
+export interface StructuralProposalInput {
+  relationships: JsonObject[];
+}
+
 export interface WeightedEnsembleMemberInput { graph_id: string; graph_version: number; target_node_id: string; weight: number; }
 export interface WorkspaceEnsembleInput { id: string; name: string; members: WeightedEnsembleMemberInput[]; combination_method?: "weighted_distribution_mixture"; }

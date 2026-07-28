@@ -10,6 +10,7 @@ import {
   type JsonObject,
   type MonitoringConfigInput,
   type ShadowSimulationInput,
+  type StructuralProposalInput,
   type TargetContractInput,
   type WorkspaceProjectInput,
   type WorkspaceCandidateRevisionInput,
@@ -68,6 +69,7 @@ export interface WorkspaceClient {
   validateRelationships(body: JsonObject): Promise<JsonObject>;
   shadowSimulate(graphId: string, body: ShadowSimulationInput): Promise<JsonObject>;
   createCandidateProposal(graphId: string, body: CandidateProposalInput): Promise<JsonObject>;
+  createStructuralProposal(graphId: string, body: StructuralProposalInput): Promise<JsonObject>;
   approveCandidateProposal(
     graphId: string,
     proposalId: string,
@@ -75,6 +77,11 @@ export interface WorkspaceClient {
   ): Promise<JsonObject>;
   approveProjectCandidateProposal(
     projectId: string,
+    proposalId: string,
+    body: CandidateApprovalInput,
+  ): Promise<JsonObject>;
+  approveStructuralProposal(
+    graphId: string,
     proposalId: string,
     body: CandidateApprovalInput,
   ): Promise<JsonObject>;
@@ -200,6 +207,11 @@ export function createWorkspaceClient({
         method: "POST",
         body: JSON.stringify(body),
       }),
+    createStructuralProposal: (graphId, body) =>
+      request<JsonObject>(`/authoring/graphs/${encodeURIComponent(graphId)}/structural-proposals`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
     approveCandidateProposal: (graphId, proposalId, body) =>
       request<JsonObject>(
         `/authoring/graphs/${encodeURIComponent(graphId)}/candidate-proposals/${encodeURIComponent(proposalId)}/approve`,
@@ -208,6 +220,11 @@ export function createWorkspaceClient({
     approveProjectCandidateProposal: (projectId, proposalId, body) =>
       request<JsonObject>(
         `/projects/${encodeURIComponent(projectId)}/candidate-proposals/${encodeURIComponent(proposalId)}/approve`,
+        { method: "POST", body: JSON.stringify(body) },
+      ),
+    approveStructuralProposal: (graphId, proposalId, body) =>
+      request<JsonObject>(
+        `/authoring/graphs/${encodeURIComponent(graphId)}/structural-proposals/${encodeURIComponent(proposalId)}/approve`,
         { method: "POST", body: JSON.stringify(body) },
       ),
     getGraph: (graphId) => request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}`, { method: "GET" }),
