@@ -11,7 +11,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Surface | Verified state |
 |---|---|
 | Kernel tests | 72 passed on 2026-07-27 after persisted multi-seed/multi-sample stability diagnostics |
-| Server tests | 28 passed on 2026-07-27 after bounded safe fetcher; one upstream deprecation warning |
+| Server tests | 30 passed on 2026-07-27 after local evidence/source persistence; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-27 |
 | Gas UI | Production build passed on 2026-07-27 |
 | Current families | Eight canonical registry families; legacy node payloads remain readable through explicit parameter normalization |
@@ -55,6 +55,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Gate 1 scientific kernel | Complete | Codex | Registry, compatibility, units, temporal DAG, dependence warnings, stability receipts, and scoring verified |
 | Q2-01 URL safety | Complete | Codex | HTTP(S)-only, credential-free, public-DNS destination validation; 24 server tests passed |
 | Q2-02 bounded fetcher | Complete | Codex | Manual redirect revalidation, timeout, streamed byte cap, content-type allowlist; 28 server tests passed |
+| Q2-03 evidence persistence | Complete | Codex | Local SQLite stores typed source receipts/claims, hashes, conflicts, and source references across restart; 30 server tests passed |
 | Gate 2 safe research/provenance | Pending | Unassigned | Depends on Gate 0 |
 | Gate 3 generalized authoring | Pending | Unassigned | Depends on Gates 1–2 |
 | Gate 4 visual workspace | Pending | Unassigned | Depends on Gate 3 API/contracts |
@@ -77,8 +78,8 @@ Gate 1 exited on 2026-07-27: all eight registry families, explicit compatibility
 
 ## Next Actions
 
-1. Complete Q2-03: persist evidence/source receipts with hashes.
-2. Complete Q2-04: isolate retrieved material as untrusted extraction input.
+1. Complete Q2-04: isolate retrieved material as untrusted extraction input.
+2. Complete Q2-05: implement provider payload preview and routing receipt.
 3. Run focused security tests after each atomic change and update this file with exact results.
 
 ## Blockers
