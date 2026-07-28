@@ -474,6 +474,35 @@ describe("ShadowComparison", () => {
     expect(screen.queryByLabelText("Structural proposal review")).not.toBeInTheDocument();
   });
 
+  it("inspects the selected persisted relationship contract without inventing legacy metadata", async () => {
+    render(<ShadowComparison graphId="graph-1" client={{
+      getGraph: async () => ({
+        nodes: {
+          input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] },
+          outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["input_signal"] },
+        },
+        relationships: {
+          "input-to-outcome": {
+            id: "input-to-outcome", parent_node_id: "input_signal", child_node_id: "outcome",
+            relationship_type: "causal_hypothesis", transform: "affine", source_unit: "USD/kg",
+            target_unit: "yield-index", sign: "positive", lag_periods: 2, lag_unit: "month",
+            coefficient_units: "yield-index / (USD/kg)", coefficient_parameters: [{ id: "coefficient", value: 0.25 }],
+            evidence_claim_ids: ["claim-7"], state: "active",
+          },
+        },
+      }),
+      shadowSimulate: async () => ({}),
+    } as never} />);
+
+    const inspector = await screen.findByLabelText("Relationship inspector");
+    expect(inspector).toHaveTextContent("Input signal → Outcome");
+    expect(within(inspector).getByLabelText("Relationship type")).toHaveValue("causal_hypothesis");
+    expect(within(inspector).getByLabelText("Units")).toHaveValue("yield-index / (USD/kg)");
+    expect(within(inspector).getByLabelText("Lag steps")).toHaveValue(2);
+    expect(inspector).toHaveTextContent("Evidence claims: claim-7");
+    expect(inspector).toHaveTextContent("Not recorded");
+  });
+
   it("turns an excluded non-target factor into a complete structural retirement proposal", async () => {
     const user = userEvent.setup();
     const createStructuralProposal = vi.fn(async () => ({ proposal: { id: "retire-1", graph_version: 4, binding_hash: "retire-hash", removed_relationship_ids: ["input-to-process", "process-to-outcome"], retired_node_ids: ["process_stage"] } }));

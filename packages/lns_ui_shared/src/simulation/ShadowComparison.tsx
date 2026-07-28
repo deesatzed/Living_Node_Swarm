@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { CandidateApprovalInput, CandidateProposalInput, DeriveDistributionInput, DistributionStatisticsResult, ElicitDistributionInput, JsonObject, ShadowSimulationInput, StructuralProposalInput, StructuralShadowSimulationInput, WorkspaceCandidateRevisionInput } from "../api/types";
 import { DistributionInspector } from "../inspectors/DistributionInspector";
+import { RelationshipInspector, type RelationshipReview } from "../inspectors/RelationshipInspector";
 import { compareCandidateRevisions, type RevisionDifference } from "../refinement/revisionComparison";
 
 export interface ShadowComparisonClient {
@@ -109,6 +110,52 @@ function numeric(value: unknown): string {
   return typeof value === "number" || typeof value === "string" ? String(value) : "unknown";
 }
 
+const RELATIONSHIP_TYPES = new Set<RelationshipReview["type"]>(["causal_hypothesis", "accounting_identity", "observed_relation", "proxy_correlation", "scenario_assumption"]);
+
+function recordedText(value: unknown): string {
+  return typeof value === "string" && value.trim() ? value : "Not recorded";
+}
+
+function relationshipInspectorReview(relationship: JsonObject, nodes: GraphNode[]): RelationshipReview {
+  const parentId = typeof relationship.parent_node_id === "string" ? relationship.parent_node_id : "";
+  const childId = typeof relationship.child_node_id === "string" ? relationship.child_node_id : "";
+  const evidenceClaimIds = Array.isArray(relationship.evidence_claim_ids) ? relationship.evidence_claim_ids.filter((claim): claim is string => typeof claim === "string" && Boolean(claim.trim())) : [];
+  const coefficientParameters = Array.isArray(relationship.coefficient_parameters) ? relationship.coefficient_parameters.flatMap((raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+    const parameter = raw as JsonObject;
+    return typeof parameter.id === "string" && typeof parameter.value === "number" ? [`${parameter.id} = ${parameter.value}`] : [];
+  }) : [];
+  const missing = [
+    typeof relationship.relationship_type !== "string" ? "relationship type" : "",
+    typeof relationship.transform !== "string" ? "transform" : "",
+    typeof relationship.source_unit !== "string" ? "source unit" : "",
+    typeof relationship.target_unit !== "string" ? "target unit" : "",
+    typeof relationship.sign !== "string" ? "sign" : "",
+    typeof relationship.lag_periods !== "number" ? "lag periods" : "",
+    typeof relationship.coefficient_units !== "string" ? "coefficient units" : "",
+  ].filter(Boolean);
+  const type = typeof relationship.relationship_type === "string" && RELATIONSHIP_TYPES.has(relationship.relationship_type as RelationshipReview["type"])
+    ? relationship.relationship_type as RelationshipReview["type"] : "unknown";
+  return {
+    id: recordedText(relationship.id),
+    parentLabel: nodes.find((node) => node.id === parentId)?.name ?? recordedText(relationship.parent_node_id),
+    childLabel: nodes.find((node) => node.id === childId)?.name ?? recordedText(relationship.child_node_id),
+    type,
+    units: recordedText(relationship.coefficient_units),
+    lagSteps: typeof relationship.lag_periods === "number" ? relationship.lag_periods : undefined,
+    sign: relationship.sign === "positive" || relationship.sign === "negative" || relationship.sign === "unknown" ? relationship.sign : "unknown",
+    transform: recordedText(relationship.transform),
+    coefficientDistribution: coefficientParameters.length ? coefficientParameters.join("; ") : "Not recorded",
+    sourceUnit: recordedText(relationship.source_unit),
+    targetUnit: recordedText(relationship.target_unit),
+    lagUnit: recordedText(relationship.lag_unit),
+    validityRange: "Not recorded",
+    evidence: `Evidence claims: ${evidenceClaimIds.length ? evidenceClaimIds.join(", ") : "none recorded"}`,
+    warnings: missing.length ? [`Not recorded on persisted contract: ${missing.join(", ")}.`] : undefined,
+    state: recordedText(relationship.state),
+  };
+}
+
 const SUPPORT: Record<string, string> = {
   Normal: "real", LogNormal: "positive", Beta: "[0, 1]", Poisson: "non-negative integers",
   NegativeBinomial: "non-negative integers", Gamma: "positive", StudentT: "real", Deterministic: "one value",
@@ -132,6 +179,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   const [selectedRelationship, setSelectedRelationship] = useState("");
   const [stagedRelationshipStates, setStagedRelationshipStates] = useState<Record<string, "active" | "excluded">>({});
   const [activeRelationshipIdsByEdge, setActiveRelationshipIdsByEdge] = useState<Record<string, string>>({});
+  const [activeRelationshipsByEdge, setActiveRelationshipsByEdge] = useState<Record<string, JsonObject>>({});
   const [stagedRelationshipContracts, setStagedRelationshipContracts] = useState<JsonObject[]>([]);
   const [relationshipType, setRelationshipType] = useState("scenario_assumption");
   const [relationshipTransform, setRelationshipTransform] = useState("affine");
@@ -188,6 +236,14 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
             ? [[`${relationship.parent_node_id}:${relationship.child_node_id}`, relationship.id] as const] : [];
         }) : [];
       setActiveRelationshipIdsByEdge(Object.fromEntries(activeRelationships));
+      const activeRelationshipContracts = graph.relationships && typeof graph.relationships === "object" && !Array.isArray(graph.relationships)
+        ? Object.values(graph.relationships as Record<string, unknown>).flatMap((raw) => {
+          if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+          const relationship = raw as JsonObject;
+          return relationship.state === "active" && typeof relationship.parent_node_id === "string" && typeof relationship.child_node_id === "string"
+            ? [[`${relationship.parent_node_id}:${relationship.child_node_id}`, relationship] as const] : [];
+        }) : [];
+      setActiveRelationshipsByEdge(Object.fromEntries(activeRelationshipContracts));
       const editable = next.find((node) => Object.keys(node.parameters).length > 0);
       setNodes(next);
       setSelectedTarget(targetId(next));
@@ -218,6 +274,9 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
   }, [client, projectId]);
 
   const selected = nodes.find((node) => node.id === selectedNode);
+  const selectedRelationshipReview = activeRelationshipsByEdge[selectedRelationship]
+    ? relationshipInspectorReview(activeRelationshipsByEdge[selectedRelationship], nodes)
+    : null;
   useEffect(() => {
     let active = true;
     setDerived(null);
@@ -486,6 +545,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
       {selected?.family && INTUITIVE_INPUTS[selected.family] && client.deriveDistribution && <section aria-label="Distribution intuitive derivation"><h3>Distribution intuitive derivation</h3><p>Use named inputs for this factor’s existing {selected.family} family. The server derives canonical parameters and returns read-only statistics.</p>{INTUITIVE_INPUTS[selected.family].map(({ id, label }) => <label key={id}>{selected.family} {label}<input aria-label={`${selected.family} ${label}`} type="number" value={derivationValues[id] ?? ""} onChange={(event) => setDerivationValues((current) => ({ ...current, [id]: event.target.value }))} /></label>)}<label>Derivation as of<input aria-label="Derivation as of" value={elicitationAsOf} onChange={(event) => setElicitationAsOf(event.target.value)} /></label><label>Derivation confidence rationale<input aria-label="Derivation confidence rationale" value={elicitationConfidence} onChange={(event) => setElicitationConfidence(event.target.value)} /></label><button onClick={stageDerivedDistribution}>Stage derived distribution candidate</button>{elicitationReceipt && <section aria-label="Derived distribution candidate"><h4>Derived distribution candidate</h4><p>Method: {numeric(elicitationReceipt.method)}. The active graph is unchanged.</p><ul>{Array.isArray(elicitationReceipt.limitations) ? elicitationReceipt.limitations.map((limitation) => <li key={numeric(limitation)}>{numeric(limitation)}</li>) : null}</ul></section>}{Object.keys(stagedDistributionSpecs).length > 0 && <p>This candidate carries distribution provenance and must be included in the exact review binding.</p>}</section>}
       <section aria-label="Candidate structural change set"><h3>Candidate structural change set</h3>{Object.keys(stagedNodeStates).length === 0 ? <p>No local candidate node-state changes staged.</p> : <ul>{Object.entries(stagedNodeStates).map(([nodeId, state]) => <li key={nodeId}>{nodes.find((node) => node.id === nodeId)?.name ?? nodeId}: {state} <button onClick={() => removeStagedNodeState(nodeId)}>Remove {nodes.find((node) => node.id === nodeId)?.name ?? nodeId} state change</button></li>)}</ul>}<p>Node-state changes are revision-only and cannot be shadow-simulated or approved until a structural proposal contract exists.</p></section>
       <section aria-label="Candidate relationship change set"><h3>Candidate relationship change set</h3><label>Candidate dependency<select aria-label="Candidate dependency" value={selectedRelationship} onChange={(event) => setSelectedRelationship(event.target.value)}>{nodes.flatMap((node) => node.dependsOn.map((parent) => <option key={`${parent}:${node.id}`} value={`${parent}:${node.id}`}>{nodes.find((item) => item.id === parent)?.name ?? parent} → {node.name}</option>))}</select></label><button onClick={() => stageSelectedRelationshipState("excluded")}>Exclude selected dependency in candidate</button><button onClick={() => stageSelectedRelationshipState("active")}>Include selected dependency in candidate</button>{Object.keys(stagedRelationshipStates).length === 0 ? <p>No local candidate relationship-state changes staged.</p> : <ul>{Object.entries(stagedRelationshipStates).map(([relationship, state]) => <li key={relationship}>{relationship}: {state} <button onClick={() => removeStagedRelationshipState(relationship)}>Remove {relationship} state change</button></li>)}</ul>}<p>Relationship-state changes are revision-only and cannot be shadow-simulated or approved until a structural proposal contract exists.</p></section>
+      {selectedRelationshipReview ? <RelationshipInspector relationship={selectedRelationshipReview} /> : selectedRelationship ? <p>No persisted relationship contract is recorded for this dependency.</p> : null}
       <section aria-label="Proposed relationship contracts"><h3>Proposed relationship contracts</h3><label>Proposed relationship parent<select aria-label="Proposed relationship parent" value={proposedRelationshipParent} onChange={(event) => setProposedRelationshipParent(event.target.value)}>{nodes.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}</select></label><label>Proposed relationship child<select aria-label="Proposed relationship child" value={proposedRelationshipChild} onChange={(event) => setProposedRelationshipChild(event.target.value)}>{nodes.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}</select></label><label>Proposed relationship type<select aria-label="Proposed relationship type" value={relationshipType} onChange={(event) => setRelationshipType(event.target.value)}><option value="causal_hypothesis">causal hypothesis</option><option value="accounting_identity">accounting identity</option><option value="observed_relation">observed relation</option><option value="proxy_correlation">proxy correlation</option><option value="scenario_assumption">scenario assumption</option></select></label><label>Proposed relationship transform<input aria-label="Proposed relationship transform" value={relationshipTransform} onChange={(event) => setRelationshipTransform(event.target.value)} /></label><label>Proposed relationship source unit<input aria-label="Proposed relationship source unit" value={relationshipSourceUnit} onChange={(event) => setRelationshipSourceUnit(event.target.value)} /></label><label>Proposed relationship target unit<input aria-label="Proposed relationship target unit" value={relationshipTargetUnit} onChange={(event) => setRelationshipTargetUnit(event.target.value)} /></label><label>Proposed relationship sign<input aria-label="Proposed relationship sign" value={relationshipSign} onChange={(event) => setRelationshipSign(event.target.value)} /></label><label>Proposed relationship lag periods<input aria-label="Proposed relationship lag periods" type="number" min="0" value={relationshipLagPeriods} onChange={(event) => setRelationshipLagPeriods(event.target.value)} /></label><label>Proposed relationship lag unit<input aria-label="Proposed relationship lag unit" value={relationshipLagUnit} onChange={(event) => setRelationshipLagUnit(event.target.value)} /></label><label>Proposed relationship coefficient units<input aria-label="Proposed relationship coefficient units" value={relationshipCoefficientUnits} onChange={(event) => setRelationshipCoefficientUnits(event.target.value)} /></label><label>Proposed relationship coefficient<input aria-label="Proposed relationship coefficient" type="number" value={relationshipCoefficient} onChange={(event) => setRelationshipCoefficient(event.target.value)} /></label><label>Proposed relationship evidence claim IDs<input aria-label="Proposed relationship evidence claim IDs" value={relationshipEvidenceClaimIds} onChange={(event) => setRelationshipEvidenceClaimIds(event.target.value)} /></label><button onClick={stageRelationshipContract}>Stage proposed relationship contract</button>{stagedRelationshipContracts.length === 0 ? <p>No proposed relationship contracts staged.</p> : <ul>{stagedRelationshipContracts.map((relationship) => <li key={numeric(relationship.id)}>{numeric(relationship.parent_node_id)} → {numeric(relationship.child_node_id)} · {numeric(relationship.relationship_type)} · {numeric(relationship.state)} <button onClick={() => removeStagedRelationshipContract(numeric(relationship.id))}>Remove proposed relationship {numeric(relationship.parent_node_id)} to {numeric(relationship.child_node_id)}</button></li>)}</ul>}<p>Relationship contracts are proposed-only until the server validates and approves an exact structural proposal.</p></section>
       {stagedRelationshipContracts.length > 0 && client.validateRelationships && <section aria-label="Relationship validation"><button onClick={validateRelationshipContracts}>Validate proposed relationships</button>{relationshipValidation && <>{Array.isArray(relationshipValidation.dependence_warnings) && (relationshipValidation.dependence_warnings.length > 0 ? <ul aria-label="Relationship validation warnings">{relationshipValidation.dependence_warnings.map((raw, index) => { const warning = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as JsonObject : {}; return <li key={numeric(warning.code) + index}>{numeric(warning.message)}</li>; })}</ul> : <p>No dependence warnings returned for this proposed relationship set.</p>)}<p>Active graph unchanged: {relationshipValidation.active_graph_mutated === false ? "yes" : "not confirmed"}.</p></>}</section>}
       {(stagedRelationshipContracts.length > 0 || Object.entries(stagedRelationshipStates).some(([edge, state]) => state === "excluded" && Boolean(activeRelationshipIdsByEdge[edge])) || Object.values(stagedNodeStates).includes("excluded")) && client.createStructuralProposal && !structuralProposal && <button onClick={createStructuralProposal}>Create structural proposal for review</button>}

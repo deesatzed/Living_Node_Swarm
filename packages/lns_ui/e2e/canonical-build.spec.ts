@@ -41,7 +41,7 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
     student_t_factor: { id: "student_t_factor", name: "Student-t factor", distribution_family: "StudentT", parameters: { loc: 0, scale: 1, df: 4 }, depends_on: [] },
     deterministic_factor: { id: "deterministic_factor", name: "Deterministic factor", distribution_family: "Deterministic", parameters: { value: 3 }, depends_on: [] },
     outcome: { id: "outcome", name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["process_stage", "beta_factor", "poisson_factor", "negative_binomial_factor", "student_t_factor", "deterministic_factor"] },
-  }, relationships: { "process-to-outcome": { id: "process-to-outcome", parent_node_id: "process_stage", child_node_id: "outcome", state: "active" } } } }));
+  }, relationships: { "process-to-outcome": { id: "process-to-outcome", parent_node_id: "process_stage", child_node_id: "outcome", relationship_type: "causal_hypothesis", transform: "affine", source_unit: "process-index", target_unit: "outcome-index", sign: "positive", lag_periods: 1, lag_unit: "month", coefficient_units: "outcome-index / process-index", coefficient_parameters: [{ id: "coefficient", value: 0.5 }], evidence_claim_ids: ["fixture-claim-process-outcome"], state: "active" } } } }));
   await page.route("**/api/authoring/graphs/graph-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 5, p50: 5 }, limitations: ["Candidate changes are simulated in memory and are not persisted or activated."] } }));
   await page.route("**/api/authoring/relationships/validate", (route) => route.fulfill({ json: { dependence_warnings: [{ code: "unresolved_proxy_correlation", message: "Fixture shared cause remains unresolved." }], active_graph_mutated: false } }));
   await page.route("**/api/authoring/graphs/graph-1/structural-proposals", (route) => {
@@ -109,6 +109,8 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByLabel("Candidate revision comparison")).toContainText("Changed parameter: input_signal.mu from 1 to 3.");
   await expect(page.getByLabel("Candidate revision comparison")).toContainText("Active graph unchanged: yes.");
   await page.getByLabel("Candidate dependency").selectOption("process_stage:outcome");
+  await expect(page.getByLabel("Relationship inspector")).toContainText("Process stage → Outcome");
+  await expect(page.getByLabel("Relationship inspector")).toContainText("Evidence claims: fixture-claim-process-outcome");
   await page.getByRole("button", { name: "Exclude selected dependency in candidate" }).click();
   await page.getByRole("button", { name: "Create structural proposal for review" }).click();
   await expect(page.getByLabel("Structural proposal review")).toContainText("Binding hash: remove-hash");

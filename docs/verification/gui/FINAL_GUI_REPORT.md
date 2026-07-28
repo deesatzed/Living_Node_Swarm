@@ -19,7 +19,7 @@
 | [P03] Shared API/catalog compatibility | Locally verified | `packages/lns_ui_shared/src/api/client.test.ts`; shared test suite passes. | Covers tested contract drift, not every future API change. |
 | [P04] Browser is non-authoritative | Locally verified | Server/kernel proposal, simulation, and ensemble tests; UI receipts state server ownership. | Does not prove remote deployment boundaries. |
 | [P05] New Neodymium target and 15 factors | Fixture-only | Canonical fixture Build tests and screenshots at both viewports. | No live Neodymium research. |
-| [P06] Branch revision/refinement delta | Partial | Durable revision comparison and structural Edit component/browser tests. | Branch extension/replay is not a complete end-to-end new-model journey. |
+| [P06] Branch revision/refinement delta | Partial | Durable revision comparison plus structural Edit component/browser tests; the selected persisted active dependency is read-only inspectable with its stored units, lag, coefficient parameters, evidence IDs, and explicit `Not recorded` legacy values. | Branch extension/replay is not a complete end-to-end new-model journey. |
 | [P07] Distribution intuitive edit | Partial | Canonical fixture Monitor → Edit stages Normal median/P90 plus all six non-quantile family forms through the server derivation route, preserves server-issued receipts, runs Normal/Gamma non-active numeric equivalents, and saves Normal/Gamma provenance-bearing candidates for exact review; server approval tests prove the binding atomically activates matching parameters and the full node provenance. Components prove the inspector immediately refreshes approved support, as-of, method, confidence, and evidence fields from the returned graph; all families expose explicit tail/alternative/limitation guidance and a server-returned fixed-seed p05/p50/p95 display interval. | Fixture-only inputs; browser proposal-review/approval is shown only for Normal/Gamma, and fitting remains. |
 | [P08] Two named assumption variants | Partial | `ScenarioEditor` component tests and Run comparison surfaces. | Browser proof does not yet compare two named shadow variants side-by-side. |
 | [P09] Model decision and ensemble | Partial | `RunModel` tests and canonical Run fixture ensemble receipt. | Not a complete new-model decision journey. |
@@ -38,7 +38,7 @@
 | [P22] URL/provider routing safety | Locally verified | Safe-fetch/server security tests and consent UI tests. | No provider content execution is claimed. |
 | [P23] Proposal cannot mutate early | Locally verified | Kernel/server approval tests and Edit browser receipts. | Applies to tested proposal contracts. |
 | [P24] Screenshots and final report | Partial | Four required screenshots plus this report and receipts. | Screenshots are fixture-only; report records outstanding work. |
-| [P25] Regression surface | Locally verified | Kernel 86, server 89, shared UI 121, canonical Playwright 8, UI/gas builds, and `git diff --check` from this session. | Fresh command output is local, not CI. |
+| [P25] Regression surface | Locally verified | Kernel 86, server 89, shared UI 122, canonical Playwright 8, UI/gas builds, and `git diff --check` from this session. | Fresh command output is local, not CI. |
 
 ## Saved visual artifacts
 
