@@ -28,6 +28,7 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
     outcome: { id: "outcome", name: "Outcome", distribution_family: "Normal", parameters: { mu: 0, sigma: 0.2 }, depends_on: ["input_signal"] },
   } } }));
   await page.route("**/api/authoring/graphs/graph-1/shadow-simulate", (route) => route.fulfill({ json: { active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 5, p50: 5 }, limitations: ["Candidate changes are simulated in memory and are not persisted or activated."] } }));
+  await page.route("**/api/authoring/relationships/validate", (route) => route.fulfill({ json: { dependence_warnings: [{ code: "unresolved_proxy_correlation", message: "Fixture shared cause remains unresolved." }], active_graph_mutated: false } }));
   await page.route("**/api/authoring/graphs/graph-1/candidate-proposals", (route) => route.fulfill({ json: { proposal: { id: "proposal-1", graph_version: 4, binding_hash: "binding-123" } } }));
   await page.route("**/api/projects/approved-1/candidate-revisions", (route) => route.request().method() === "GET"
     ? route.fulfill({ json: { candidate_revisions: [] } })
@@ -46,6 +47,9 @@ test("canonical Monitor inspects a fixture event and branches into a version-bou
   await expect(page.getByLabel("Approved model dependency graph").getByRole("status")).toContainText("Traced path: Input signal → Outcome");
   await expect(page.getByRole("heading", { name: "Active versus candidate" })).toBeVisible();
   await expect(page.getByLabel("Candidate value")).toBeVisible();
+  await page.getByRole("button", { name: "Stage proposed relationship contract" }).click();
+  await page.getByRole("button", { name: "Validate proposed relationships" }).click();
+  await expect(page.getByLabel("Relationship validation warnings")).toContainText("Fixture shared cause remains unresolved.");
   await expect(page.getByLabel("Distribution inspector")).toContainText("As of: Not recorded on graph node");
   await page.getByLabel("Candidate value").fill("5");
   await page.getByRole("button", { name: "Add selected candidate change" }).click();

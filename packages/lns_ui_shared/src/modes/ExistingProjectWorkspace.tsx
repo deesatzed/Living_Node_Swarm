@@ -20,6 +20,7 @@ export interface ExistingProjectClient extends RunModelClient, MonitoringClient,
   approveProjectCandidateProposal?: ShadowComparisonClient["approveProjectCandidateProposal"];
   createCandidateRevision?: ShadowComparisonClient["createCandidateRevision"];
   listCandidateRevisions?: ShadowComparisonClient["listCandidateRevisions"];
+  validateRelationships?: ShadowComparisonClient["validateRelationships"];
   patchProject?(projectId: string, patch: JsonObject): Promise<JsonObject>;
 }
 
@@ -88,7 +89,7 @@ export function ExistingProjectWorkspace({ mode, projectId, client, onBack, onBr
     {mode === "monitor" && <MonitoringSetup projectId={projectId} client={client} onBranchToEdit={onBranchToEdit} />}
     {mode === "edit" && <EditModel projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : null} client={client} />}
     {mode === "edit" && approvedGraph && <ApprovedGraphMap graph={approvedGraph} />}
-    {mode === "edit" && typeof project.graph_id === "string" && client.getGraph && client.shadowSimulate && <ShadowComparison graphId={project.graph_id} projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : undefined} client={{ getGraph: client.getGraph, shadowSimulate: client.shadowSimulate, createCandidateProposal: client.createCandidateProposal, approveCandidateProposal: client.approveCandidateProposal, approveProjectCandidateProposal: client.approveProjectCandidateProposal, createCandidateRevision: client.createCandidateRevision, listCandidateRevisions: client.listCandidateRevisions }} onApproved={setProject} />}
+    {mode === "edit" && typeof project.graph_id === "string" && client.getGraph && client.shadowSimulate && <ShadowComparison graphId={project.graph_id} projectId={projectId} activeGraphVersion={typeof project.active_graph_version === "number" ? project.active_graph_version : undefined} client={{ getGraph: client.getGraph, shadowSimulate: client.shadowSimulate, createCandidateProposal: client.createCandidateProposal, approveCandidateProposal: client.approveCandidateProposal, approveProjectCandidateProposal: client.approveProjectCandidateProposal, createCandidateRevision: client.createCandidateRevision, listCandidateRevisions: client.listCandidateRevisions, validateRelationships: client.validateRelationships }} onApproved={setProject} />}
     <button onClick={onBack}>Back to projects</button>
   </WorkspaceShell>;
 }
