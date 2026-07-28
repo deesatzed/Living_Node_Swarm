@@ -15,6 +15,7 @@ import {
   type WorkspaceCandidateRevisionInput,
   type WorkspaceDraftInput,
   type WorkspaceScenarioInput,
+  type WorkspaceEnsembleInput,
   type WeightedEnsembleMemberInput,
   type VisibleNodeState,
 } from "./types";
@@ -94,6 +95,8 @@ export interface WorkspaceClient {
   createScenario(projectId: string, scenario: WorkspaceScenarioInput): Promise<JsonObject>;
   listScenarios(projectId: string): Promise<{ scenarios: JsonObject[] }>;
   simulateScenario(projectId: string, scenarioId: string): Promise<JsonObject>;
+  createEnsemble(projectId: string, ensemble: WorkspaceEnsembleInput): Promise<JsonObject>;
+  listEnsembles(projectId: string): Promise<{ ensembles: JsonObject[] }>;
   getProject(projectId: string): Promise<JsonObject>;
   patchProject(projectId: string, patch: JsonObject): Promise<JsonObject>;
   getMonitoring(projectId: string): Promise<JsonObject>;
@@ -229,6 +232,8 @@ export function createWorkspaceClient({
     createScenario: (projectId, scenario) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/scenarios`, { method: "POST", body: JSON.stringify(scenario) }),
     listScenarios: (projectId) => request<{ scenarios: JsonObject[] }>(`/projects/${encodeURIComponent(projectId)}/scenarios`, { method: "GET" }),
     simulateScenario: (projectId, scenarioId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/scenarios/${encodeURIComponent(scenarioId)}/simulate`, { method: "POST" }),
+    createEnsemble: (projectId, ensemble) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/ensembles`, { method: "POST", body: JSON.stringify(ensemble) }),
+    listEnsembles: (projectId) => request<{ ensembles: JsonObject[] }>(`/projects/${encodeURIComponent(projectId)}/ensembles`, { method: "GET" }),
     getProject: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "GET" }),
     patchProject: (projectId, patch) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "PATCH", body: JSON.stringify(patch) }),
     getMonitoring: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/monitoring`, { method: "GET" }),

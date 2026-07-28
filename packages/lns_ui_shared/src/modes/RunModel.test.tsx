@@ -97,4 +97,19 @@ describe("RunModel", () => {
     expect(screen.getByLabelText("Weighted mixture limitations")).toHaveTextContent("not an arithmetic average");
     expect(screen.getByText("Active graphs unchanged: yes.")).toBeVisible();
   });
+
+  it("saves and restores a two-model configuration as review-only state", async () => {
+    const user = userEvent.setup();
+    const createEnsemble = vi.fn(async (_projectId, ensemble) => ensemble);
+    render(<RunModel graphId="graph-1" targetNodeId="outcome" activeGraphVersion={4} projectId="project-1" client={{ runSimulation: async () => ({ snapshot: {} }), runWeightedEnsemble: async () => ({}), createEnsemble, listEnsembles: async () => ({ ensembles: [] }) }} />);
+    await user.type(screen.getByLabelText("Alternative graph ID"), "graph-2");
+    await user.type(screen.getByLabelText("Alternative graph version"), "3");
+    await user.type(screen.getByLabelText("Alternative target node ID"), "outcome");
+    await user.type(screen.getByLabelText("Ensemble configuration name"), "Two-model blend");
+    await user.click(screen.getByRole("button", { name: "Save ensemble for review" }));
+
+    expect(createEnsemble).toHaveBeenCalledWith("project-1", expect.objectContaining({ name: "Two-model blend", members: [{ graph_id: "graph-1", graph_version: 4, target_node_id: "outcome", weight: 1 }, { graph_id: "graph-2", graph_version: 3, target_node_id: "outcome", weight: 1 }] }));
+    expect(await screen.findByRole("status")).toHaveTextContent("saved for review only; it is not approved or active");
+    expect(screen.getByLabelText("Saved ensemble configurations")).toHaveTextContent("Saved configurations are not approved or active");
+  });
 });

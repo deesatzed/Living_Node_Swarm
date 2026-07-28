@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import type { JsonObject, WeightedEnsembleMemberInput } from "../api/types";
+import type { JsonObject, WeightedEnsembleMemberInput, WorkspaceEnsembleInput } from "../api/types";
 import { ScenarioEditor, type ScenarioClient } from "../simulation/ScenarioEditor";
 
 export interface RunModelClient {
   runSimulation(graphId: string): Promise<JsonObject>;
   runLocalSensitivity?(graphId: string, body: { target_node_id: string; perturbation_fraction: number }): Promise<JsonObject>;
   runWeightedEnsemble?(members: WeightedEnsembleMemberInput[]): Promise<JsonObject>;
+  createEnsemble?(projectId: string, ensemble: WorkspaceEnsembleInput): Promise<JsonObject>;
+  listEnsembles?(projectId: string): Promise<{ ensembles: JsonObject[] }>;
   listSnapshots?(graphId: string, limit?: number): Promise<{ snapshots: JsonObject[] }>;
 }
 
@@ -34,6 +36,9 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
   const [alternativeTargetId, setAlternativeTargetId] = useState("");
   const [alternativeWeight, setAlternativeWeight] = useState("1");
   const [mixture, setMixture] = useState<JsonObject | null>(null);
+  const [ensembleName, setEnsembleName] = useState("");
+  const [savedEnsembles, setSavedEnsembles] = useState<JsonObject[]>([]);
+  const [ensembleStatus, setEnsembleStatus] = useState("");
   useEffect(() => {
     let active = true;
     if (!client.listSnapshots) return;
@@ -42,6 +47,12 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
     }).catch(() => { if (active) setHistory(null); });
     return () => { active = false; };
   }, [client, graphId, result]);
+  useEffect(() => {
+    let active = true;
+    if (!projectId || !client.listEnsembles) return;
+    void client.listEnsembles(projectId).then((response) => { if (active) setSavedEnsembles(response.ensembles); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [client, projectId]);
   async function run() {
     setRunning(true);
     setError("");
@@ -60,6 +71,26 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
     if (!client.runWeightedEnsemble || !targetNodeId || !activeGraphVersion || !alternativeGraphId.trim() || !alternativeTargetId.trim() || !Number.isInteger(secondaryVersion) || secondaryVersion < 1 || !Number.isFinite(primaryWeight) || primaryWeight < 0 || !Number.isFinite(secondaryWeight) || secondaryWeight < 0 || primaryWeight + secondaryWeight <= 0) { setError("Provide two graph versions, target node IDs, and finite non-negative weights with a positive total."); return; }
     try { setError(""); setMixture(await client.runWeightedEnsemble([{ graph_id: graphId, graph_version: activeGraphVersion, target_node_id: targetNodeId, weight: primaryWeight }, { graph_id: alternativeGraphId.trim(), graph_version: secondaryVersion, target_node_id: alternativeTargetId.trim(), weight: secondaryWeight }])); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to compare weighted model mixture."); }
+  }
+  function visibleMembers(): WeightedEnsembleMemberInput[] | null {
+    const primaryWeight = Number(currentWeight); const secondaryWeight = Number(alternativeWeight); const secondaryVersion = Number(alternativeGraphVersion);
+    if (!targetNodeId || !activeGraphVersion || !alternativeGraphId.trim() || !alternativeTargetId.trim() || !Number.isInteger(secondaryVersion) || secondaryVersion < 1 || !Number.isFinite(primaryWeight) || primaryWeight < 0 || !Number.isFinite(secondaryWeight) || secondaryWeight < 0 || primaryWeight + secondaryWeight <= 0) return null;
+    return [{ graph_id: graphId, graph_version: activeGraphVersion, target_node_id: targetNodeId, weight: primaryWeight }, { graph_id: alternativeGraphId.trim(), graph_version: secondaryVersion, target_node_id: alternativeTargetId.trim(), weight: secondaryWeight }];
+  }
+  async function saveMixture() {
+    const members = visibleMembers();
+    if (!projectId || !client.createEnsemble || !ensembleName.trim() || !members) { setError("Provide an ensemble name and two valid member bindings before saving."); return; }
+    const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ensemble-${Date.now()}`;
+    try { const saved = await client.createEnsemble(projectId, { id, name: ensembleName.trim(), members }); setSavedEnsembles((current) => [...current, saved]); setEnsembleStatus(`Ensemble ${ensembleName.trim()} saved for review only; it is not approved or active.`); setError(""); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save ensemble configuration."); }
+  }
+  function loadEnsemble(ensemble: JsonObject) {
+    const members = Array.isArray(ensemble.members) ? ensemble.members.map(object).filter((member): member is JsonObject => Boolean(member)) : [];
+    if (members.length !== 2 || !targetNodeId || !activeGraphVersion) { setError("Only two-member configurations can be restored into this comparison form."); return; }
+    const current = members.find((member) => member.graph_id === graphId && member.graph_version === activeGraphVersion && member.target_node_id === targetNodeId);
+    const alternative = members.find((member) => member !== current);
+    if (!current || !alternative) { setError("This saved configuration does not bind the selected approved model."); return; }
+    setCurrentWeight(String(current.weight)); setAlternativeGraphId(text(alternative.graph_id, "")); setAlternativeGraphVersion(text(alternative.graph_version, "")); setAlternativeTargetId(text(alternative.target_node_id, "")); setAlternativeWeight(String(alternative.weight)); setEnsembleName(text(ensemble.name, "")); setEnsembleStatus(`Loaded ${text(ensemble.name, "ensemble")} for review. It is not approved or active.`); setError("");
   }
   const snapshot = result?.snapshot as JsonObject | undefined;
   const status = result?.sim_status as JsonObject | undefined;
@@ -80,6 +111,7 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
       <label>Alternative target node ID<input aria-label="Alternative target node ID" value={alternativeTargetId} onChange={(event) => setAlternativeTargetId(event.target.value)} /></label>
       <label>Alternative model weight<input aria-label="Alternative model weight" type="number" min="0" value={alternativeWeight} onChange={(event) => setAlternativeWeight(event.target.value)} /></label>
       <button onClick={runMixture}>Compare weighted model mixture</button>
+      {projectId && client.createEnsemble && <><label>Ensemble configuration name<input aria-label="Ensemble configuration name" value={ensembleName} onChange={(event) => setEnsembleName(event.target.value)} /></label><button onClick={saveMixture}>Save ensemble for review</button>{ensembleStatus && <p role="status">{ensembleStatus}</p>}</>}
       {mixture && <section aria-label="Weighted mixture receipt">
         <h3>Weighted mixture receipt</h3><p>Mixture mean: {number(mixtureSummary?.derived_mean)} · median: {number(mixtureSummary?.derived_median)}</p>
         <ul>{mixtureMembers.map((member) => <li key={text(member.member_id, "unknown")}>{text(member.member_id, "unknown")} · normalized weight {number(member.normalized_weight)}</li>)}</ul>
@@ -87,6 +119,7 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
         <p>Active graphs unchanged: {mixture.active_graph_mutated === false ? "yes" : "not confirmed"}.</p>
       </section>}
     </section>}
+    {savedEnsembles.length > 0 && <section aria-label="Saved ensemble configurations"><h2>Saved ensemble configurations</h2><p>Saved configurations are not approved or active.</p><ul>{savedEnsembles.map((ensemble) => <li key={text(ensemble.id, "unknown")}>{text(ensemble.name, text(ensemble.id, "unknown"))} · {text(ensemble.combination_method, "weighted_distribution_mixture")} <button onClick={() => loadEnsemble(ensemble)}>Load ensemble {text(ensemble.name, text(ensemble.id, "unknown"))}</button></li>)}</ul></section>}
     {projectId && scenarioClient && <ScenarioEditor projectId={projectId} client={scenarioClient} targetNodeId={targetNodeId} activeGraphVersion={activeGraphVersion} />}
     {error && <p role="alert">{error}</p>}
     {snapshot && <section aria-label="Run receipt">
