@@ -686,7 +686,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             trial = materialize_structural_trial(graph, proposal.relationships, proposal.removed_relationship_ids)
             return run_structural_shadow_simulation(
-                graph, trial, body, candidate_relationship_ids=proposal.candidate_relationship_ids
+                graph, trial, body, candidate_relationship_ids=proposal.candidate_relationship_ids,
+                removed_relationship_ids=proposal.removed_relationship_ids,
             )
         except (ValidationError, ShadowSimulationError) as exc:
             raise HTTPException(400, str(exc)) from exc

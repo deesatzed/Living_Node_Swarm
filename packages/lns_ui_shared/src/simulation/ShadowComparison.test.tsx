@@ -219,7 +219,7 @@ describe("ShadowComparison", () => {
     const user = userEvent.setup();
     const createStructuralProposal = vi.fn(async () => ({ proposal: { id: "structural-1", graph_version: 4, binding_hash: "structural-hash", candidate_relationship_ids: ["proposal-input_signal-to-outcome"] } }));
     const approveProjectStructuralProposal = vi.fn(async () => ({ approval_receipt: { id: "structural-receipt", binding_hash: "structural-hash" }, graph: { graph_version: 5 }, project: { stage: "decide", active_graph_version: 5 } }));
-    const shadowStructuralProposal = vi.fn(async () => ({ active_graph_mutated: false, candidate_relationship_ids: ["proposal-input_signal-to-outcome"], active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 0.2, p50: 0.2 }, limitations: ["Candidate structural relationships are simulated only in memory and are not persisted or activated."] }));
+    const shadowStructuralProposal = vi.fn(async () => ({ active_graph_mutated: false, candidate_relationship_ids: ["proposal-input_signal-to-outcome"], removed_relationship_ids: [], active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 0.2, p50: 0.2 }, limitations: ["Candidate structural relationships are simulated only in memory and are not persisted or activated."] }));
     const onApproved = vi.fn();
     render(<ShadowComparison graphId="graph-1" projectId="project-1" client={{ getGraph: async () => ({ nodes: { input_signal: { name: "Input signal", parameters: { mu: 0 }, depends_on: [] }, process_stage: { name: "Process stage", parameters: { mu: 0 }, depends_on: ["input_signal"] }, outcome: { name: "Outcome", parameters: { mu: 0 }, depends_on: ["process_stage"] } } }), shadowSimulate: async () => ({}), createStructuralProposal, approveProjectStructuralProposal, shadowStructuralProposal } as never} onApproved={onApproved} />);
     await screen.findByLabelText("Proposed relationship parent");
@@ -235,6 +235,7 @@ describe("ShadowComparison", () => {
     await user.click(screen.getByRole("button", { name: "Run structural in-memory comparison" }));
     expect(shadowStructuralProposal).toHaveBeenCalledWith("graph-1", "structural-1", { target_node_id: "outcome" });
     expect(await screen.findByLabelText("Structural comparison receipt")).toHaveTextContent("Candidate mean: 0.2");
+    expect(screen.getByLabelText("Structural comparison receipt")).toHaveTextContent("Added relationships: proposal-input_signal-to-outcome.");
     expect(screen.getByLabelText("Structural comparison receipt")).toHaveTextContent("Active graph unchanged: yes.");
     expect(screen.getByText("A distribution shift is structural impact, not evidence of improved forecast accuracy.")).toBeVisible();
     await user.type(screen.getByLabelText("Structural approver identity"), "operator");

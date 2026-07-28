@@ -132,6 +132,7 @@ def run_structural_shadow_simulation(
     body: StructuralShadowSimulationBody,
     *,
     candidate_relationship_ids: tuple[str, ...],
+    removed_relationship_ids: tuple[str, ...] = (),
 ) -> dict[str, object]:
     """Compare an exact in-memory structural trial with its active base graph."""
 
@@ -151,6 +152,7 @@ def run_structural_shadow_simulation(
         "active_run_id": str(uuid.uuid4()),
         "candidate_run_id": str(uuid.uuid4()),
         "candidate_relationship_ids": list(candidate_relationship_ids),
+        "removed_relationship_ids": list(removed_relationship_ids),
         "active_graph_mutated": False,
         "active_summary": {"mean": active.derived_mean, **active.quantiles},
         "candidate_summary": {"mean": candidate.derived_mean, **candidate.quantiles},

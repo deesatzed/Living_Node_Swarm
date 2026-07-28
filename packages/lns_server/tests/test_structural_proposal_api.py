@@ -145,6 +145,10 @@ def test_structural_proposal_can_remove_an_exact_active_relationship_without_mut
         assert removal.status_code == 200, removal.text
         removal_proposal = removal.json()["proposal"]
         unchanged = client.get(f"/graphs/{active['id']}").json()
+        comparison = client.post(
+            f"/authoring/graphs/{active['id']}/structural-proposals/{removal_proposal['id']}/shadow-simulate",
+            json={"target_node_id": "outcome", "seed": 42, "n_samples": 1000},
+        )
         approved = client.post(
             f"/authoring/graphs/{active['id']}/structural-proposals/{removal_proposal['id']}/approve",
             json={"approved_by": "operator", "binding_hash": removal_proposal["binding_hash"]},
@@ -154,6 +158,8 @@ def test_structural_proposal_can_remove_an_exact_active_relationship_without_mut
     assert removal.json()["proposal"]["removed_relationship_ids"] == ["input-to-outcome-proposal"]
     assert unchanged["graph_version"] == activated["graph_version"]
     assert unchanged["nodes"]["outcome"]["depends_on"] == ["process_stage", "input_signal"]
+    assert comparison.status_code == 200, comparison.text
+    assert comparison.json()["removed_relationship_ids"] == ["input-to-outcome-proposal"]
     assert approved.status_code == 200, approved.text
     assert approved.json()["graph"]["nodes"]["outcome"]["depends_on"] == ["process_stage"]
     assert "input-to-outcome-proposal" not in approved.json()["graph"]["relationships"]
