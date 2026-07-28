@@ -52,7 +52,7 @@
 | ID | Task | Depends on | Acceptance | Status |
 |---|---|---|---|---|
 | Q3-01 | Add target-intake API | Q0-07 | valid target stored; missing basis/horizon rejected | Complete (Neodymium target create/get and rejection tests, 40 server tests, 2026-07-27) |
-| Q3-02 | Add research-review API | Q2-06 | user can accept/reject claims before model proposal | Pending |
+| Q3-02 | Add research-review API | Q2-06 | user can accept/reject claims before model proposal | Complete (claim/source/conflict/review API test, 41 server tests, 2026-07-27) |
 | Q3-03 | Add ranked candidate-graph proposal | Q1-01, Q2-06 | deterministic fixture yields 15 distinct candidates and a three-hop path | Pending |
 | Q3-04 | Add distribution elicitation/fit service | Q1-02 | quantiles map to valid family params with receipt | Pending |
 | Q3-05 | Add relationship proposal/validation | Q1-05–07 | units, lags, duplicates, dependence warnings returned | Pending |

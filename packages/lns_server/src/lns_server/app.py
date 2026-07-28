@@ -36,6 +36,7 @@ from lns_server.journal import TradeJournal
 from lns_server.kalshi_client import KalshiClient, KalshiError
 from lns_server.openrouter import OpenRouterClient, OpenRouterError
 from lns_server.proposal_normalize import proposal_to_node
+from lns_server.research_review import ClaimReviewBody, make_claim_review
 from lns_server.settings import Settings
 
 logger = logging.getLogger("lns_server")
@@ -253,6 +254,37 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if target is None:
             raise HTTPException(404, "target not found")
         return json.loads(target.model_dump_json())
+
+    @app.get("/research/targets/{target_id}/review")
+    def get_research_review(target_id: str) -> dict[str, Any]:
+        claims = []
+        for claim in app.state.evidence_store.list_evidence_claims():
+            source = (
+                app.state.evidence_store.get_source_receipt(claim.source_receipt_id)
+                if claim.source_receipt_id
+                else None
+            )
+            review = app.state.evidence_store.get_claim_review(
+                target_contract_id=target_id, claim_id=claim.id
+            )
+            claims.append(
+                {
+                    **json.loads(claim.model_dump_json()),
+                    "review_status": review.decision if review else "unreviewed",
+                    "source": json.loads(source.model_dump_json()) if source else None,
+                }
+            )
+        return {"target_contract_id": target_id, "claims": claims}
+
+    @app.post("/research/targets/{target_id}/claims/{claim_id}/review")
+    def review_research_claim(
+        target_id: str, claim_id: str, body: ClaimReviewBody
+    ) -> dict[str, Any]:
+        if app.state.evidence_store.get_evidence_claim(claim_id) is None:
+            raise HTTPException(404, "evidence claim not found")
+        review = make_claim_review(target_contract_id=target_id, claim_id=claim_id, body=body)
+        app.state.evidence_store.save_claim_review(review)
+        return {"review": json.loads(review.model_dump_json())}
 
     @app.post("/graphs")
     def create_graph(body: CreateGraphBody) -> dict[str, Any]:

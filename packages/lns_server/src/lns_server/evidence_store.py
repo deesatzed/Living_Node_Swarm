@@ -8,6 +8,7 @@ from pathlib import Path
 from lns_kernel.contracts import EvidenceClaim, EvidenceClass, SourceReceipt, TargetContract
 from lns_server.research_routing import ProviderRoutingReceipt
 from lns_server.research_plan import ResearchCompletenessReport
+from lns_server.research_review import ClaimReview
 
 
 class EvidenceStore:
@@ -43,6 +44,12 @@ class EvidenceStore:
             CREATE TABLE IF NOT EXISTS research_completeness_reports (
                 id TEXT PRIMARY KEY,
                 payload_json TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS claim_reviews (
+                target_contract_id TEXT NOT NULL,
+                claim_id TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                PRIMARY KEY(target_contract_id, claim_id)
             );
             """
         )
@@ -147,3 +154,20 @@ class EvidenceStore:
             "SELECT payload_json FROM research_completeness_reports WHERE id=?", (report_id,)
         ).fetchone()
         return None if row is None else ResearchCompletenessReport.model_validate_json(row["payload_json"])
+
+    def save_claim_review(self, review: ClaimReview) -> None:
+        self._connection.execute(
+            """
+            INSERT INTO claim_reviews(target_contract_id, claim_id, payload_json) VALUES (?, ?, ?)
+            ON CONFLICT(target_contract_id, claim_id) DO UPDATE SET payload_json=excluded.payload_json
+            """,
+            (review.target_contract_id, review.claim_id, review.model_dump_json()),
+        )
+        self._connection.commit()
+
+    def get_claim_review(self, *, target_contract_id: str, claim_id: str) -> ClaimReview | None:
+        row = self._connection.execute(
+            "SELECT payload_json FROM claim_reviews WHERE target_contract_id=? AND claim_id=?",
+            (target_contract_id, claim_id),
+        ).fetchone()
+        return None if row is None else ClaimReview.model_validate_json(row["payload_json"])

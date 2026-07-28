@@ -11,7 +11,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Surface | Verified state |
 |---|---|
 | Kernel tests | 72 passed on 2026-07-27 after persisted multi-seed/multi-sample stability diagnostics |
-| Server tests | 40 passed on 2026-07-27 after target-intake API; one upstream deprecation warning |
+| Server tests | 41 passed on 2026-07-27 after research-review API; one upstream deprecation warning |
 | General UI | Production build passed on 2026-07-27 |
 | Gas UI | Production build passed on 2026-07-27 |
 | Current families | Eight canonical registry families; legacy node payloads remain readable through explicit parameter normalization |
@@ -62,6 +62,7 @@ The new domain-general goal has a hardened control surface and the first typed k
 | Q2-07 security/provenance suite | Complete | Codex | Fixture-only end-to-end security/receipt journey, including unsafe redirect rejection; 38 server tests passed |
 | Gate 2 safe research/provenance | Complete | Codex | Local safe retrieval, untrusted isolation, consent receipts, persistence, and completeness reporting verified; no live research claimed |
 | Q3-01 target intake API | Complete | Codex | Resolution-grade `TargetContract` persists/retrieves; ambiguous target data rejects; 40 server tests passed |
+| Q3-02 research-review API | Complete | Codex | Claims show source/conflict/classification and require explicit per-target include/exclude review; 41 server tests passed |
 | Gate 3 generalized authoring | Pending | Unassigned | Depends on Gates 1–2 |
 | Gate 4 visual workspace | Pending | Unassigned | Depends on Gate 3 API/contracts |
 | Gate 5 Neodymium acceptance | Pending | Unassigned | Depends on Gates 1–4 |
@@ -83,8 +84,8 @@ Gate 2 exited on 2026-07-27: fixture-tested local URL safety, bounded retrieval,
 
 ## Next Actions
 
-1. Complete Q3-02: add research-review API backed by persisted claims/receipts.
-2. Complete Q3-03: add ranked 15-factor candidate-graph proposal with three-hop fixture.
+1. Complete Q3-03: add ranked 15-factor candidate-graph proposal with three-hop fixture.
+2. Complete Q3-04: add distribution elicitation/fit service with receipt.
 3. Keep proposals inactive until version-bound human approval.
 
 ## Blockers
