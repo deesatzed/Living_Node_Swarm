@@ -47,4 +47,19 @@ describe("ProjectHome", () => {
 
     expect(onAction).toHaveBeenCalledWith("run", "approved-1");
   });
+
+  it("uses the project explicitly selected by the operator for existing-model actions", async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+    const projects = ["first", "second"].map((id) => ({
+      id, name: `${id} model`, target: `${id} target`, horizon: "1 year", stage: "monitor",
+      activeGraphVersion: 4, freshness: "active" as const, warningCount: 0, evidenceClassification: "local_verified" as const, lastRun: "2026-07-28",
+    }));
+    render(<ProjectHome projects={projects} onAction={onAction} />);
+
+    await user.click(screen.getByRole("button", { name: "Select second model" }));
+    await user.click(screen.getByRole("button", { name: "Monitor" }));
+
+    expect(onAction).toHaveBeenCalledWith("monitor", "second");
+  });
 });
