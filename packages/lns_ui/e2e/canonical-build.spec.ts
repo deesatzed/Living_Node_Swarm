@@ -341,6 +341,9 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await page.route("**/api/authoring/graphs/fixture-review-graph/structural-proposals", (route) =>
     route.fulfill({ json: { proposal: { id: "fixture-structural-review", graph_version: 1, binding_hash: "fixture-structural-hash" }, active_graph_mutated: false } }),
   );
+  await page.route("**/api/authoring/graphs/fixture-review-graph/structural-proposals/fixture-structural-review/shadow-simulate", (route) =>
+    route.fulfill({ json: { active_graph_mutated: false, candidate_relationship_ids: ["china_export_controls_to_target"], active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 0.2, p50: 0.2 }, limitations: ["Fixture structural impact only; not forecast accuracy."] } }),
+  );
   await page.route("**/api/projects/*/structural-proposals/fixture-structural-review/approve", (route) =>
     route.fulfill({ json: { approval_receipt: { id: "fixture-structural-receipt" }, graph: { graph_version: 2 }, project: { id: "fixture-project", stage: "decide", active_graph_version: 2 } } }),
   );
@@ -412,6 +415,8 @@ test(`canonical fixture Build advances from a persisted target through Vet to a 
   await page.getByRole("button", { name: "Create structural review for selected fixture factor" }).click();
   await expect(page.getByLabel("Fixture structural review")).toContainText("Binding hash: fixture-structural-hash");
   await expect(page.getByLabel("Fixture structural review")).toContainText("No factor is active until exact named approval.");
+  await page.getByRole("button", { name: "Run fixture structural in-memory comparison" }).click();
+  await expect(page.getByLabel("Fixture structural comparison receipt")).toContainText("Active graph unchanged: yes.");
   await page.getByLabel("Fixture structural approver identity").fill("fixture-operator");
   await page.getByLabel("I reviewed this fixture structural binding").check();
   await page.getByRole("button", { name: "Approve fixture structural binding" }).click();

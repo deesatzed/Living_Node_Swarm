@@ -7,8 +7,11 @@ export interface CandidateMapClient {
   createFixtureCandidateProposal(targetId: string): Promise<CandidateGraphFixture>;
   materializeFixtureCandidateProposal?(targetId: string): Promise<{ graph?: { id?: string }; active_graph_mutated?: boolean }>;
   createStructuralProposal?(graphId: string, body: { relationships: Record<string, unknown>[]; activated_node_ids: string[] }): Promise<{ proposal?: { id?: string; binding_hash?: string; graph_version?: number }; active_graph_mutated?: boolean }>;
+  shadowStructuralProposal?(graphId: string, proposalId: string, body: { target_node_id: string }): Promise<StructuralComparison | Record<string, unknown>>;
   approveProjectStructuralProposal?(projectId: string, proposalId: string, body: { approved_by: string; binding_hash: string }): Promise<{ approval_receipt?: { id?: string }; graph?: { graph_version?: number }; project?: { stage?: string; active_graph_version?: number } }>;
 }
+
+type StructuralComparison = { active_graph_mutated?: boolean; active_summary?: { mean?: number; p50?: number }; candidate_summary?: { mean?: number; p50?: number }; limitations?: string[] };
 
 type FixtureCandidateRevision = Pick<CandidateGraphFixture, "factors" | "relationships">;
 
@@ -27,6 +30,7 @@ export function CandidateMap({ targetId, projectId, client, onMaterialized }: { 
   const [structuralReview, setStructuralReview] = useState<{ id?: string; binding_hash?: string; graph_version?: number } | null>(null);
   const [structuralApprover, setStructuralApprover] = useState("");
   const [structuralReviewed, setStructuralReviewed] = useState(false);
+  const [structuralComparison, setStructuralComparison] = useState<StructuralComparison | null>(null);
   const [structuralApproval, setStructuralApproval] = useState<{ approval_receipt?: { id?: string }; graph?: { graph_version?: number }; project?: { stage?: string; active_graph_version?: number } } | null>(null);
   const [loading, setLoading] = useState(false);
   async function load() {
@@ -113,8 +117,15 @@ export function CandidateMap({ targetId, projectId, client, onMaterialized }: { 
     try {
       const result = await client.createStructuralProposal(materializedGraphId, { relationships: [relationship], activated_node_ids: [selectedFactorId] });
       setStructuralReview(result.proposal ?? null);
-      setStructuralApprover(""); setStructuralReviewed(false); setStructuralApproval(null);
+      setStructuralApprover(""); setStructuralReviewed(false); setStructuralComparison(null); setStructuralApproval(null);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to create structural review."); }
+  }
+  async function runStructuralComparison() {
+    if (!fixture || !materializedGraphId || !structuralReview?.id || !client.shadowStructuralProposal) return;
+    const targetNodeId = typeof fixture.graph_proposal.target_node_id === "string" ? fixture.graph_proposal.target_node_id : "";
+    if (!targetNodeId) { setError("The fixture structural comparison needs a target node ID."); return; }
+    try { setStructuralComparison(await client.shadowStructuralProposal(materializedGraphId, structuralReview.id, { target_node_id: targetNodeId }) as StructuralComparison); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to run fixture structural comparison."); }
   }
   async function approveStructuralReview() {
     if (!projectId || !structuralReview?.id || !structuralReview.binding_hash || !client.approveProjectStructuralProposal) return;
@@ -134,7 +145,7 @@ export function CandidateMap({ targetId, projectId, client, onMaterialized }: { 
         {client.materializeFixtureCandidateProposal && <button onClick={() => void materialize()}>Materialize fixture proposal for review</button>}
         {materializedGraphId && <p role="status">Fixture candidate graph {materializedGraphId} persisted for separate review; no factor is active.</p>}
         {materializedGraphId && client.createStructuralProposal && <button onClick={() => void createStructuralReview()}>Create structural review for selected fixture factor</button>}
-        {structuralReview && <section aria-label="Fixture structural review"><h3>Fixture structural review</h3><p>Proposal {structuralReview.id ?? "Not recorded"} · graph version {structuralReview.graph_version ?? "Not recorded"}</p><p>Binding hash: {structuralReview.binding_hash ?? "Not recorded"}</p><p>Fixture scenario assumptions only. No factor is active until exact named approval.</p>{projectId && client.approveProjectStructuralProposal && <><label>Fixture structural approver identity<input aria-label="Fixture structural approver identity" value={structuralApprover} onChange={(event) => setStructuralApprover(event.target.value)} /></label><label><input aria-label="I reviewed this fixture structural binding" type="checkbox" checked={structuralReviewed} onChange={(event) => setStructuralReviewed(event.target.checked)} />I reviewed this fixture structural binding</label><button onClick={() => void approveStructuralReview()} disabled={!structuralApprover.trim() || !structuralReviewed}>Approve fixture structural binding</button></>}</section>}
+        {structuralReview && <section aria-label="Fixture structural review"><h3>Fixture structural review</h3><p>Proposal {structuralReview.id ?? "Not recorded"} · graph version {structuralReview.graph_version ?? "Not recorded"}</p><p>Binding hash: {structuralReview.binding_hash ?? "Not recorded"}</p><p>Fixture scenario assumptions only. No factor is active until exact named approval.</p>{projectId && client.approveProjectStructuralProposal && <>{client.shadowStructuralProposal ? <><button onClick={() => void runStructuralComparison()}>Run fixture structural in-memory comparison</button>{structuralComparison && <section aria-label="Fixture structural comparison receipt"><h4>Fixture structural comparison receipt</h4><p>Active mean: {structuralComparison.active_summary?.mean ?? "Not recorded"} · p50: {structuralComparison.active_summary?.p50 ?? "Not recorded"}</p><p>Candidate mean: {structuralComparison.candidate_summary?.mean ?? "Not recorded"} · p50: {structuralComparison.candidate_summary?.p50 ?? "Not recorded"}</p><p>Active graph unchanged: {structuralComparison.active_graph_mutated === false ? "yes" : "not confirmed"}.</p><p>A distribution shift is structural impact, not forecast accuracy.</p>{structuralComparison.limitations && <ul>{structuralComparison.limitations.map((limitation, index) => <li key={`${limitation}-${index}`}>{limitation}</li>)}</ul>}</section>}</> : <p>Structural comparison is unavailable; approval is not enabled.</p>}<label>Fixture structural approver identity<input aria-label="Fixture structural approver identity" value={structuralApprover} onChange={(event) => setStructuralApprover(event.target.value)} /></label><label><input aria-label="I reviewed this fixture structural binding" type="checkbox" checked={structuralReviewed} onChange={(event) => setStructuralReviewed(event.target.checked)} />I reviewed this fixture structural binding</label>{client.shadowStructuralProposal && <button onClick={() => void approveStructuralReview()} disabled={!structuralApprover.trim() || !structuralReviewed || structuralComparison?.active_graph_mutated !== false}>Approve fixture structural binding</button>}</>}</section>}
         {structuralApproval && <section aria-label="Fixture structural approval receipt"><h3>Fixture structural approval receipt</h3><p>Approval receipt: {structuralApproval.approval_receipt?.id ?? "Not recorded"}</p><p>Approved graph version: {structuralApproval.graph?.graph_version ?? "Not recorded"}</p><p>Project stage: {structuralApproval.project?.stage ?? "Not recorded"}</p></section>}
         {revisionStatus && <p role="status">{revisionStatus}</p>}
         <section aria-label="Fixture revision delta"><h3>Fixture revision delta</h3>{removedFactors.length === 0 && addedFactors.length === 0 ? <p>No fixture candidate changes staged.</p> : <>{removedFactors.map((factor) => <p key={`removed-${factor.id}`}>Removed factor: {factor.label}.</p>)}{addedFactors.map((factor) => <p key={`added-${factor.id}`}>Added factor: {factor.label}.</p>)}{addedEdges.map((edge) => <p key={`edge-${String(edge.parent_node_id)}-${String(edge.child_node_id)}`}>Added model dependency: {String(edge.parent_node_id)} → {String(edge.child_node_id)}.</p>)}</>}<p>Active graph unchanged: yes.</p></section>

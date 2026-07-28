@@ -101,10 +101,12 @@ describe("CandidateMap", () => {
   it("requires a named explicit review before approving a fixture structural binding for its project", async () => {
     const user = userEvent.setup();
     const approveProjectStructuralProposal = vi.fn(async () => ({ approval_receipt: { id: "receipt-1" }, graph: { graph_version: 2 }, project: { stage: "decide", active_graph_version: 2 } }));
+    const shadowStructuralProposal = vi.fn(async () => ({ active_graph_mutated: false, active_summary: { mean: 0, p50: 0 }, candidate_summary: { mean: 0.2, p50: 0.2 }, limitations: ["Fixture structural impact only."] }));
     render(<CandidateMap targetId="fixture-nd-retail-2027" projectId="project-1" client={{
       createFixtureCandidateProposal: async () => createNeodymiumGraphFixture(),
       materializeFixtureCandidateProposal: async () => ({ graph: { id: "fixture-graph-5" }, active_graph_mutated: false }),
       createStructuralProposal: async () => ({ proposal: { id: "fixture-review-2", binding_hash: "fixture-hash-2", graph_version: 1 }, active_graph_mutated: false }),
+      shadowStructuralProposal,
       approveProjectStructuralProposal,
     }} />);
 
@@ -113,6 +115,9 @@ describe("CandidateMap", () => {
     await user.selectOptions(screen.getByLabelText("Candidate factor for fixture refinement"), "china_export_controls");
     await user.click(screen.getByRole("button", { name: "Create structural review for selected fixture factor" }));
     expect(screen.getByRole("button", { name: "Approve fixture structural binding" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Run fixture structural in-memory comparison" }));
+    expect(shadowStructuralProposal).toHaveBeenCalledWith("fixture-graph-5", "fixture-review-2", { target_node_id: "nd_private_retail_price_usd_per_kg" });
+    expect(await screen.findByLabelText("Fixture structural comparison receipt")).toHaveTextContent("Active graph unchanged: yes.");
     await user.type(screen.getByLabelText("Fixture structural approver identity"), "operator");
     await user.click(screen.getByLabelText("I reviewed this fixture structural binding"));
     await user.click(screen.getByRole("button", { name: "Approve fixture structural binding" }));
