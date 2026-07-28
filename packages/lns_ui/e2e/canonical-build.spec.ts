@@ -174,6 +174,13 @@ test("canonical Monitor opens the immutable Run workspace or branches into a ver
   await page.getByRole("button", { name: "Run in-memory comparison" }).click();
   await page.getByRole("button", { name: "Save candidate for review" }).click();
   await expect(page.getByLabel("Candidate approval")).toContainText("distribution-binding");
+  await page.getByLabel("Candidate value").fill("6");
+  await page.getByRole("button", { name: "Add selected candidate change" }).click();
+  await expect(page.getByLabel("Candidate change set")).toContainText("Input signal · mu: 6");
+  await expect(page.getByLabel("Candidate approval")).toHaveCount(0);
+  await page.getByRole("button", { name: "Run in-memory comparison" }).click();
+  await page.getByRole("button", { name: "Save candidate for review" }).click();
+  await expect(page.getByLabel("Candidate approval")).toContainText("distribution-binding");
   await page.getByRole("button", { name: "Save durable candidate revision" }).click();
   await expect(page.getByText(/Revision revision-elicited .*1 elicited distribution candidate/)).toBeVisible();
   await page.getByLabel("Candidate factor").selectOption("process_stage");

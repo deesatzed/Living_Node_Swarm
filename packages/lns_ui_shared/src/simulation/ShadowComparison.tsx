@@ -287,6 +287,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
     return () => { active = false; };
   }, [client, selected]);
   function captureStaging() { setStagingHistory((current) => [...current, snapshot(stagedOverrides, stagedDistributionSpecs, stagedNodeStates, stagedRelationshipStates, stagedRelationshipContracts, stagedNewNodes)]); setStagingRedo([]); }
+  function invalidateCandidateReview() { setResult(null); setComparedOverrides(null); setProposal(null); setApproval(null); setReviewed(false); }
   function restoreStaging(next: StagingSnapshot) { setStagedOverrides(next.overrides); setStagedDistributionSpecs(next.distributionSpecs); setStagedNodeStates(next.nodeStates); setStagedRelationshipStates(next.relationshipStates); setStagedRelationshipContracts(next.relationshipContracts); setStagedNewNodes(next.newNodes); setRelationshipValidation(null); setStructuralProposal(null); setStructuralApproval(null); setStructuralComparison(null); }
   function undoStaging() { const previous = stagingHistory.at(-1); if (!previous) return; setStagingHistory((current) => current.slice(0, -1)); setStagingRedo((current) => [...current, snapshot(stagedOverrides, stagedDistributionSpecs, stagedNodeStates, stagedRelationshipStates, stagedRelationshipContracts, stagedNewNodes)]); restoreStaging(previous); }
   function redoStaging() { const next = stagingRedo.at(-1); if (!next) return; setStagingRedo((current) => current.slice(0, -1)); setStagingHistory((current) => [...current, snapshot(stagedOverrides, stagedDistributionSpecs, stagedNodeStates, stagedRelationshipStates, stagedRelationshipContracts, stagedNewNodes)]); restoreStaging(next); }
@@ -310,6 +311,7 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
     setError("");
     captureStaging();
     setStagedOverrides((current) => ({ ...current, [selectedNode]: { ...current[selectedNode], [selectedParameter]: value } }));
+    invalidateCandidateReview();
   }
   function removeStagedChange(nodeId: string, parameter: string) {
     captureStaging();
@@ -319,18 +321,21 @@ export function ShadowComparison({ graphId, projectId, activeGraphVersion, clien
       if (Object.keys(next[nodeId]).length === 0) delete next[nodeId];
       return next;
     });
+    invalidateCandidateReview();
   }
   function stageSelectedNodeState(state: "active" | "excluded") {
     if (!selectedNode) return;
     captureStaging();
     setStagedNodeStates((current) => ({ ...current, [selectedNode]: state }));
+    invalidateCandidateReview();
   }
   function removeStagedNodeState(nodeId: string) {
     captureStaging();
     setStagedNodeStates((current) => { const next = { ...current }; delete next[nodeId]; return next; });
+    invalidateCandidateReview();
   }
-  function stageSelectedRelationshipState(state: "active" | "excluded") { if (selectedRelationship) { captureStaging(); setStagedRelationshipStates((current) => ({ ...current, [selectedRelationship]: state })); } }
-  function removeStagedRelationshipState(relationship: string) { captureStaging(); setStagedRelationshipStates((current) => { const next = { ...current }; delete next[relationship]; return next; }); }
+  function stageSelectedRelationshipState(state: "active" | "excluded") { if (selectedRelationship) { captureStaging(); setStagedRelationshipStates((current) => ({ ...current, [selectedRelationship]: state })); invalidateCandidateReview(); } }
+  function removeStagedRelationshipState(relationship: string) { captureStaging(); setStagedRelationshipStates((current) => { const next = { ...current }; delete next[relationship]; return next; }); invalidateCandidateReview(); }
   function stageRelationshipContract() {
     const parentNodeId = proposedRelationshipParent;
     const childNodeId = proposedRelationshipChild;
