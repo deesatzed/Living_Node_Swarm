@@ -125,4 +125,11 @@ describe("RunModel", () => {
     expect(await screen.findByLabelText("Ensemble approval receipt")).toHaveTextContent("Approval receipt: ensemble-receipt-1");
     expect(screen.getByLabelText("Ensemble approval receipt")).toHaveTextContent("Member graphs unchanged: yes.");
   });
+
+  it("shows persisted ensemble approval receipts without activating a graph", async () => {
+    render(<RunModel graphId="graph-1" targetNodeId="outcome" activeGraphVersion={4} projectId="project-1" client={{ runSimulation: async () => ({ snapshot: {} }), listEnsembles: async () => ({ ensembles: [] }), listEnsembleApprovals: async () => ({ approval_receipts: [{ id: "ensemble-receipt-1", ensemble_id: "blend", approved_by: "operator", binding_hash: "a".repeat(64) }] }) }} />);
+
+    expect(await screen.findByLabelText("Prior ensemble approval receipts")).toHaveTextContent("ensemble-receipt-1 · blend · approved by operator");
+    expect(screen.getByLabelText("Prior ensemble approval receipts")).toHaveTextContent("Receipt history is read-only and does not activate or alter a graph.");
+  });
 });

@@ -98,6 +98,7 @@ export interface WorkspaceClient {
   createEnsemble(projectId: string, ensemble: WorkspaceEnsembleInput): Promise<JsonObject>;
   listEnsembles(projectId: string): Promise<{ ensembles: JsonObject[] }>;
   approveEnsemble(projectId: string, ensembleId: string, body: { approved_by: string; binding_hash: string }): Promise<JsonObject>;
+  listEnsembleApprovals(projectId: string): Promise<{ approval_receipts: JsonObject[] }>;
   getProject(projectId: string): Promise<JsonObject>;
   patchProject(projectId: string, patch: JsonObject): Promise<JsonObject>;
   getMonitoring(projectId: string): Promise<JsonObject>;
@@ -236,6 +237,7 @@ export function createWorkspaceClient({
     createEnsemble: (projectId, ensemble) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/ensembles`, { method: "POST", body: JSON.stringify(ensemble) }),
     listEnsembles: (projectId) => request<{ ensembles: JsonObject[] }>(`/projects/${encodeURIComponent(projectId)}/ensembles`, { method: "GET" }),
     approveEnsemble: (projectId, ensembleId, body) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/ensembles/${encodeURIComponent(ensembleId)}/approve`, { method: "POST", body: JSON.stringify(body) }),
+    listEnsembleApprovals: (projectId) => request<{ approval_receipts: JsonObject[] }>(`/projects/${encodeURIComponent(projectId)}/ensemble-approvals`, { method: "GET" }),
     getProject: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "GET" }),
     patchProject: (projectId, patch) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "PATCH", body: JSON.stringify(patch) }),
     getMonitoring: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}/monitoring`, { method: "GET" }),

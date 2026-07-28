@@ -85,6 +85,7 @@ test("canonical Run renders an authoritative successful simulation receipt witho
   await page.route("**/api/projects/run-1/ensembles", (route) => route.request().method() === "GET"
     ? route.fulfill({ json: { ensembles: [{ id: "fixture-blend", name: "Fixture blend", combination_method: "weighted_distribution_mixture", binding_hash: "a".repeat(64), members: [{ graph_id: "graph-1", graph_version: 4, target_node_id: "outcome", weight: 1 }, { graph_id: "graph-2", graph_version: 3, target_node_id: "outcome", weight: 3 }] }] } })
     : route.fulfill({ json: {} }));
+  await page.route("**/api/projects/run-1/ensemble-approvals", (route) => route.fulfill({ json: { approval_receipts: [] } }));
   await page.route("**/api/projects/run-1/ensembles/fixture-blend/approve", (route) => route.fulfill({ json: { approval_receipt: { id: "fixture-ensemble-receipt", approved_by: "fixture-operator" }, active_graph_mutated: false } }));
   await page.route("**/api/graphs/graph-1/sim/run", (route) => route.fulfill({ json: runResponse }));
   await page.route("**/api/projects/run-1", (route) => route.request().method() === "GET" ? route.fulfill({ json: project }) : route.fulfill({ json: project }));

@@ -9,6 +9,7 @@ export interface RunModelClient {
   createEnsemble?(projectId: string, ensemble: WorkspaceEnsembleInput): Promise<JsonObject>;
   listEnsembles?(projectId: string): Promise<{ ensembles: JsonObject[] }>;
   approveEnsemble?(projectId: string, ensembleId: string, body: { approved_by: string; binding_hash: string }): Promise<JsonObject>;
+  listEnsembleApprovals?(projectId: string): Promise<{ approval_receipts: JsonObject[] }>;
   listSnapshots?(graphId: string, limit?: number): Promise<{ snapshots: JsonObject[] }>;
 }
 
@@ -43,6 +44,7 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
   const [ensembleApprover, setEnsembleApprover] = useState("");
   const [ensembleReviewed, setEnsembleReviewed] = useState(false);
   const [ensembleApproval, setEnsembleApproval] = useState<JsonObject | null>(null);
+  const [ensembleApprovals, setEnsembleApprovals] = useState<JsonObject[]>([]);
   useEffect(() => {
     let active = true;
     if (!client.listSnapshots) return;
@@ -55,6 +57,12 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
     let active = true;
     if (!projectId || !client.listEnsembles) return;
     void client.listEnsembles(projectId).then((response) => { if (active) setSavedEnsembles(response.ensembles); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [client, projectId]);
+  useEffect(() => {
+    let active = true;
+    if (!projectId || !client.listEnsembleApprovals) return;
+    void client.listEnsembleApprovals(projectId).then((response) => { if (active) setEnsembleApprovals(response.approval_receipts); }).catch(() => undefined);
     return () => { active = false; };
   }, [client, projectId]);
   async function run() {
@@ -130,6 +138,7 @@ export function RunModel({ graphId, client, projectId, scenarioClient, targetNod
       </section>}
     </section>}
     {savedEnsembles.length > 0 && <section aria-label="Saved ensemble configurations"><h2>Saved ensemble configurations</h2><p>Saved configurations are not approved or active.</p>{projectId && client.approveEnsemble && <><label>Ensemble approver identity<input aria-label="Ensemble approver identity" value={ensembleApprover} onChange={(event) => setEnsembleApprover(event.target.value)} /></label><label><input aria-label="I reviewed this exact ensemble binding" type="checkbox" checked={ensembleReviewed} onChange={(event) => setEnsembleReviewed(event.target.checked)} />I reviewed this exact ensemble binding</label></>}<ul>{savedEnsembles.map((ensemble) => <li key={text(ensemble.id, "unknown")}>{text(ensemble.name, text(ensemble.id, "unknown"))} · {text(ensemble.combination_method, "weighted_distribution_mixture")} <button onClick={() => loadEnsemble(ensemble)}>Load ensemble {text(ensemble.name, text(ensemble.id, "unknown"))}</button>{projectId && client.approveEnsemble && <button onClick={() => void approveEnsemble(ensemble)}>Approve ensemble {text(ensemble.name, text(ensemble.id, "unknown"))}</button>}</li>)}</ul>{ensembleApproval && <section aria-label="Ensemble approval receipt"><h3>Ensemble approval receipt</h3><p>Approval receipt: {text(object(ensembleApproval.approval_receipt)?.id, "unknown")}</p><p>Approved by: {text(object(ensembleApproval.approval_receipt)?.approved_by, "unknown")}</p><p>Member graphs unchanged: {ensembleApproval.active_graph_mutated === false ? "yes" : "not confirmed"}.</p></section>}</section>}
+    {ensembleApprovals.length > 0 && <section aria-label="Prior ensemble approval receipts"><h2>Prior ensemble approval receipts</h2><ul>{ensembleApprovals.map((approval) => <li key={text(approval.id, "unknown")}>{text(approval.id, "unknown")} · {text(approval.ensemble_id, "unknown ensemble")} · approved by {text(approval.approved_by, "unknown")}</li>)}</ul><p>Receipt history is read-only and does not activate or alter a graph.</p></section>}
     {projectId && scenarioClient && <ScenarioEditor projectId={projectId} client={scenarioClient} targetNodeId={targetNodeId} activeGraphVersion={activeGraphVersion} />}
     {error && <p role="alert">{error}</p>}
     {snapshot && <section aria-label="Run receipt">

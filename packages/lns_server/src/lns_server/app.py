@@ -429,6 +429,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         saved = app.state.workspace_store.save_ensemble_approval(project_id, approval)
         return {"approval_receipt": saved.model_dump(mode="json"), "ensemble": ensemble.model_dump(mode="json"), "active_graph_mutated": False}
 
+    @app.get("/projects/{project_id}/ensemble-approvals")
+    def list_workspace_ensemble_approvals(project_id: str) -> dict[str, Any]:
+        require_project(project_id)
+        return {
+            "approval_receipts": [
+                approval.model_dump(mode="json")
+                for approval in app.state.workspace_store.list_ensemble_approvals(project_id)
+            ]
+        }
+
     @app.post("/projects/{project_id}/scenarios/{scenario_id}/simulate")
     def simulate_workspace_scenario(project_id: str, scenario_id: str) -> dict[str, Any]:
         project = require_project(project_id)

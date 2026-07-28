@@ -167,10 +167,15 @@ def test_ensemble_approval_binds_saved_configuration_and_rejects_wrong_hash(tmp_
         approved = client.post("/projects/nd-project/ensembles/blend/approve", json={"approved_by": "operator", "binding_hash": ensemble["binding_hash"]})
         active = client.get(f"/graphs/{graph['id']}")
 
+    with TestClient(create_app(settings)) as restarted:
+        receipts = restarted.get("/projects/nd-project/ensemble-approvals")
+
     assert rejected.status_code == 409
     assert approved.status_code == 200, approved.text
     assert approved.json()["approval_receipt"]["approved_by"] == "operator"
     assert approved.json()["active_graph_mutated"] is False
+    assert receipts.status_code == 200, receipts.text
+    assert receipts.json()["approval_receipts"] == [approved.json()["approval_receipt"]]
     assert active.json()["graph_version"] == graph["graph_version"]
 
 

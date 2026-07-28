@@ -294,6 +294,7 @@ describe("workspace API client", () => {
       "getTarget",
       "listCandidateRevisions",
       "listDrafts",
+      "listEnsembleApprovals",
       "listEnsembles",
       "listGraphEvents",
       "listProjects",

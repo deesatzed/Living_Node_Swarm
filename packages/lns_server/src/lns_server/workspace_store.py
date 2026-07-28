@@ -129,6 +129,13 @@ class WorkspaceStore:
         self._connection.commit()
         return approval
 
+    def list_ensemble_approvals(self, project_id: str) -> list[WorkspaceEnsembleApproval]:
+        rows = self._connection.execute(
+            "SELECT payload_json FROM workspace_ensemble_approvals WHERE project_id=? ORDER BY ensemble_id",
+            (project_id,),
+        ).fetchall()
+        return [WorkspaceEnsembleApproval.model_validate_json(row["payload_json"]) for row in rows]
+
     def save_monitoring(self, project_id: str, config: MonitoringConfig) -> MonitoringConfig:
         self._connection.execute("INSERT INTO workspace_monitoring VALUES (?, ?) ON CONFLICT(project_id) DO UPDATE SET payload_json=excluded.payload_json", (project_id, config.model_dump_json()))
         self._connection.commit()
