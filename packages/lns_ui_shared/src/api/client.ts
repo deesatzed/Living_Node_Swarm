@@ -6,6 +6,7 @@ import {
   type ClaimReviewInput,
   type DistributionCatalog,
   type DistributionStatisticsResult,
+  type DeriveDistributionInput,
   type ElicitDistributionInput,
   type JsonObject,
   type MonitoringConfigInput,
@@ -67,6 +68,7 @@ export interface WorkspaceClient {
   reviewResearchClaim(targetId: string, claimId: string, body: ClaimReviewInput): Promise<JsonObject>;
   createFixtureCandidateProposal(targetId: string): Promise<CandidateGraphFixture>;
   elicitDistribution(body: ElicitDistributionInput): Promise<JsonObject>;
+  deriveDistribution(body: DeriveDistributionInput): Promise<JsonObject>;
   validateRelationships(body: JsonObject): Promise<JsonObject>;
   shadowSimulate(graphId: string, body: ShadowSimulationInput): Promise<JsonObject>;
   shadowStructuralProposal(graphId: string, proposalId: string, body: StructuralShadowSimulationInput): Promise<JsonObject>;
@@ -202,6 +204,8 @@ export function createWorkspaceClient({
       ),
     elicitDistribution: (body) =>
       request<JsonObject>("/authoring/distributions/elicit", { method: "POST", body: JSON.stringify(body) }),
+    deriveDistribution: (body) =>
+      request<JsonObject>("/authoring/distributions/derive", { method: "POST", body: JSON.stringify(body) }),
     validateRelationships: (body) =>
       request<JsonObject>("/authoring/relationships/validate", { method: "POST", body: JSON.stringify(body) }),
     shadowSimulate: (graphId, body) =>

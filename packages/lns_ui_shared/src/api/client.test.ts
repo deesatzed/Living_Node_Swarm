@@ -298,6 +298,7 @@ describe("workspace API client", () => {
       "createScenario",
       "createStructuralProposal",
       "createTarget",
+      "deriveDistribution",
       "elicitDistribution",
       "getDistributionCatalog",
       "getDistributionStatistics",

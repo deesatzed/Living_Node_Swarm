@@ -117,6 +117,15 @@ export interface ElicitDistributionInput {
   confidence_rationale: string;
 }
 
+export interface DeriveDistributionInput {
+  id: string;
+  family_id: "Normal" | "LogNormal" | "Beta" | "Poisson" | "NegativeBinomial" | "Gamma" | "StudentT" | "Deterministic";
+  values: Record<string, number>;
+  evidence_claim_ids?: string[];
+  as_of: string;
+  confidence_rationale: string;
+}
+
 export interface ShadowSimulationInput {
   target_node_id: string;
   candidate_parameter_overrides: Record<string, Record<string, number>>;

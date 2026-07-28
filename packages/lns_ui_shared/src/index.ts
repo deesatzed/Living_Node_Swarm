@@ -24,6 +24,7 @@ export {
   type CandidateApprovalInput,
   type CandidateProposalInput,
   type ClaimReviewInput,
+  type DeriveDistributionInput,
   type ElicitDistributionInput,
   type JsonObject,
   type ShadowSimulationInput,
