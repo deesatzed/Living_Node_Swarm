@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { WORKFLOW_STAGES } from "@lns/ui-shared";
+import { WORKFLOW_STAGES, WorkspaceShell } from "@lns/ui-shared";
 import { api, type Graph, type Snapshot, type SimStatus } from "./api/client";
 import { DistributionPanel } from "./components/DistributionPanel";
 import { FreshnessBadge } from "./components/FreshnessBadge";
@@ -198,6 +198,14 @@ export default function App() {
   }
 
   return (
+    <WorkspaceShell
+      projectName={graph?.name || "New prediction project"}
+      target="Outcome target (legacy seed until a resolution-grade target is saved)"
+      horizon="Not yet specified"
+      graphVersion={graph?.graph_version || 1}
+      freshness={status?.freshness === "stale" ? "stale" : "active"}
+      evidenceClassification="fixture_unverified"
+    >
     <div className="app">
       <header>
         <div>
@@ -507,5 +515,6 @@ export default function App() {
         </div>
       </div>
     </div>
+    </WorkspaceShell>
   );
 }
