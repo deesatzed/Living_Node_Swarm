@@ -46,7 +46,11 @@ export function NewProjectFlow({ client, onCreated }: { client: NewProjectClient
     await client.patchProject(projectId, { discovery_ledger: next });
     setVetEntries(next);
   }
-  if (projectId && targetId) return <section aria-label="Build vet stage"><VettingConversation provider="No provider selected" model="No model selected" dataScope="No content will leave this Mac until an explicit provider-routing confirmation is recorded." onRecord={recordVetEntry} onProceed={() => setBuildStage("map")} /></section>;
+  async function recordLocalOnlyResearchPreference() {
+    if (!projectId) return;
+    await client.patchProject(projectId, { research_consent: { mode: "local_only", provider: "none", model: "none", data_scope: "no content leaves this Mac" } });
+  }
+  if (projectId && targetId) return <section aria-label="Build vet stage"><VettingConversation provider="No provider selected" model="No model selected" dataScope="No content will leave this Mac until an explicit provider-routing confirmation is recorded." onRecord={recordVetEntry} onRecordLocalOnly={recordLocalOnlyResearchPreference} onProceed={() => setBuildStage("map")} /></section>;
   if (projectId) return <PersistedTargetIntake client={client} projectId={projectId} onSaved={setTargetId} />;
   return <section aria-labelledby="new-project-title">
     <h1 id="new-project-title">New prediction project</h1>

@@ -41,4 +41,15 @@ describe("VettingConversation", () => {
     expect(screen.getByRole("button", { name: "Resume" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Proceed now" })).toBeDisabled();
   });
+
+  it("records a local-only preference without granting provider routing", async () => {
+    const user = userEvent.setup();
+    const onRecordLocalOnly = vi.fn(async () => undefined);
+    render(<VettingConversation provider="No provider selected" model="No model selected" dataScope="No content leaves this Mac." onRecordLocalOnly={onRecordLocalOnly} />);
+
+    await user.click(screen.getByRole("button", { name: "Keep research local" }));
+    expect(onRecordLocalOnly).toHaveBeenCalledOnce();
+    expect(await screen.findByRole("status")).toHaveTextContent("Local-only research preference saved");
+    expect(screen.getByText(/requires explicit confirmation/i)).toBeVisible();
+  });
 });

@@ -29,6 +29,7 @@ def test_workspace_project_persists_lifecycle_ledger_scenario_and_monitoring_acr
                 "stage": "vet",
                 "target_id": "fixture-nd-retail-2027",
                 "discovery_ledger": [{"kind": "user_claim", "text": "Demand will rise."}],
+                "research_consent": {"mode": "local_only", "provider": "none", "data_scope": "no content leaves this Mac"},
             },
         )
         scenario = client.post(
@@ -62,6 +63,7 @@ def test_workspace_project_persists_lifecycle_ledger_scenario_and_monitoring_acr
     assert [project["id"] for project in projects.json()["projects"]] == ["nd-project"]
     assert restored.json()["stage"] == "vet"
     assert restored.json()["discovery_ledger"] == [{"kind": "user_claim", "text": "Demand will rise."}]
+    assert restored.json()["research_consent"]["mode"] == "local_only"
     assert scenarios.json()["scenarios"][0]["name"] == "Conservative"
     assert restored_monitoring.json()["events"][0]["evidence_classification"] == "fixture_unverified"
     assert restored_monitoring.json()["events"][0]["acknowledged_at"] is not None

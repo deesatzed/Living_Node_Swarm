@@ -11,12 +11,13 @@ const ACTIONS: Array<{ label: string; classification: VettingEntryKind; prompt: 
   { label: "Correct understanding", classification: "user_claim", prompt: "Corrected understanding" },
 ];
 
-export function VettingConversation({ provider, model, dataScope, onProceed, onRecord }: {
+export function VettingConversation({ provider, model, dataScope, onProceed, onRecord, onRecordLocalOnly }: {
   provider: string;
   model: string;
   dataScope: string;
   onProceed?: () => void;
   onRecord?: (entry: VettingEntry) => Promise<void>;
+  onRecordLocalOnly?: () => Promise<void>;
 }) {
   const [paused, setPaused] = useState(false);
   const [action, setAction] = useState<(typeof ACTIONS)[number] | null>(null);
@@ -24,6 +25,13 @@ export function VettingConversation({ provider, model, dataScope, onProceed, onR
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  async function recordLocalOnly() {
+    if (!onRecordLocalOnly) return;
+    setBusy(true); setError("");
+    try { await onRecordLocalOnly(); setStatus("Local-only research preference saved. No content leaves this Mac."); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save local-only research preference."); }
+    finally { setBusy(false); }
+  }
   async function record() {
     if (!action || !text.trim() || !onRecord) return;
     setBusy(true); setError("");
@@ -40,6 +48,6 @@ export function VettingConversation({ provider, model, dataScope, onProceed, onR
     {paused && <p role="status">Discovery is paused. No research or routing action is in progress.</p>}
     {action && <section aria-label="Record discovery action"><label>{action.prompt}<input value={text} onChange={(event) => setText(event.target.value)} /></label><button onClick={() => void record()} disabled={busy || !text.trim()}>{busy ? "Saving discovery entry…" : "Save discovery action"}</button></section>}
     {status && <p role="status">{status}</p>}{error && <p role="alert">{error}</p>}
-    <aside aria-label="Provider routing preview"><strong>{provider} · {model}</strong><p>{dataScope}</p><p>Routing requires explicit confirmation; fixture evidence never becomes live research.</p></aside>
+    <aside aria-label="Provider routing preview"><strong>{provider} · {model}</strong><p>{dataScope}</p><button onClick={() => void recordLocalOnly()} disabled={!onRecordLocalOnly || busy}>Keep research local</button><p>Routing requires explicit confirmation; fixture evidence never becomes live research.</p></aside>
   </section>;
 }
