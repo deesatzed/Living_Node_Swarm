@@ -92,6 +92,18 @@ describe("workspace API client", () => {
     await expect(client.listProjects()).resolves.toEqual({ projects: [{ id: "project-1", name: "Neodymium" }] });
   });
 
+  it("lists bounded persisted simulation receipts through the read-only history route", async () => {
+    const client = createWorkspaceClient({
+      baseUrl: "http://localhost:8787",
+      fetch: async (input) => {
+        expect(input).toBe("http://localhost:8787/graphs/graph%2F1/snapshots?limit=5");
+        return new Response(JSON.stringify({ snapshots: [{ id: "snapshot-1" }] }));
+      },
+    });
+
+    await expect(client.listSnapshots("graph/1", 5)).resolves.toEqual({ snapshots: [{ id: "snapshot-1" }] });
+  });
+
   it("retrieves a persisted target contract for Project Home summaries", async () => {
     const client = createWorkspaceClient({
       baseUrl: "http://localhost:8787",
@@ -244,6 +256,7 @@ describe("workspace API client", () => {
       "listGraphEvents",
       "listProjects",
       "listScenarios",
+      "listSnapshots",
       "patchProject",
       "reviewResearchClaim",
       "runSimulation",

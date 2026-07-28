@@ -49,6 +49,18 @@ def test_create_seed_patch_changes_outcome(client: TestClient):
     assert len(r2.json()["event"]["diff_summary"]["parameters_after"]) >= 1
 
 
+def test_snapshot_history_returns_persisted_receipts_newest_first(client: TestClient):
+    created = client.post("/graphs", json={"from_seed": True})
+    graph_id = created.json()["graph"]["id"]
+    first_snapshot = created.json()["snapshot"]["id"]
+    second_snapshot = client.post(f"/graphs/{graph_id}/sim/run").json()["snapshot"]["id"]
+
+    history = client.get(f"/graphs/{graph_id}/snapshots?limit=2")
+
+    assert history.status_code == 200, history.text
+    assert [snapshot["id"] for snapshot in history.json()["snapshots"]] == [second_snapshot, first_snapshot]
+
+
 def test_transform_experiment(client: TestClient):
     gid = client.post("/graphs", json={"from_seed": True}).json()["graph"]["id"]
     r = client.post(

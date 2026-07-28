@@ -80,6 +80,7 @@ export interface WorkspaceClient {
   runSimulation(graphId: string): Promise<JsonObject>;
   getSimulationStatus(graphId: string): Promise<JsonObject>;
   getSnapshot(graphId: string): Promise<JsonObject>;
+  listSnapshots(graphId: string, limit?: number): Promise<{ snapshots: JsonObject[] }>;
   listGraphEvents(graphId: string): Promise<JsonObject>;
   listProjects(): Promise<{ projects: JsonObject[] }>;
   createProject(project: WorkspaceProjectInput): Promise<JsonObject>;
@@ -207,6 +208,8 @@ export function createWorkspaceClient({
       request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/sim/status`, { method: "GET" }),
     getSnapshot: (graphId) =>
       request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/snapshot`, { method: "GET" }),
+    listSnapshots: (graphId, limit = 20) =>
+      request<{ snapshots: JsonObject[] }>(`/graphs/${encodeURIComponent(graphId)}/snapshots?limit=${encodeURIComponent(String(limit))}`, { method: "GET" }),
     listGraphEvents: (graphId) =>
       request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/events`, { method: "GET" }),
     listProjects: () => request<{ projects: JsonObject[] }>("/projects", { method: "GET" }),

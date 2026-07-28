@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { JsonObject } from "../api/types";
 import { ScenarioEditor, type ScenarioClient } from "../simulation/ScenarioEditor";
 
 export interface RunModelClient {
   runSimulation(graphId: string): Promise<JsonObject>;
+  listSnapshots?(graphId: string, limit?: number): Promise<{ snapshots: JsonObject[] }>;
 }
 
 function text(value: unknown, fallback: string): string {
@@ -22,6 +23,15 @@ export function RunModel({ graphId, client, projectId, scenarioClient, onReceipt
   const [result, setResult] = useState<JsonObject | null>(null);
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
+  const [history, setHistory] = useState<JsonObject[] | null>(null);
+  useEffect(() => {
+    let active = true;
+    if (!client.listSnapshots) return;
+    void client.listSnapshots(graphId, 10).then((response) => {
+      if (active) setHistory(response.snapshots);
+    }).catch(() => { if (active) setHistory(null); });
+    return () => { active = false; };
+  }, [client, graphId, result]);
   async function run() {
     setRunning(true);
     setError("");
@@ -46,5 +56,6 @@ export function RunModel({ graphId, client, projectId, scenarioClient, onReceipt
       {!failed && predictives && <section aria-label="Run outcome summaries"><h3>Outcome summaries</h3><ul>{Object.entries(predictives).map(([nodeId, raw]) => { const predictive = object(raw); const quantiles = object(predictive?.quantiles); return <li key={nodeId}>{nodeId} · mean {number(predictive?.derived_mean)} · median {number(predictive?.derived_median)} · p05 {number(quantiles?.p05)} · p95 {number(quantiles?.p95)} · standard deviation {number(predictive?.derived_std)}</li>; })}</ul></section>}
       {!failed && stability && <section aria-label="Run stability diagnostic"><h3>Monte Carlo stability diagnostic</h3><p>Method: {text(stability.method, "not recorded")}</p><p>Seeds: {Array.isArray(stability.seeds) ? stability.seeds.map((value) => text(value, "unknown")).join(", ") : "not recorded"} · sample counts: {Array.isArray(stability.sample_counts) ? stability.sample_counts.map((value) => text(value, "unknown")).join(", ") : "not recorded"}</p><ul>{Object.entries(object(stability.node_metric_ranges) ?? {}).map(([nodeId, raw]) => { const ranges = object(raw); return <li key={nodeId}>{nodeId}: mean range {number(ranges?.mean)} · p50 range {number(ranges?.p50)}</li>; })}</ul><p>{text(stability.limitations, "No stability limitations were recorded.")}</p></section>}
     </section>}
+    {history && <section aria-label="Prior run receipts"><h2>Prior run receipts</h2>{history.length === 0 ? <p>No persisted run receipts yet.</p> : <ul>{history.map((receipt) => <li key={text(receipt.id, "unknown")}>{text(receipt.id, "unknown")} · graph v{text(receipt.graph_version, "unknown")} · seed {text(receipt.seed, "unknown")} · {text(receipt.n_samples, "unknown")} samples · {text(receipt.status, "unknown")} · finished {text(receipt.finished_at, "not recorded")}</li>)}</ul>}<p>History is read-only and does not rerun or alter the approved graph.</p></section>}
   </section>;
 }

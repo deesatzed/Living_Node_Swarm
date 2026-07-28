@@ -645,6 +645,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(404, "no snapshot")
         return json.loads(snap.model_dump_json())
 
+    @app.get("/graphs/{graph_id}/snapshots")
+    def list_snapshots(graph_id: str, limit: int = Query(default=20, ge=1, le=100)) -> dict[str, Any]:
+        if not store.get_graph(graph_id):
+            raise HTTPException(404, "graph not found")
+        return {"snapshots": [json.loads(snapshot.model_dump_json()) for snapshot in store.list_snapshots(graph_id, limit=limit)]}
+
     @app.get("/graphs/{graph_id}/events")
     def get_events(graph_id: str) -> dict[str, Any]:
         return {"events": [json.loads(e.model_dump_json()) for e in store.list_events(graph_id)]}

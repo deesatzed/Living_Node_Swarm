@@ -54,4 +54,14 @@ describe("RunModel", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Run snapshot-failed failed: Node outcome has invalid transform parameters.");
     expect(screen.getByText("No successful outcome summary is available from this failed run.")).toBeVisible();
   });
+
+  it("shows persisted receipt history without rerunning or editing the approved graph", async () => {
+    render(<RunModel graphId="graph-1" client={{
+      runSimulation: async () => ({ snapshot: {} }),
+      listSnapshots: async () => ({ snapshots: [{ id: "snapshot-older", graph_version: 3, seed: 10, n_samples: 1000, status: "complete", finished_at: "2026-07-28T00:00:00Z" }] }),
+    }} />);
+
+    expect(await screen.findByLabelText("Prior run receipts")).toHaveTextContent("snapshot-older · graph v3 · seed 10 · 1000 samples · complete");
+    expect(screen.getByLabelText("Prior run receipts")).toHaveTextContent("does not rerun or alter the approved graph");
+  });
 });

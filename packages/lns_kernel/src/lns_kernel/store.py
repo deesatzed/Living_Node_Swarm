@@ -620,6 +620,18 @@ class GraphStore:
             return None
         return SimulationSnapshot.model_validate_json(row["payload_json"])
 
+    def list_snapshots(self, graph_id: str, *, limit: int = 20) -> list[SimulationSnapshot]:
+        """Return persisted receipts newest first; this is read-only history, not a rerun."""
+
+        if limit <= 0:
+            raise ValueError("snapshot history limit must be positive")
+        c = self._conn.cursor()
+        c.execute(
+            "SELECT payload_json FROM snapshots WHERE graph_id=? ORDER BY finished_at DESC LIMIT ?",
+            (graph_id, limit),
+        )
+        return [SimulationSnapshot.model_validate_json(row["payload_json"]) for row in c.fetchall()]
+
     def set_job_state(
         self,
         graph_id: str,
