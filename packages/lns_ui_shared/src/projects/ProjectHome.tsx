@@ -16,14 +16,15 @@ export interface ProjectHomeItem {
 }
 
 export function ProjectHome({ projects, onAction }: { projects: ProjectHomeItem[]; onAction: (action: ProjectAction, projectId?: string) => void }) {
+  const selectedProjectId = projects[0]?.id;
   return <section aria-labelledby="project-home-title">
     <h1 id="project-home-title">Prediction projects</h1>
     <p>Choose a guided build path or operate an approved model without silently changing it.</p>
     <div>
       <button onClick={() => onAction("new")}>New project</button>
-      <button onClick={() => onAction("run")}>Run model</button>
-      <button onClick={() => onAction("edit")}>Edit model</button>
-      <button onClick={() => onAction("monitor")}>Monitor</button>
+      <button onClick={() => onAction("run", selectedProjectId)} disabled={!selectedProjectId}>Run model</button>
+      <button onClick={() => onAction("edit", selectedProjectId)} disabled={!selectedProjectId}>Edit model</button>
+      <button onClick={() => onAction("monitor", selectedProjectId)} disabled={!selectedProjectId}>Monitor</button>
     </div>
     {projects.length === 0 ? <p>No projects yet. Start a new resolution-grade target.</p> : <ul>
       {projects.map((project) => <li key={project.id}>

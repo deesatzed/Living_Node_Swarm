@@ -1,6 +1,9 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProjectHome } from "./ProjectHome";
+
+afterEach(cleanup);
 
 describe("ProjectHome", () => {
   it("offers New, Run, Edit, and Monitor paths while exposing project truth", () => {
@@ -30,5 +33,18 @@ describe("ProjectHome", () => {
     expect(screen.getByText("Private-investor retail neodymium price")).toBeVisible();
     expect(screen.getByText("Fixture evidence — not live research")).toBeVisible();
     expect(screen.getByText("2 unresolved warnings")).toBeVisible();
+  });
+
+  it("runs an existing selected project without treating it as a new build", async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+    render(<ProjectHome projects={[{
+      id: "approved-1", name: "Approved model", target: "Target", horizon: "1 year", stage: "monitor",
+      activeGraphVersion: 4, freshness: "active", warningCount: 0, evidenceClassification: "local_verified", lastRun: "2026-07-28",
+    }]} onAction={onAction} />);
+
+    await user.click(screen.getByRole("button", { name: "Run model" }));
+
+    expect(onAction).toHaveBeenCalledWith("run", "approved-1");
   });
 });

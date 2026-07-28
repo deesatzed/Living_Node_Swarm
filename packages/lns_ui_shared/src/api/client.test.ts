@@ -64,6 +64,18 @@ describe("workspace API client", () => {
     });
   });
 
+  it("lists persisted projects through the workspace endpoint", async () => {
+    const client = createWorkspaceClient({
+      baseUrl: "http://localhost:8787",
+      fetch: async (input) => {
+        expect(input).toBe("http://localhost:8787/projects");
+        return new Response(JSON.stringify({ projects: [{ id: "project-1", name: "Neodymium" }] }));
+      },
+    });
+
+    await expect(client.listProjects()).resolves.toEqual({ projects: [{ id: "project-1", name: "Neodymium" }] });
+  });
+
   it("rejects candidate fixtures with an unrecognized visible state", () => {
     expect(() =>
       parseCandidateGraphFixture({
@@ -100,6 +112,7 @@ describe("workspace API client", () => {
       "getSimulationStatus",
       "getSnapshot",
       "listGraphEvents",
+      "listProjects",
       "patchProject",
       "reviewResearchClaim",
       "runSimulation",

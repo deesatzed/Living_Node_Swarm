@@ -9,6 +9,8 @@ export const VISIBLE_NODE_STATES = [
 export type VisibleNodeState = (typeof VISIBLE_NODE_STATES)[number];
 export type EvidenceClassification =
   | "fixture_unverified"
+  | "local_verified"
+  | "live_provider_verified"
   | "user_provided"
   | "retrieved"
   | "model_inference"

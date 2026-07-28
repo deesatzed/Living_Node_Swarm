@@ -69,6 +69,7 @@ export interface WorkspaceClient {
   getSimulationStatus(graphId: string): Promise<JsonObject>;
   getSnapshot(graphId: string): Promise<JsonObject>;
   listGraphEvents(graphId: string): Promise<JsonObject>;
+  listProjects(): Promise<{ projects: JsonObject[] }>;
   createProject(project: WorkspaceProjectInput): Promise<JsonObject>;
   getProject(projectId: string): Promise<JsonObject>;
   patchProject(projectId: string, patch: JsonObject): Promise<JsonObject>;
@@ -180,6 +181,7 @@ export function createWorkspaceClient({
       request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/snapshot`, { method: "GET" }),
     listGraphEvents: (graphId) =>
       request<JsonObject>(`/graphs/${encodeURIComponent(graphId)}/events`, { method: "GET" }),
+    listProjects: () => request<{ projects: JsonObject[] }>("/projects", { method: "GET" }),
     createProject: (project) => request<JsonObject>("/projects", { method: "POST", body: JSON.stringify(project) }),
     getProject: (projectId) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "GET" }),
     patchProject: (projectId, patch) => request<JsonObject>(`/projects/${encodeURIComponent(projectId)}`, { method: "PATCH", body: JSON.stringify(patch) }),
